@@ -909,6 +909,36 @@ class TestConstrain:
         with pytest.raises(ValueError, match="Cannot constrain 'typo'"):
             self.mixture().constrain('typo', 0, 1)
 
+    def test_a_condition_must_hold_and_survives_pickling(self):
+        mixture = self.mixture().constrain('w < 0.9')
+        assert isinstance(mixture(Y_TRUE, Y_SCORE, a=1.0, w=0.5), float)
+        for candidate in (mixture, pickle.loads(pickle.dumps(mixture))):
+            with pytest.raises(ValueError, match=re.escape('w < 0.9')):
+                candidate(Y_TRUE, Y_SCORE, a=1.0, w=0.95)
+
+    def test_constraints_see_the_defaults_the_components_share(self):
+        """The components score with their default, so the mixture's constraints check it too."""
+        metric = Metric(CostMatrix().add_fp_cost(self.A).add_fn_cost('b').set_default(b=2.0), Cost())
+        mixture = MixtureMetric([MixtureComponent(0.5, metric, {}), MixtureComponent(0.5, metric, {})])
+        with pytest.raises(ValueError, match=re.escape('a > b')):
+            mixture.constrain('a > b')(Y_TRUE, Y_SCORE, a=1.0)
+        with pytest.raises(ValueError, match='b should be at most 1'):
+            mixture.constrain('b', upper=1)(Y_TRUE, Y_SCORE, a=5.0)
+
+    def test_a_default_the_components_disagree_on_is_checked_only_when_passed(self):
+        def metric(default):
+            return Metric(CostMatrix().add_fp_cost(self.A).add_fn_cost('b').set_default(b=default), Cost())
+
+        mixture = MixtureMetric([MixtureComponent(0.5, metric(2.0), {}), MixtureComponent(0.5, metric(3.0), {})])
+        mixture = mixture.constrain('a > b')
+        assert isinstance(mixture(Y_TRUE, Y_SCORE, a=1.0), float)
+        with pytest.raises(ValueError, match=re.escape('a > b')):
+            mixture(Y_TRUE, Y_SCORE, a=1.0, b=2.0)
+
+    def test_a_condition_on_an_unknown_name_is_rejected(self):
+        with pytest.raises(ValueError, match=re.escape("Cannot constrain 'typo < 1'")):
+            self.mixture().constrain('typo < 1')
+
     def test_a_random_variable_is_rejected(self):
         """Its values are drawn, not passed, so a bound on it would never be checked."""
         gamma = sympy.stats.Beta('gamma', sympy.Symbol('alpha'), 2)

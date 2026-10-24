@@ -53,6 +53,8 @@ class EmpiricalMaxProfitScore:
         """Return how much targeting each sample earns over not targeting it."""
         _check_parameters(self.delta_equation.free_symbols - LABEL_SYMBOLS, kwargs)
         y_true = np.asarray(y_true, dtype=np.float64).reshape(-1)
+        if y_true.size == 0:
+            raise ValueError('The maximum profit needs at least one sample.')
         delta: FloatNDArray = np.asarray(
             _safe_run_lambda_array(self.delta_function, self.delta_equation, shape=y_true.size, y=y_true, **kwargs),
             dtype=np.float64,

@@ -4,6 +4,7 @@ constraints it accepts, and the ones it rejects when the matrix is built rather 
 first computes with it.
 """
 
+import pickle
 import re
 import warnings
 
@@ -510,6 +511,82 @@ def test_constrain_requires_a_message_for_a_predicate():
 def test_constrain_rejects_a_non_symbol_target():
     with pytest.raises(TypeError, match=re.escape('The target must be a sympy.Symbol')):
         CostMatrix().add_fp_cost('a').constrain(5, 0, 1)
+
+
+class TestConditions:
+    """A condition such as ``'a > b'`` relates parameters, and pickles, unlike a lambda."""
+
+    @staticmethod
+    def metric(condition, **kwargs):
+        cost_matrix = CostMatrix().add_fp_cost('a').add_fn_cost('b').alias('benefit', 'b')
+        return Metric(cost_matrix.constrain(condition, **kwargs), Cost())
+
+    @pytest.mark.parametrize(
+        'condition',
+        ['a > b', 'a > benefit', sympy.Symbol('a') > sympy.Symbol('b')],
+        ids=['string', 'alias', 'sympy'],
+    )
+    def test_a_condition_must_hold(self, condition):
+        metric = self.metric(condition)
+        assert isinstance(metric(Y_TRUE, Y_SCORE, a=2.0, b=1.0), float)
+        with pytest.raises(ValueError, match='do not satisfy a constraint'):
+            metric(Y_TRUE, Y_SCORE, a=1.0, b=2.0)
+
+    def test_the_error_quotes_the_condition_unless_given_a_message(self):
+        with pytest.raises(ValueError, match='a > benefit'):
+            self.metric('a > benefit')(Y_TRUE, Y_SCORE, a=1.0, b=2.0)
+        with pytest.raises(ValueError, match='a must exceed b'):
+            self.metric('a > b', message='a must exceed b')(Y_TRUE, Y_SCORE, a=1.0, b=2.0)
+
+    def test_a_condition_over_instance_dependent_parameters_must_hold_for_every_sample(self):
+        metric = self.metric(sympy.And(sympy.Symbol('a') > sympy.Symbol('b'), sympy.Symbol('b') > 0))
+        assert isinstance(metric(Y_TRUE, Y_SCORE, a=np.full(5, 3.0), b=1.0), float)
+        with pytest.raises(ValueError, match='do not satisfy a constraint'):
+            metric(Y_TRUE, Y_SCORE, a=np.array([3.0, 3.0, 3.0, 3.0, 0.5]), b=1.0)
+
+    def test_a_metric_with_a_condition_pickles_and_keeps_checking_it(self):
+        metric = pickle.loads(pickle.dumps(self.metric('a > benefit')))
+        with pytest.raises(ValueError, match='a > benefit'):
+            metric(Y_TRUE, Y_SCORE, a=1.0, b=2.0)
+
+    def test_a_condition_on_an_unknown_name_is_rejected_at_construction(self):
+        with pytest.raises(ValueError, match=re.escape("condition(s) on ['typo']")):
+            self.metric('a > typo')
+
+    def test_a_condition_on_a_drawn_variable_is_not_checked(self):
+        """As for a bound: one builder may serve a metric that draws the variable and one that takes it."""
+        clv = sympy.Symbol('clv')
+        gamma = sympy.stats.Uniform('gamma', 0, 1)
+        metric = Metric(CostMatrix().add_tp_benefit(gamma * clv).add_fp_cost(1).constrain(gamma < clv), MaxProfit())
+        assert isinstance(metric(Y_TRUE, Y_SCORE, clv=10.0), float)
+
+    @pytest.mark.parametrize(
+        ('condition', 'kwargs', 'match'),
+        [
+            ('0 < a < 1', {}, 'write a chained comparison as one constraint per comparison'),
+            ('a > 0', {'lower': 0}, 'takes neither'),
+            ('1 > 0', {}, 'does not depend on any parameter'),
+            (sympy.Gt(1, 0), {}, 'does not depend on any parameter'),
+            ('(a > b) & (b > 0)', {}, 'Join several with sympy.And'),
+            ('a > b and b > 0', {}, 'Join several with sympy.And'),
+            ('not a > b', {}, 'Join several with sympy.And'),
+            ('a == b', {}, 'Pass sympy.Eq or sympy.Ne'),
+        ],
+        ids=['chained', 'with_bounds', 'no_parameter', 'sympy_no_parameter', 'and_operator', 'and', 'not', 'equality'],
+    )
+    def test_a_condition_it_cannot_read_is_rejected(self, condition, kwargs, match):
+        with pytest.raises(ValueError, match=match):
+            CostMatrix().add_fp_cost('a').constrain(condition, **kwargs)
+
+    def test_mismatched_lengths_are_reported_by_the_metric(self):
+        """Not as a broadcasting error from inside the condition."""
+        metric = self.metric('a > b')
+        with pytest.raises(ValueError, match="Parameter 'a' has length 3"):
+            metric(Y_TRUE, Y_SCORE, a=np.ones(3), b=np.zeros(5))
+
+    def test_a_plain_name_is_still_a_parameter_to_bound(self):
+        with pytest.raises(ValueError, match='a should lay between 0 and 1'):
+            self.metric('a', lower=0, upper=1)(Y_TRUE, Y_SCORE, a=2.0, b=1.0)
 
 
 def test_constraints_survive_the_metrics_deep_copy():

@@ -199,6 +199,7 @@ class Metric(BaseMetric):
             default_names=self._cost_matrix._defaults.keys(),
             bound_names=self._cost_matrix._bounds.keys(),
             outlier_names={str(symbol) for symbol in self._cost_matrix._outlier_sensitive_symbols},
+            constraint_names=self._cost_matrix._constraint_names(),
         )
         if self.tp_benefit == 0 and self.tn_benefit == 0 and self.fp_cost == 0 and self.fn_cost == 0:
             warnings.warn(
@@ -337,6 +338,10 @@ class Metric(BaseMetric):
     @property
     def _is_unitless(self) -> bool:
         return self.strategy._unitless_score
+
+    @property
+    def _parameter_defaults(self) -> dict[str, Any]:
+        return dict(self._cost_matrix._defaults)
 
     @property
     def _label_dependent_cost_weight(self) -> bool:

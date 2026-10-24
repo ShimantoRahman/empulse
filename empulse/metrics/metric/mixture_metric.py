@@ -14,7 +14,15 @@ from ._parameter_domain import _check_parameter_domains
 from ._symbolic import _sympify_term
 from .base_metric import BaseMetric, _reject_sample_weight
 from .capabilities import Capability
-from .cost_matrix import CostMatrix, ParameterPredicate, _add_bounds, _check_bounds
+from .cost_matrix import (
+    _CONDITION_TAKES_NO_BOUNDS,
+    CostMatrix,
+    ParameterPredicate,
+    _add_bounds,
+    _check_bounds,
+    _constraint_expression,
+    _ExpressionConstraint,
+)
 from .metric import Metric
 from .strategies import ElasticNetPenalty, LogitObjective, MetricStrategy
 
@@ -291,8 +299,12 @@ class MixtureMetric(BaseMetric):
         resolved = {**defaults, **parameters}
         _reject_sample_weight(resolved, self._accepted_parameter_names())
         if validate and (self._bounds or self._predicates):
-            # Bounds and predicates name a parameter by its symbol, whichever spelling the caller used.
-            by_symbol = {self._canonical_name(key): value for key, value in resolved.items()}
+            # Bounds and predicates name a parameter by its symbol, whichever spelling the caller used, and
+            # see a value the components take from their own defaults as the components do.
+            by_symbol = {
+                **self._parameter_defaults,
+                **{self._canonical_name(key): value for key, value in resolved.items()},
+            }
             caller_names = {self._canonical_name(key): key for key in resolved}
             _check_parameter_domains((), by_symbol, self._bounds, self._predicates, caller_names=caller_names)
         self._warn_about_unknown_parameters(resolved)
@@ -308,7 +320,7 @@ class MixtureMetric(BaseMetric):
 
     def constrain(
         self,
-        target: str | Callable[[Mapping[str, Any]], bool],
+        target: str | sympy.Basic | Callable[[Mapping[str, Any]], bool],
         lower: float | None = None,
         upper: float | None = None,
         *,
@@ -322,9 +334,10 @@ class MixtureMetric(BaseMetric):
 
         Parameters
         ----------
-        target : str or callable
-            The parameter to bound, or a callable taking the mapping of parameter values and
-            returning whether they are acceptable.
+        target : str, sympy relation or callable
+            The parameter to bound; a condition the parameters must satisfy, such as ``'w < 0.9'``,
+            written as for :meth:`CostMatrix.constrain`; or a callable taking the mapping of parameter
+            values and returning whether they are acceptable.
 
         lower : float, optional
             Smallest allowed value, inclusive.
@@ -333,8 +346,8 @@ class MixtureMetric(BaseMetric):
             Largest allowed value, inclusive.
 
         message : str, optional
-            Explanation to report when a callable `target` rejects the parameters.
-            Required when `target` is a callable.
+            Explanation to report when a condition or callable `target` rejects the parameters.
+            Required when `target` is a callable; a condition reports itself by default.
 
         Returns
         -------
@@ -345,8 +358,8 @@ class MixtureMetric(BaseMetric):
         ------
         ValueError
             If `target` is a name and neither `lower` nor `upper` is given, if `lower` is greater than
-            `upper`, if `target` names no parameter of the mixture, or if `target` is a callable and
-            `message` is not given.
+            `upper`, if `target` names no parameter of the mixture, if `target` is a condition and
+            `lower` or `upper` is given, or if `target` is a callable and `message` is not given.
 
         Notes
         -----
@@ -354,8 +367,26 @@ class MixtureMetric(BaseMetric):
         spelling a caller passes it as. Bounding the same parameter twice keeps the tighter of each bound.
 
         A callable receives the parameters keyed by **symbol name**, with aliases already resolved and
-        the mixture's :attr:`defaults` already applied, as for :meth:`CostMatrix.constrain`.
+        defaults already applied: the mixture's :attr:`defaults`, and those its components share. A
+        parameter whose components have different defaults is checked only when passed. As for
+        :meth:`CostMatrix.constrain`, a lambda or nested function cannot be pickled, and a condition can.
         """
+        expression = _constraint_expression(target)
+        if expression is not None:
+            if lower is not None or upper is not None:
+                raise ValueError(_CONDITION_TAKES_NO_BOUNDS)
+            constraint = _ExpressionConstraint(expression)
+            if unknown := sorted(constraint.names - self._all_parameters):
+                raise ValueError(
+                    f"Cannot constrain '{expression}': {unknown} is not a parameter of the mixture. "
+                    f'Known parameters: {sorted(self._all_parameters)}.'
+                )
+            self._predicates.append(
+                ParameterPredicate(
+                    predicate=constraint.renamed(self._canonical_name), message=message or str(expression)
+                )
+            )
+            return self
         if callable(target):
             if message is None:
                 raise ValueError('A message is required when constraining with a callable.')
@@ -559,6 +590,27 @@ class MixtureMetric(BaseMetric):
         for component in self.components:
             names |= component.metric._default_parameter_names - self._fixed_names(component)
         return names
+
+    @property
+    def _parameter_defaults(self) -> dict[str, Any]:
+        """
+        The defaults of the mixture, and those its components share, keyed by symbol name.
+
+        A parameter whose components have different defaults has no one value to check a constraint of
+        the mixture against, so it is left out. A parameter a component fixes is not read from its default.
+        """
+        shared: dict[str, Any] = {}
+        conflicting: set[str] = set()
+        for component in self.components:
+            fixed = self._fixed_names(component)
+            for name, value in component.metric._parameter_defaults.items():
+                if name in fixed:
+                    continue
+                if name in shared and not np.array_equal(shared[name], value):
+                    conflicting.add(name)
+                shared.setdefault(name, value)
+        own = {self._canonical_name(name): value for name, value in self.defaults.items()}
+        return {**{name: value for name, value in shared.items() if name not in conflicting}, **own}
 
     @property
     def _is_deterministic(self) -> bool:

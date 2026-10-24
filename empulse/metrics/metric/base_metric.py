@@ -139,6 +139,11 @@ class BaseMetric(ABC):
         """The set of parameter names that have a default value and need not be supplied."""
 
     @property
+    def _parameter_defaults(self) -> dict[str, Any]:
+        """The default value of each parameter that has one, keyed by symbol name."""
+        return {}
+
+    @property
     @abstractmethod
     def _is_deterministic(self) -> bool:
         """Whether the metric is free of stochastic (random) variables."""

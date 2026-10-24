@@ -13,6 +13,22 @@ Metrics
   its mixture weight over its baseline's cost. That weight depends on the labels, so such a mixture no
   longer has ``Capability.COST_ONLY_DECISION`` (it cannot decide from costs passed to ``predict``) or
   ``Capability.EXPECTED_COST``.
+- |Feature| :meth:`CostMatrix.constrain <empulse.metrics.CostMatrix.constrain>` and
+  :meth:`MixtureMetric.constrain <empulse.metrics.MixtureMetric.constrain>` take a condition relating
+  several parameters, written as a comparison such as ``'clv > incentive_cost'`` or as a sympy
+  relation, which may name aliases. Unlike a lambda, which cannot be pickled, it keeps the metric and
+  the models fitted with it picklable, for instance by :func:`joblib.dump`. A condition on a name that
+  is no symbol or alias raises when the metric is built.
+- |Fix| The bounds and conditions of a :class:`~empulse.metrics.MixtureMetric` check a component's
+  parameter against the default the components use when it is not passed. It went unchecked, so a
+  default outside the bounds was accepted. A parameter whose components have different defaults is
+  checked when passed.
+- |Fix| :class:`~empulse.metrics.EmpiricalMaxProfit` and :class:`~empulse.metrics.EmpiricalMinCost`
+  raise a ``ValueError`` on empty input, as :class:`~empulse.metrics.MaxProfit` does, instead of a
+  ``ZeroDivisionError``.
+- |Fix| The ``optimal_threshold`` of :class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.Profit`,
+  :class:`~empulse.metrics.Savings` and :class:`~empulse.metrics.LogCost` is a single number when a
+  parameter is an array of length 1, which applies to every sample, instead of an array of one.
 - |Efficiency| Scoring :class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.Savings` and
   :class:`~empulse.metrics.LogCost` is about a tenth faster: the symbols a call is checked against are
   worked out once rather than on every call.

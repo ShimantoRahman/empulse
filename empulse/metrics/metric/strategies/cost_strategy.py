@@ -719,7 +719,8 @@ def _solve_optimal_threshold(
     ValueError
         If the costs favour targeting the samples least likely to be positive.
     """
-    is_scalar = np.ndim(numerator) == 0 and np.ndim(denominator) == 0
+    # A length-1 array is a single value applied to every sample, as everywhere else in a metric.
+    is_scalar = np.size(numerator) == 1 and np.size(denominator) == 1
     numerator, denominator = np.broadcast_arrays(
         np.asarray(numerator, dtype=np.float64), np.asarray(denominator, dtype=np.float64)
     )
@@ -748,7 +749,7 @@ def _solve_optimal_threshold(
             UserWarning,
             stacklevel=3,
         )
-    return float(threshold) if is_scalar else threshold
+    return float(threshold.item()) if is_scalar else threshold
 
 
 class CostOptimalThreshold:

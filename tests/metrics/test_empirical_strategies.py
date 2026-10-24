@@ -19,7 +19,14 @@ import pytest
 import sympy
 from scipy.integrate import trapezoid
 
-from empulse.metrics import AUEPC, CostMatrix, EmpiricalMaxProfit, Metric, classification_threshold
+from empulse.metrics import (
+    AUEPC,
+    CostMatrix,
+    EmpiricalMaxProfit,
+    EmpiricalMinCost,
+    Metric,
+    classification_threshold,
+)
 from empulse.metrics.churn.stochastic import empb_score
 from empulse.metrics.metric._direction import Direction
 from empulse.metrics.metric.strategies.auepc_strategy import AUEPCScore
@@ -142,6 +149,15 @@ def test_optimal_threshold_targets_nobody_on_decision_scores_when_the_optimal_ra
     assert metric.optimal_rate(y_true, logits, b=1.0, c=100.0) == 0.0
     threshold = metric.optimal_threshold(y_true, logits, b=1.0, c=100.0)
     assert not np.any(logits >= threshold)
+
+
+@pytest.mark.parametrize('strategy', [EmpiricalMaxProfit, EmpiricalMinCost], ids=lambda s: s.__name__)
+@pytest.mark.parametrize('method', ['__call__', 'optimal_rate', 'optimal_threshold'])
+def test_empty_input_raises_a_clear_error(strategy, method):
+    """As MaxProfit does; it raised a ZeroDivisionError."""
+    metric = Metric(CostMatrix().add_tp_benefit('clv').add_fp_cost('d'), strategy())
+    with pytest.raises(ValueError, match='needs at least one sample'):
+        getattr(metric, method)(np.array([]), np.array([]), clv=10.0, d=1.0)
 
 
 def test_classification_threshold_for_a_zero_rate_targets_nobody():

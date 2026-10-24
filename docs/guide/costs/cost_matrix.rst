@@ -342,7 +342,7 @@ As with :meth:`~empulse.metrics.CostMatrix.set_default`, a constraint can name a
 in either order of calls, and a constraint on a name that is neither raises when the metric is
 built. The error message names whichever spelling you passed at call time.
 
-Conditions that span several parameters are expressed with a callable. This is how you would add
+Conditions that span several parameters are written as a comparison. This is how you would add
 the rule that the incentive must be worth less than the customer:
 
 .. code-block:: python
@@ -356,10 +356,7 @@ the rule that the incentive must be worth less than the customer:
         .add_tp_benefit(gamma * (clv - d - f))
         .add_fp_cost(d + f)
         .alias({'accept_rate': 'gamma', 'incentive_cost': 'd', 'contact_cost': 'f'})
-        .constrain(
-            lambda params: params['clv'] > params['d'],
-            message='clv must exceed the incentive cost',
-        )
+        .constrain('clv > incentive_cost', message='clv must exceed the incentive cost')
     )
     metric = Metric(cost_matrix, MaxProfit())
 
@@ -368,8 +365,25 @@ the rule that the incentive must be worth less than the customer:
     except ValueError as error:
         print(error)
 
-A callable receives the parameters keyed by **symbol name**, with aliases resolved and defaults
-filled in -- hence ``params['d']`` rather than ``params['incentive_cost']`` above.
+A condition may name symbols and aliases, and holds for an instance-dependent parameter only if it
+holds for every sample. Without a ``message``, the error quotes the condition. Several comparisons
+can be joined with :func:`sympy.And` or :func:`sympy.Or`, or passed to separate ``constrain`` calls.
+
+For anything a comparison cannot say, pass a callable instead. It receives the parameters keyed by
+**symbol name**, with aliases resolved and defaults filled in, so it reads ``params['d']`` rather
+than ``params['incentive_cost']``:
+
+.. code-block:: python
+
+    def incentive_below_value(params):
+        return params['clv'] > 2 * params['d'] + params['f']
+
+
+    cost_matrix = cost_matrix.constrain(incentive_below_value, message='the incentive must stay cheap')
+
+Define such a function at the top level of a module. A lambda, or a function defined inside another
+function, cannot be pickled, and neither can a metric built on it or a model fitted with that metric,
+so :func:`joblib.dump` would fail. A condition written as a comparison has no such limit.
 
 Constraints are checked where your values first reach the metric -- when you call it, and once at
 the start of ``fit`` when a model trains on it. Training re-enters the metric many times over, per

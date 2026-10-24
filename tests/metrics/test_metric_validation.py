@@ -15,10 +15,12 @@ from empulse.metrics import (
     BaseMetric,
     Cost,
     CostMatrix,
+    LogCost,
     MaxProfit,
     Metric,
     MixtureComponent,
     MixtureMetric,
+    Profit,
     Savings,
     cost_loss,
     expected_cost_loss,
@@ -271,6 +273,17 @@ def test_size_one_array_parameter_is_accepted_as_scalar_broadcast():
     scalar = metric(Y_TRUE, Y_SCORE, a=2.0, b=1.0)
 
     assert broadcast == pytest.approx(scalar)
+
+
+@pytest.mark.parametrize('strategy', [Cost, Profit, Savings, LogCost], ids=lambda s: s.__name__)
+def test_size_one_array_parameter_gives_a_single_threshold(strategy):
+    """A length-1 array is one value for every sample, so the threshold is a number, not an array."""
+    metric = Metric(COST_MATRIX, strategy())
+
+    threshold = metric.optimal_threshold(Y_TRUE, Y_SCORE, a=np.array([2.0]), b=1.0)
+
+    assert isinstance(threshold, float)
+    assert threshold == pytest.approx(metric.optimal_threshold(Y_TRUE, Y_SCORE, a=2.0, b=1.0))
 
 
 def test_correct_length_array_parameter_is_accepted():
