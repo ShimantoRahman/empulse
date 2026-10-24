@@ -194,6 +194,10 @@ Metrics
   ``Capability.PRECOMPUTED_BOOST_OBJECTIVE not in strategy.capabilities`` instead.
 - |API| Metrics, strategies and training objectives pickled with 0.13 or earlier are no longer
   supported. Build or fit them again with this release before pickling them.
+- |Fix| Documentation: the formula of :func:`~empulse.metrics.max_profit_score` weighs the false
+  positive cost by the negative class prior and defines its symbols. :class:`~empulse.metrics.MaxProfit`
+  describes how instance-dependent parameters are averaged, that ``optimal_threshold`` returns one
+  threshold, and which integration methods use ``n_mc_samples_exp``.
 - |Fix| :class:`~empulse.models.ProfLogitClassifier` with a gradient-free optimizer optimizes the
   :class:`~empulse.metrics.MaxProfit` score itself when instance-dependent parameters enter a cost
   non-linearly.

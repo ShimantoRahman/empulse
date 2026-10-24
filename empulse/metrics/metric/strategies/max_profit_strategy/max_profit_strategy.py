@@ -196,10 +196,10 @@ class MaxProfit(ClassTerms, MetricStrategy):
             - :func:`sympy.stats.WignerSemicircle`
 
     n_mc_samples_exp : int, default=16
-        ``2**n_mc_samples_exp`` is the number of (Quasi-) Monte Carlo samples to use when
-        ``integration_method == 'monte-carlo'``.
+        ``2**n_mc_samples_exp`` is the number of samples to draw when the metric is integrated by
+        ``'monte-carlo'`` or ``'quasi-monte-carlo'``, including when ``'auto'`` picks either.
         Increasing the number of samples improves the accuracy of the metric estimation but slows down the speed.
-        This argument is ignored when the ``integration_method == 'quad'``.
+        This argument is ignored by ``'quad'`` and by piecewise integration.
 
     random_state : int | np.random.Generator | None, default=None
         The random state to use when ``integration_method == 'monte-carlo'`` or
@@ -219,12 +219,17 @@ class MaxProfit(ClassTerms, MetricStrategy):
     Notes
     -----
     Unlike :class:`~empulse.metrics.Cost` and :class:`~empulse.metrics.Savings`, this
-    strategy does **not** take instance-dependent costs/benefits into account: the EMP
-    framework is defined on the aggregate class priors and the score/rate/threshold it
-    computes are global, classifier-level quantities, not per-instance ones. Any array-like
-    parameter you pass is silently reduced to its **mean** before use - passing an
-    instance-dependent array gives the exact same result as passing that array's mean as a
-    plain ``float``.
+    strategy does **not** decide per instance: the EMP framework is defined on the aggregate
+    class priors, and the score, rate and threshold it computes are global, classifier-level
+    quantities. Instance-dependent (array-like) parameters are therefore reduced to the average
+    cost or benefit of each outcome:
+
+    - Where a cost or benefit is linear in them, averaging the parameters first is the same, so
+      passing an array gives the same result as passing its mean.
+    - Otherwise, such as for the product of two of them, a metric without stochastic variables
+      evaluates the cost or benefit per sample and averages that.
+    - A metric with stochastic variables cannot, so it averages the parameters first and warns that
+      this only approximates the average cost or benefit.
     """
 
     INTEGRATION_METHODS: ClassVar[list[Literal['auto', 'quad', 'quasi-monte-carlo', 'monte-carlo']]] = [
@@ -469,11 +474,11 @@ class MaxProfit(ClassTerms, MetricStrategy):
         self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
     ) -> float | FloatNDArray:
         """
-        Compute the classification threshold(s) to optimize the metric value.
+        Compute the classification threshold to optimize the metric value.
 
         i.e., the score threshold at which an observation should be classified as positive to optimize the metric.
-        For instance-dependent costs and benefits, this will return an array of thresholds, one for each sample.
-        For class-dependent costs and benefits, this will return a single threshold value.
+        This strategy decides for all samples at once, so the threshold is a single value, also for
+        instance-dependent costs and benefits.
 
         Parameters
         ----------
@@ -496,8 +501,8 @@ class MaxProfit(ClassTerms, MetricStrategy):
 
         Returns
         -------
-        optimal_threshold : float | FloatNDArray
-            The optimal classification threshold(s).
+        optimal_threshold : float
+            The optimal classification threshold.
         """
         rate = self.optimal_rate(y_true, y_score, **parameters)
         return classification_threshold(y_true, y_score, rate)

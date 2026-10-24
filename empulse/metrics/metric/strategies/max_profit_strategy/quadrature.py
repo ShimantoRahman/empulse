@@ -107,7 +107,7 @@ class _Hull:
 
 class MaxProfitScoreQuad(_HullScoreFunction):
     """
-    Compute the optimal predicted positive rate for one or more stochastic variables using quad integration.
+    Compute the expected maximum profit, or its predicted positive rate, for stochastic variables using quad.
 
     This method is very slow for more than 2 stochastic variables.
     It is recommended to use Quasi Monte Carlo integration for more than 2 stochastic variables.

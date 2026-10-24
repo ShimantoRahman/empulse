@@ -996,7 +996,7 @@ class MaxProfitScorePiecewiseGamma(BasePositiveDistribution):
 
 
 class MaxProfitScorePiecewisePareto(BasePositiveDistribution):
-    """Compute the maximum profit for a single triangular distributed variable using piecewise integration."""
+    """Compute the maximum profit for a single Pareto distributed variable using piecewise integration."""
 
     _compiled_distribution = 'PARETO'
 

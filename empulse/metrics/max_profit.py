@@ -13,9 +13,13 @@ The MP is defined as [1]_:
 
 .. math::
 
-    \text{MP} = b_0 \pi_0 F_0(T) + b_1 \pi_1 (1 - F_1(T)) - c_0 \pi_0 (1 - F_0(T)) - c_1 F_1(T)
+    \text{MP} = b_0 \pi_0 F_0(T) + b_1 \pi_1 (1 - F_1(T)) - c_0 \pi_0 (1 - F_0(T)) - c_1 \pi_1 F_1(T)
 
-where :math:`T` is the threshold at which the maximum profit is achieved.
+where :math:`T` is the threshold at which the maximum profit is achieved, :math:`F_0(T)` and
+:math:`F_1(T)` are the fractions of positives and of negatives classified as positive at that
+threshold, :math:`\pi_0` and :math:`\pi_1` are the positive and negative class priors, and
+:math:`b_0 = -\text{tp\_cost}`, :math:`b_1 = -\text{tn\_cost}`, :math:`c_0 = \text{fn\_cost}` and
+:math:`c_1 = \text{fp\_cost}`.
 
 .. rubric:: Methods
 
