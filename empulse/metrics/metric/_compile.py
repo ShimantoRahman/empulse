@@ -28,12 +28,6 @@ class MetricFn(Protocol):
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float: ...
 
 
-class LogitConsts(Protocol):
-    def prepare(
-        self, x: FloatNDArray, y_true: FloatNDArray, **kwargs: Any
-    ) -> tuple[FloatNDArray, FloatNDArray, FloatNDArray]: ...
-
-
 class BoostGradientConst(Protocol):
     def __call__(self, y_true: FloatNDArray, **kwargs: Any) -> FloatNDArray: ...
 

@@ -4,7 +4,7 @@ from typing import Any
 import numpy as np
 import scipy
 import sympy
-from scipy.stats._qmc import Sobol
+from scipy.stats.qmc import Sobol
 from sympy.stats import pspace
 
 from ....._types import FloatNDArray

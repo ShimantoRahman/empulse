@@ -32,7 +32,7 @@ def cy_logit_gradient(
     n_threads: int = ...,
 ) -> npt.NDArray[np.float64]: ...
 def cy_boost_grad_hess(
-    y_true: npt.NDArray[np.float64],
+    y_true: object,  # unused: taken only to match XGBoost's obj(y_true, y_pred) signature
     y_score: npt.NDArray[np.float64],
     grad_const: npt.NDArray[np.float64],
 ) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]: ...

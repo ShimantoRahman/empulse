@@ -71,7 +71,11 @@ class EmpiricalMaxProfitScore:
         The profit differential is computed once here. The returned function takes the scores and
         gives the same result as calling this score function.
         """
-        delta = self.profit_differential(y_true, **kwargs)
+        return self._scorer_for_differential(self.profit_differential(y_true, **kwargs))
+
+    @staticmethod
+    def _scorer_for_differential(delta: FloatNDArray) -> Callable[[FloatNDArray], float]:
+        """Return the score of the scores, for samples whose :meth:`profit_differential` is *delta*."""
 
         def score(y_score: FloatNDArray) -> float:
             _, cumulative_profits = _ranked_profit_curve(delta, np.asarray(y_score, dtype=np.float64).reshape(-1))
@@ -232,7 +236,7 @@ class EmpiricalMaxProfit(MetricStrategy):
         }
         delta = self._score_function.profit_differential(y_true, **parameters)  # type: ignore[attr-defined]
         return RankingLogitValueObjective(
-            score=self._score_function._sample_scorer(y_true, **parameters),  # type: ignore[attr-defined]
+            score=self._score_function._scorer_for_differential(delta),  # type: ignore[attr-defined]
             features=features,
             penalty=ElasticNetPenalty.from_scale(
                 objective_scale=float(np.mean(np.abs(delta))),

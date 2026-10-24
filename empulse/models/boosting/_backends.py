@@ -57,9 +57,10 @@ class LGBMObjective:
         """
         gradient: FloatNDArray
         hessian: FloatNDArray
-        # cy_boost_grad_hess (Cython) requires float64 memoryviews
+        # cy_boost_grad_hess (Cython) requires float64 memoryviews; it ignores y_true, which it takes
+        # only to match XGBoost's obj(y_true, y_pred) signature.
         gradient, hessian = cy_boost_grad_hess(
-            np.asarray(y_true, dtype=np.float64),
+            y_true,
             np.asarray(y_score, dtype=np.float64),
             np.asarray(self.gradient_const, dtype=np.float64),
         )

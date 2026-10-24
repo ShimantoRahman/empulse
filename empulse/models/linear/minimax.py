@@ -165,7 +165,7 @@ class ProfMPMClassifier(BaseMinimaxProbabilityMachine):
     ) -> tuple[FloatNDArray, float, float, float, OptimizeResult]:
         if self.lambda_reg == 0.0:
             return self._solve_unregularized_mpm(mu_1, mu_0, sigma_1, sigma_0)
-        return self._solve_regularized_mpm(mu_1, mu_0, sigma_1, sigma_0, c1, c0)
+        return self._solve_regularized(mu_1, mu_0, sigma_1, sigma_0, c1, c0, shared_beta=True)
 
 
 class ProfMEMPMClassifier(BaseMinimaxProbabilityMachine):
@@ -331,4 +331,4 @@ class ProfMEMPMClassifier(BaseMinimaxProbabilityMachine):
     ) -> tuple[FloatNDArray, float, float, float, OptimizeResult]:
         if self.lambda_reg == 0.0:
             return self._solve_unregularized_mempm(mu_1, mu_0, sigma_1, sigma_0, c1, c0)
-        return self._solve_regularized_mempm(mu_1, mu_0, sigma_1, sigma_0, c1, c0)
+        return self._solve_regularized(mu_1, mu_0, sigma_1, sigma_0, c1, c0, shared_beta=False)

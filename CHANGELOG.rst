@@ -13,6 +13,9 @@ Metrics
   its mixture weight over its baseline's cost. That weight depends on the labels, so such a mixture no
   longer has ``Capability.COST_ONLY_DECISION`` (it cannot decide from costs passed to ``predict``) or
   ``Capability.EXPECTED_COST``.
+- |Efficiency| Scoring :class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.Savings` and
+  :class:`~empulse.metrics.LogCost` is about a tenth faster: the symbols a call is checked against are
+  worked out once rather than on every call.
 - |Fix| A :class:`~empulse.metrics.MixtureMetric` without ``Capability.OPTIMAL_RATE`` or
   ``Capability.OPTIMAL_THRESHOLD``, such as one of a :class:`~empulse.metrics.Profit` and a
   :class:`~empulse.metrics.Savings` component, raises a ``ValueError`` from ``optimal_rate`` and

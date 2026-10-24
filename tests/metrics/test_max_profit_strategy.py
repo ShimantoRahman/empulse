@@ -21,14 +21,13 @@ from empulse.metrics import (
     Metric,
 )
 from empulse.metrics.metric.strategies.max_profit_strategy.common import _convex_hull
-from empulse.metrics.metric.strategies.max_profit_strategy.envelope import PolynomialEnvelope
+from empulse.metrics.metric.strategies.max_profit_strategy.envelope import PolynomialEnvelope, partition_support
 from empulse.metrics.metric.strategies.max_profit_strategy.max_profit_strategy import (
     _build_profit_function,
 )
 from empulse.metrics.metric.strategies.max_profit_strategy.piecewise import (
     _build_max_profit_score_piecewise,
     _evaluate_coefficient_matrix,
-    compute_piecewise_bounds,
 )
 
 from ._helpers import brute_force_emp
@@ -57,7 +56,6 @@ class TestPartitionSupport:
     PI_1 = 0.5
     CONTACT_COST = 2.0
     RANDOM_VAR_BOUNDS = (0.0, np.inf)
-    DIST_PARAMS: dict = {}  # ruff: ignore[mutable-class-default]
 
     def _coefficients(self, degree, sign):
         """Profit ``sign * clv**degree * pi_0 * F_0 - contact_cost * pi_1 * F_1`` per hull vertex."""
@@ -67,13 +65,7 @@ class TestPartitionSupport:
         return coefficients
 
     def _call(self, coefficients):
-        return compute_piecewise_bounds(
-            PolynomialEnvelope(coefficients),
-            self.TPRS,
-            self.FPRS,
-            self.RANDOM_VAR_BOUNDS,
-            self.DIST_PARAMS,
-        )
+        return partition_support(PolynomialEnvelope(coefficients), self.TPRS, self.FPRS, *self.RANDOM_VAR_BOUNDS)
 
     def test_linear_profit(self):
         """
@@ -86,8 +78,6 @@ class TestPartitionSupport:
         """
         partition = self._call(self._coefficients(degree=1, sign=1))
 
-        assert partition.lower_bound == pytest.approx(0.0)
-        assert partition.upper_bound == np.inf
         assert partition.bounds == pytest.approx([0.0, 0.8, 3.2, np.inf])
         assert partition.tprs == pytest.approx([0.0, 0.5, 1.0])
         assert partition.fprs == pytest.approx([0.0, 0.2, 1.0])
@@ -157,7 +147,7 @@ class TestPartitionSupport:
         not three with one of zero width.
         """
         coefficients = np.array([[0.0, 1.0], [-10.0, 1.0], [-1.0, 3.0]])
-        partition = compute_piecewise_bounds(PolynomialEnvelope(coefficients), self.TPRS, self.FPRS, (0.0, np.inf), {})
+        partition = partition_support(PolynomialEnvelope(coefficients), self.TPRS, self.FPRS, 0.0, np.inf)
 
         assert 1 not in partition.vertex_indices.tolist()
         assert len(partition.bounds) == len(partition.tprs) + 1
@@ -526,9 +516,7 @@ class TestProfitFunctionsBeyondRadicals:
             1.0 - positive_class_prior,
             {'d': 1.0},
         )
-        partition = compute_piecewise_bounds(
-            PolynomialEnvelope(coefficients), tprs, fprs, score_fn.random_var_bounds, {}
-        )
+        partition = partition_support(PolynomialEnvelope(coefficients), tprs, fprs, *score_fn._support({}))
         widths = np.diff(np.clip(partition.bounds, 0.0, 10.0)) / 10.0
         rates = positive_class_prior * np.array(partition.tprs) + (1 - positive_class_prior) * np.array(partition.fprs)
 

@@ -185,65 +185,17 @@ def _product_with_density(parts: tuple[Any, Any]) -> Any:
 
 
 def _resolve_support(
-    random_var_bounds: tuple[float | sympy.Expr, ...],
-    distribution_parameters: dict[str, Any],
-    lower_bound: float | None,
-    upper_bound: float | None,
+    random_var_bounds: tuple[float | sympy.Expr, ...], distribution_parameters: dict[str, Any]
 ) -> tuple[float, float]:
     """Turn the distribution's symbolic support into a pair of floats, mapping ``oo`` to ``np.inf``."""
-    if upper_bound is None:
-        bound = random_var_bounds[1]
-        if isinstance(bound, sympy.Expr):
-            bound = _subs_by_name(bound, distribution_parameters)
-            upper_bound = np.inf if bound == sympy.oo else float(bound)
-        else:
-            upper_bound = float(bound)
-    if lower_bound is None:
-        bound = random_var_bounds[0]
-        if isinstance(bound, sympy.Expr):
-            bound = _subs_by_name(bound, distribution_parameters)
-            lower_bound = -np.inf if bound == -sympy.oo else float(bound)
-        else:
-            lower_bound = float(bound)
+    lower_bound, upper_bound = random_var_bounds[:2]
+    if isinstance(lower_bound, sympy.Expr):
+        lower_bound = _subs_by_name(lower_bound, distribution_parameters)
+        lower_bound = -np.inf if lower_bound == -sympy.oo else lower_bound
+    if isinstance(upper_bound, sympy.Expr):
+        upper_bound = _subs_by_name(upper_bound, distribution_parameters)
+        upper_bound = np.inf if upper_bound == sympy.oo else upper_bound
     return float(lower_bound), float(upper_bound)
-
-
-def compute_piecewise_bounds(
-    envelope: ProfitEnvelope,
-    true_positive_rates: FloatNDArray,
-    false_positive_rates: FloatNDArray,
-    random_var_bounds: tuple[float | sympy.Expr, ...],
-    distribution_parameters: dict[str, Any],
-    lower_bound: float | None = None,
-    upper_bound: float | None = None,
-) -> Partition:
-    """
-    Split the stochastic variable's support into the regions where each hull vertex is optimal.
-
-    Parameters
-    ----------
-    envelope : ProfitEnvelope
-        The candidate profit curves, one per ROC convex-hull vertex.
-    true_positive_rates : NDArray of shape (n_vertices,)
-        True positive rates of the ROC convex hull.
-    false_positive_rates : NDArray of shape (n_vertices,)
-        False positive rates of the ROC convex hull.
-    random_var_bounds : tuple
-        The distribution's support, possibly still symbolic.
-    distribution_parameters : dict
-        Values for any free symbols appearing in `random_var_bounds`.
-    lower_bound : float, optional
-        Precomputed lower end of the support, to skip the sympy substitution on a hot path.
-    upper_bound : float, optional
-        Precomputed upper end of the support, to skip the sympy substitution on a hot path.
-
-    Returns
-    -------
-    partition : Partition
-        Region edges together with the optimal hull vertex on each region.
-    """
-    lower, upper = _resolve_support(random_var_bounds, distribution_parameters, lower_bound, upper_bound)
-    return partition_support(envelope, true_positive_rates, false_positive_rates, lower, upper)
 
 
 def _extract_polynomial_coefficients(
@@ -424,7 +376,7 @@ class _PiecewiseBase:
 
         # Most supports are plain numbers; resolve those once instead of substituting on every call.
         if not any(isinstance(bound, sympy.Expr) and bound.free_symbols for bound in self.random_var_bounds):
-            self._static_support: tuple[float, float] | None = _resolve_support(self.random_var_bounds, {}, None, None)
+            self._static_support: tuple[float, float] | None = _resolve_support(self.random_var_bounds, {})
         else:
             self._static_support = None
         self._support_cache: tuple[tuple[tuple[str, float], ...], tuple[float, float]] | None = None
@@ -492,6 +444,28 @@ class _PiecewiseBase:
             anchor,
         )
 
+    def _partition(
+        self,
+        true_positive_rates: FloatNDArray,
+        false_positive_rates: FloatNDArray,
+        positive_class_prior: float,
+        parameters: dict[str, Any],
+        distribution_parameters: dict[str, Any],
+        anchor: Anchor | None,
+    ) -> Partition:
+        """Split the support into the regions where each hull vertex is optimal, see ``partition_support``."""
+        envelope = self._envelope(
+            true_positive_rates,
+            false_positive_rates,
+            positive_class_prior,
+            1 - positive_class_prior,
+            parameters,
+            anchor,
+        )
+        return partition_support(
+            envelope, true_positive_rates, false_positive_rates, *self._support(distribution_parameters)
+        )
+
     def _anchor(self, distribution_parameters: dict[str, Any]) -> Anchor | None:
         """Return where the density's mass lies for these parameters, see :class:`~._anchoring.DensityOf`."""
         # Instances pickled by older versions lack the density.
@@ -506,10 +480,10 @@ class _PiecewiseBase:
         gate = getattr(self, '_lower_chain_gate', None)
         if gate is None:
             return True
-        distribution_parameters, _ = self._resolve_distribution_parameters(kwargs)
+        distribution_parameters = self._resolve_distribution_parameters(kwargs)
         return bool(gate.on_support(kwargs, *self._support(distribution_parameters)))
 
-    def _resolve_distribution_parameters(self, kwargs: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    def _resolve_distribution_parameters(self, kwargs: dict[str, Any]) -> dict[str, Any]:
         """Pick the distribution's own parameters out of the call's parameters.
 
         Only the parameters named by a symbol are passed in by the caller; hardcoded numeric ones
@@ -517,8 +491,7 @@ class _PiecewiseBase:
         parameters keep them too, since the profit can use a distribution parameter as well
         (``Gamma('v', a, b) * clv - a``).
         """
-        distribution_parameters = {name: kwargs[name] for name in self._distribution_parameter_names if name in kwargs}
-        return distribution_parameters, kwargs
+        return {name: kwargs[name] for name in self._distribution_parameter_names if name in kwargs}
 
     def _distribution_values(self, distribution_parameters: dict[str, Any]) -> list[float]:
         """Every parameter of the distribution, in the order its constructor takes them.
@@ -549,7 +522,7 @@ class _PiecewiseBase:
         cached = self._support_cache
         if cached is not None and cached[0] == key:
             return cached[1]
-        support = _resolve_support(self.random_var_bounds, distribution_parameters, None, None)
+        support = _resolve_support(self.random_var_bounds, distribution_parameters)
         self._support_cache = (key, support)
         return support
 
@@ -581,18 +554,11 @@ class MaxProfitRatePiecewise(_PiecewiseBase):
         negative_class_prior = 1 - positive_class_prior
         true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score, full=self._needs_lower_hull(kwargs))
 
-        distribution_parameters, kwargs = self._resolve_distribution_parameters(kwargs)
+        distribution_parameters = self._resolve_distribution_parameters(kwargs)
         anchor = self._anchor(distribution_parameters)
 
-        partition = compute_piecewise_bounds(
-            self._envelope(
-                true_positive_rates, false_positive_rates, positive_class_prior, negative_class_prior, kwargs, anchor
-            ),
-            true_positive_rates,
-            false_positive_rates,
-            self.random_var_bounds,
-            distribution_parameters,
-            *self._support(distribution_parameters),
+        partition = self._partition(
+            true_positive_rates, false_positive_rates, positive_class_prior, kwargs, distribution_parameters, anchor
         )
 
         return self._prepared.integrate_regions(
@@ -638,19 +604,12 @@ class ExactMaxProfitRatePiecewise(_PiecewiseBase):
         negative_class_prior = 1 - positive_class_prior
         true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score, full=self._needs_lower_hull(kwargs))
 
-        distribution_parameters, kwargs = self._resolve_distribution_parameters(kwargs)
+        distribution_parameters = self._resolve_distribution_parameters(kwargs)
         # Only a profit that is not a polynomial needs the anchor, to search for its crossings.
         anchor = None if self.poly_eqs is not None else self._anchor(distribution_parameters)
 
-        partition = compute_piecewise_bounds(
-            self._envelope(
-                true_positive_rates, false_positive_rates, positive_class_prior, negative_class_prior, kwargs, anchor
-            ),
-            true_positive_rates,
-            false_positive_rates,
-            self.random_var_bounds,
-            distribution_parameters,
-            *self._support(distribution_parameters),
+        partition = self._partition(
+            true_positive_rates, false_positive_rates, positive_class_prior, kwargs, distribution_parameters, anchor
         )
 
         rate = _safe_run_lambda(
@@ -713,18 +672,11 @@ class MaxProfitScorePiecewise(_PiecewiseBase, _HullScoreFunction):
         """Compute the maximum profit from the ROC convex hull and the positive class prior."""
         negative_class_prior = 1 - positive_class_prior
 
-        distribution_parameters, kwargs = self._resolve_distribution_parameters(kwargs)
+        distribution_parameters = self._resolve_distribution_parameters(kwargs)
         anchor = self._anchor(distribution_parameters)
 
-        partition = compute_piecewise_bounds(
-            self._envelope(
-                true_positive_rates, false_positive_rates, positive_class_prior, negative_class_prior, kwargs, anchor
-            ),
-            true_positive_rates,
-            false_positive_rates,
-            self.random_var_bounds,
-            distribution_parameters,
-            *self._support(distribution_parameters),
+        partition = self._partition(
+            true_positive_rates, false_positive_rates, positive_class_prior, kwargs, distribution_parameters, anchor
         )
 
         return self._prepared.integrate_regions(
@@ -784,7 +736,7 @@ class BaseMaxProfitScorePiecewise(_PiecewiseBase, _HullScoreFunction):
         """Compute the maximum profit from the ROC convex hull and the positive class prior."""
         negative_class_prior = 1 - positive_class_prior
 
-        distribution_parameters, kwargs = self._resolve_distribution_parameters(kwargs)
+        distribution_parameters = self._resolve_distribution_parameters(kwargs)
 
         if self._compiled is not None:
             affine, distribution = self._compiled
@@ -812,12 +764,10 @@ class BaseMaxProfitScorePiecewise(_PiecewiseBase, _HullScoreFunction):
             negative_class_prior,
             kwargs,
         )
-        partition = compute_piecewise_bounds(
+        partition = partition_support(
             PolynomialEnvelope(coefficient_matrix),
             true_positive_rates,
             false_positive_rates,
-            self.random_var_bounds,
-            distribution_parameters,
             *self._support(distribution_parameters),
         )
         segment_coefficients = list(coefficient_matrix[partition.vertex_indices].T)
@@ -826,8 +776,6 @@ class BaseMaxProfitScorePiecewise(_PiecewiseBase, _HullScoreFunction):
             bounds=[float(bound) for bound in partition.bounds],
             coefficients=segment_coefficients,
             distribution_parameters=distribution_parameters,
-            upper_bound=partition.upper_bound,
-            lower_bound=partition.lower_bound,
         )
 
     def _count_scorer(self, **kwargs: Any) -> CountScoreFn:
@@ -896,7 +844,8 @@ class BaseMaxProfitScorePiecewise(_PiecewiseBase, _HullScoreFunction):
         """Resolve the parts of the compiled score that depend only on the parameters."""
         assert self._compiled is not None
         affine, distribution = self._compiled
-        distribution_parameters, parameters = self._resolve_distribution_parameters(dict(kwargs))
+        parameters = dict(kwargs)
+        distribution_parameters = self._resolve_distribution_parameters(parameters)
         lower_bound, upper_bound = self._support(distribution_parameters)
         distribution_values = np.asarray(self._distribution_values(distribution_parameters), dtype=np.float64)
         return affine, distribution, parameters, lower_bound, upper_bound, distribution_values
@@ -906,8 +855,6 @@ class BaseMaxProfitScorePiecewise(_PiecewiseBase, _HullScoreFunction):
         bounds: list[float],
         coefficients: list[FloatNDArray],
         distribution_parameters: dict[str, Any],
-        upper_bound: float,
-        lower_bound: float,
     ) -> float:
         """Integrate distribution-specific piecewise math."""
         raise NotImplementedError('Subclasses must implement the `_integrate` method.')
@@ -923,15 +870,14 @@ class MaxProfitScorePiecewiseUniform(BaseMaxProfitScorePiecewise):
         bounds: list[float],
         coefficients: list[np.ndarray],
         distribution_parameters: dict[str, Any],
-        upper_bound: float,
-        lower_bound: float,
     ) -> float:
 
         lower_bounds = np.asarray(bounds[:-1])
         upper_bounds = np.asarray(bounds[1:])
 
-        max_val = float(upper_bound)
-        min_val = float(lower_bound)
+        # The regions cover the support, so their outer bounds are its ends.
+        min_val = float(bounds[0])
+        max_val = float(bounds[-1])
 
         # The density is constant: 1 / (beta - alpha).
         pdf_val = 1.0 / (max_val - min_val)
@@ -969,8 +915,6 @@ class MaxProfitScorePiecewiseNormal(BaseMaxProfitScorePiecewise):
         bounds: list[float],
         coefficients: list[np.ndarray],
         distribution_parameters: dict[str, Any],
-        upper_bound: float,
-        lower_bound: float,
     ) -> float:
         dist_params_list = self._distribution_values(distribution_parameters)
         mu = float(dist_params_list[0])
@@ -1029,8 +973,6 @@ class BasePositiveDistribution(BaseMaxProfitScorePiecewise):
         bounds: list[float],
         coefficients: list[FloatNDArray],
         distribution_parameters: dict[str, Any],
-        upper_bound: float,
-        lower_bound: float,
     ) -> float:
         total_score = 0.0
 
@@ -1102,8 +1044,6 @@ class MaxProfitScorePiecewiseTriangular(BaseMaxProfitScorePiecewise):
         bounds: list[float],
         coefficients: list[np.ndarray],
         distribution_parameters: dict[str, Any],
-        upper_bound: float,
-        lower_bound: float,
     ) -> float:
         dist_params_list = self._distribution_values(distribution_parameters)
 

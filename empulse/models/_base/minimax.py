@@ -233,7 +233,7 @@ class BaseMinimaxProbabilityMachine(CostSensitiveClassifier, ABC):
         )
         return w_star, b_star, alpha_1, alpha_0, res
 
-    def _solve_regularized_mpm(
+    def _solve_regularized(
         self,
         mu_1: FloatNDArray,
         mu_0: FloatNDArray,
@@ -241,242 +241,72 @@ class BaseMinimaxProbabilityMachine(CostSensitiveClassifier, ABC):
         sigma_0: FloatNDArray,
         c1: float,
         c0: float,
+        *,
+        shared_beta: bool,
     ) -> tuple[FloatNDArray, float, float, float, OptimizeResult]:
-        """Solve regularized Lp-ProfMPM (Section 4.2 / Algorithm 2 with shared beta)."""
-        w_init, b_init = self._margin_feasible_mpm(mu_1, mu_0, sigma_1, sigma_0)
+        """
+        Solve regularized Lp-ProfMPM or Lp-ProfMEMPM (Algorithm 2).
+
+        With *shared_beta*, one beta bounds both classes (Lp-ProfMPM, Section 4.2); otherwise each class
+        has its own (Lp-ProfMEMPM, Section 4.3). The parameters are the weights, the intercept and the
+        betas, ``beta_0`` before ``beta_1``. Under the L1 penalty the weights are ``u - v`` with ``u`` and
+        ``v`` non-negative, so the penalty is smooth.
+        """
+        w, b = self._margin_feasible_mpm(mu_1, mu_0, sigma_1, sigma_0)
         n_features = len(mu_1)
+        l1 = self.penalty != 'l2'
+        n_weights = 2 * n_features if l1 else n_features
+        betas = [1.0] if shared_beta else [1.0, 1.0]
         t1, t2 = 1.0, 1.0
-        w = w_init
-        b = b_init
-        beta = 1.0
-        last_res: OptimizeResult | None = None
+
+        def unpack(params: FloatNDArray) -> tuple[FloatNDArray, float, float, float]:
+            """Return the weights, intercept, beta_0 and beta_1; a shared beta is both."""
+            w_curr = params[:n_features] - params[n_features:n_weights] if l1 else params[:n_features]
+            return w_curr, params[n_weights], params[n_weights + 1], params[n_weights + len(betas)]
+
+        def objective(params: FloatNDArray) -> float:
+            if l1:
+                reg = self.lambda_reg * float(np.sum(params[:n_features] + params[n_features:n_weights]))
+            else:
+                reg = 0.5 * self.lambda_reg * float(np.sum(params[:n_features] ** 2))
+            _, _, beta_0, beta_1 = unpack(params)
+            if shared_beta:
+                return float(reg + (c0 + c1) / (beta_0 + 1.0))
+            return float(reg + c0 / (beta_0 + 1.0) + c1 / (beta_1 + 1.0))
+
+        def margin_1(params: FloatNDArray, t1: float) -> float:
+            w_curr, b_curr, _, beta_1 = unpack(params)
+            lhs = 0.5 * (beta_1 * t1 + float(w_curr @ sigma_1 @ w_curr) / t1)
+            return float(float(w_curr @ mu_1 + b_curr) - lhs)
+
+        def margin_0(params: FloatNDArray, t2: float) -> float:
+            w_curr, b_curr, beta_0, _ = unpack(params)
+            lhs = 0.5 * (beta_0 * t2 + float(w_curr @ sigma_0 @ w_curr) / t2)
+            return float(float(-(w_curr @ mu_0 + b_curr)) - lhs)
+
+        weight_bounds: list[tuple[float | None, float | None]] = [(0.0 if l1 else None, None)] * n_weights
+        bounds = [*weight_bounds, (None, None), *[(1e-6, None)] * len(betas)]
+        margins = self._margin_constraints(mu_1, mu_0, lambda p: unpack(p)[:2])
 
         for _ in range(25):
-            if self.penalty == 'l2':
-
-                def obj_l2(params: FloatNDArray) -> float:
-                    w_curr = params[:n_features]
-                    beta_curr = params[n_features + 1]
-                    reg = 0.5 * self.lambda_reg * float(np.sum(w_curr**2))
-                    return float(reg + (c0 + c1) / (beta_curr + 1.0))
-
-                def con1_l2(params: FloatNDArray, t1: float = t1) -> float:
-                    w_curr = params[:n_features]
-                    b_curr = params[n_features]
-                    beta_curr = params[n_features + 1]
-                    lhs = 0.5 * (beta_curr * t1 + float(w_curr @ sigma_1 @ w_curr) / t1)
-                    rhs = float(w_curr @ mu_1 + b_curr)
-                    return float(rhs - lhs)
-
-                def con2_l2(params: FloatNDArray, t2: float = t2) -> float:
-                    w_curr = params[:n_features]
-                    b_curr = params[n_features]
-                    beta_curr = params[n_features + 1]
-                    lhs = 0.5 * (beta_curr * t2 + float(w_curr @ sigma_0 @ w_curr) / t2)
-                    rhs = float(-(w_curr @ mu_0 + b_curr))
-                    return float(rhs - lhs)
-
-                bounds = [(None, None)] * n_features + [(None, None)] + [(1e-6, None)]
-                init = np.append(np.append(w, b), beta)
-                res = minimize(
-                    obj_l2,
-                    init,
-                    method='SLSQP',
-                    bounds=bounds,
-                    constraints=[
-                        {'type': 'ineq', 'fun': con1_l2},
-                        {'type': 'ineq', 'fun': con2_l2},
-                        *self._margin_constraints(mu_1, mu_0, lambda p: (p[:n_features], p[n_features])),
-                    ],
-                )
-                w = res.x[:n_features]
-                b = float(res.x[n_features])
-                beta = float(res.x[n_features + 1])
-                last_res = res
+            if l1:
+                weights = np.concatenate([np.maximum(w, 0), np.maximum(-np.asarray(w, dtype=np.float64), 0)])
             else:
-
-                def obj_l1(params: FloatNDArray) -> float:
-                    u = params[:n_features]
-                    v = params[n_features : 2 * n_features]
-                    beta_curr = params[2 * n_features + 1]
-                    reg = self.lambda_reg * float(np.sum(u + v))
-                    return float(reg + (c0 + c1) / (beta_curr + 1.0))
-
-                def con1_l1(params: FloatNDArray, t1: float = t1) -> float:
-                    w_curr = params[:n_features] - params[n_features : 2 * n_features]
-                    b_curr = params[2 * n_features]
-                    beta_curr = params[2 * n_features + 1]
-                    lhs = 0.5 * (beta_curr * t1 + float(w_curr @ sigma_1 @ w_curr) / t1)
-                    rhs = float(w_curr @ mu_1 + b_curr)
-                    return float(rhs - lhs)
-
-                def con2_l1(params: FloatNDArray, t2: float = t2) -> float:
-                    w_curr = params[:n_features] - params[n_features : 2 * n_features]
-                    b_curr = params[2 * n_features]
-                    beta_curr = params[2 * n_features + 1]
-                    lhs = 0.5 * (beta_curr * t2 + float(w_curr @ sigma_0 @ w_curr) / t2)
-                    rhs = float(-(w_curr @ mu_0 + b_curr))
-                    return float(rhs - lhs)
-
-                bounds = [(0, None)] * n_features + [(0, None)] * n_features + [(None, None)] + [(1e-6, None)]
-                init = np.zeros(2 * n_features + 2)
-                init[:n_features] = np.maximum(w, 0)
-                init[n_features : 2 * n_features] = np.maximum(-np.asarray(w, dtype=np.float64), 0)
-                init[2 * n_features] = b
-                init[2 * n_features + 1] = beta
-                res = minimize(
-                    obj_l1,
-                    init,
-                    method='SLSQP',
-                    bounds=bounds,
-                    constraints=[
-                        {'type': 'ineq', 'fun': con1_l1},
-                        {'type': 'ineq', 'fun': con2_l1},
-                        *self._margin_constraints(
-                            mu_1,
-                            mu_0,
-                            lambda p: (p[:n_features] - p[n_features : 2 * n_features], p[2 * n_features]),
-                        ),
-                    ],
-                )
-                w = res.x[:n_features] - res.x[n_features : 2 * n_features]
-                b = float(res.x[2 * n_features])
-                beta = float(res.x[2 * n_features + 1])
-                last_res = res
-
-            d1 = float(np.sqrt(w @ sigma_1 @ w))
-            d0 = float(np.sqrt(w @ sigma_0 @ w))
-            t1_new = max(d1 / np.sqrt(beta), 1e-6)
-            t2_new = max(d0 / np.sqrt(beta), 1e-6)
-
-            if abs(t1_new - t1) < 1e-4 and abs(t2_new - t2) < 1e-4:
-                break
-            t1, t2 = t1_new, t2_new
-
-        # beta here is kappa^2(alpha) (the AM-GM relaxation shared with Section 4.3), so
-        # kappa = sqrt(beta) and alpha_1 = alpha_0 = beta / (beta + 1) via _worst_case_accuracies.
-        kappa = float(np.sqrt(max(beta, 0.0)))
-        alpha_1, alpha_0 = self._worst_case_accuracies(kappa, kappa)
-        return w, b, alpha_1, alpha_0, last_res or res
-
-    def _solve_regularized_mempm(
-        self,
-        mu_1: FloatNDArray,
-        mu_0: FloatNDArray,
-        sigma_1: FloatNDArray,
-        sigma_0: FloatNDArray,
-        c1: float,
-        c0: float,
-    ) -> tuple[FloatNDArray, float, float, float, OptimizeResult]:
-        """Solve regularized Lp-ProfMEMPM (Section 4.3 / Algorithm 2 with per-class beta)."""
-        w_init, b_init = self._margin_feasible_mpm(mu_1, mu_0, sigma_1, sigma_0)
-        n_features = len(mu_1)
-        t1, t2 = 1.0, 1.0
-        w = w_init
-        b = b_init
-        beta_0 = 1.0
-        beta_1 = 1.0
-        last_res: OptimizeResult | None = None
-
-        for _ in range(25):
-            if self.penalty == 'l2':
-
-                def obj_l2(params: FloatNDArray) -> float:
-                    w_curr = params[:n_features]
-                    b0_curr = params[n_features + 1]
-                    b1_curr = params[n_features + 2]
-                    reg = 0.5 * self.lambda_reg * float(np.sum(w_curr**2))
-                    return float(reg + c0 / (b0_curr + 1.0) + c1 / (b1_curr + 1.0))
-
-                def con1_l2(params: FloatNDArray, t1: float = t1) -> float:
-                    w_curr = params[:n_features]
-                    b_curr = params[n_features]
-                    b1_curr = params[n_features + 2]
-                    lhs = 0.5 * (b1_curr * t1 + float(w_curr @ sigma_1 @ w_curr) / t1)
-                    rhs = float(w_curr @ mu_1 + b_curr)
-                    return float(rhs - lhs)
-
-                def con2_l2(params: FloatNDArray, t2: float = t2) -> float:
-                    w_curr = params[:n_features]
-                    b_curr = params[n_features]
-                    b0_curr = params[n_features + 1]
-                    lhs = 0.5 * (b0_curr * t2 + float(w_curr @ sigma_0 @ w_curr) / t2)
-                    rhs = float(-(w_curr @ mu_0 + b_curr))
-                    return float(rhs - lhs)
-
-                bounds = [(None, None)] * n_features + [(None, None)] + [(1e-6, None), (1e-6, None)]
-                init = np.append(np.append(w, b), [beta_0, beta_1])
-                res = minimize(
-                    obj_l2,
-                    init,
-                    method='SLSQP',
-                    bounds=bounds,
-                    constraints=[
-                        {'type': 'ineq', 'fun': con1_l2},
-                        {'type': 'ineq', 'fun': con2_l2},
-                        *self._margin_constraints(mu_1, mu_0, lambda p: (p[:n_features], p[n_features])),
-                    ],
-                )
-                w = res.x[:n_features]
-                b = float(res.x[n_features])
-                beta_0 = float(res.x[n_features + 1])
-                beta_1 = float(res.x[n_features + 2])
-                last_res = res
-            else:
-
-                def obj_l1(params: FloatNDArray) -> float:
-                    u = params[:n_features]
-                    v = params[n_features : 2 * n_features]
-                    b0_curr = params[2 * n_features + 1]
-                    b1_curr = params[2 * n_features + 2]
-                    reg = self.lambda_reg * float(np.sum(u + v))
-                    return float(reg + c0 / (b0_curr + 1.0) + c1 / (b1_curr + 1.0))
-
-                def con1_l1(params: FloatNDArray, t1: float = t1) -> float:
-                    w_curr = params[:n_features] - params[n_features : 2 * n_features]
-                    b_curr = params[2 * n_features]
-                    b1_curr = params[2 * n_features + 2]
-                    lhs = 0.5 * (b1_curr * t1 + float(w_curr @ sigma_1 @ w_curr) / t1)
-                    rhs = float(w_curr @ mu_1 + b_curr)
-                    return float(rhs - lhs)
-
-                def con2_l1(params: FloatNDArray, t2: float = t2) -> float:
-                    w_curr = params[:n_features] - params[n_features : 2 * n_features]
-                    b_curr = params[2 * n_features]
-                    b0_curr = params[2 * n_features + 1]
-                    lhs = 0.5 * (b0_curr * t2 + float(w_curr @ sigma_0 @ w_curr) / t2)
-                    rhs = float(-(w_curr @ mu_0 + b_curr))
-                    return float(rhs - lhs)
-
-                bounds = (
-                    [(0, None)] * n_features + [(0, None)] * n_features + [(None, None)] + [(1e-6, None), (1e-6, None)]
-                )
-                init = np.zeros(2 * n_features + 3)
-                init[:n_features] = np.maximum(w, 0)
-                init[n_features : 2 * n_features] = np.maximum(-np.asarray(w, dtype=np.float64), 0)
-                init[2 * n_features] = b
-                init[2 * n_features + 1] = beta_0
-                init[2 * n_features + 2] = beta_1
-                res = minimize(
-                    obj_l1,
-                    init,
-                    method='SLSQP',
-                    bounds=bounds,
-                    constraints=[
-                        {'type': 'ineq', 'fun': con1_l1},
-                        {'type': 'ineq', 'fun': con2_l1},
-                        *self._margin_constraints(
-                            mu_1,
-                            mu_0,
-                            lambda p: (p[:n_features] - p[n_features : 2 * n_features], p[2 * n_features]),
-                        ),
-                    ],
-                )
-                w = res.x[:n_features] - res.x[n_features : 2 * n_features]
-                b = float(res.x[2 * n_features])
-                beta_0 = float(res.x[2 * n_features + 1])
-                beta_1 = float(res.x[2 * n_features + 2])
-                last_res = res
+                weights = np.asarray(w, dtype=np.float64)
+            res = minimize(
+                objective,
+                np.concatenate([weights, [b], betas]),
+                method='SLSQP',
+                bounds=bounds,
+                constraints=[
+                    {'type': 'ineq', 'fun': margin_1, 'args': (t1,)},
+                    {'type': 'ineq', 'fun': margin_0, 'args': (t2,)},
+                    *margins,
+                ],
+            )
+            w, b_value, beta_0, beta_1 = unpack(res.x)
+            b = float(b_value)
+            betas = [float(beta) for beta in res.x[n_weights + 1 :]]
 
             d1 = float(np.sqrt(w @ sigma_1 @ w))
             d0 = float(np.sqrt(w @ sigma_0 @ w))
@@ -487,12 +317,13 @@ class BaseMinimaxProbabilityMachine(CostSensitiveClassifier, ABC):
                 break
             t1, t2 = t1_new, t2_new
 
-        # beta_0, beta_1 are kappa_0^2(alpha_0), kappa_1^2(alpha_1) (Eq. 21), so
-        # kappa_i = sqrt(beta_i) recovers the per-class bounds via _worst_case_accuracies.
-        kappa_1 = float(np.sqrt(max(beta_1, 0.0)))
-        kappa_0 = float(np.sqrt(max(beta_0, 0.0)))
+        # Each beta is kappa^2 of its class's worst-case accuracy (Eq. 21; a shared beta is the AM-GM
+        # relaxation Lp-ProfMPM shares with Section 4.3), so kappa = sqrt(beta) recovers the worst-case
+        # accuracies via _worst_case_accuracies.
+        kappa_1 = float(np.sqrt(max(float(beta_1), 0.0)))
+        kappa_0 = float(np.sqrt(max(float(beta_0), 0.0)))
         alpha_1, alpha_0 = self._worst_case_accuracies(kappa_1, kappa_0)
-        return w, b, alpha_1, alpha_0, last_res or res
+        return w, b, alpha_1, alpha_0, res
 
     def _fit(self, X: FloatNDArray, y: IntNDArray, loss: BaseMetric, **loss_params: Any) -> Self:
         tp_benefit, tn_benefit, fp_cost, fn_cost = self._prepare_class_costs(loss_params)

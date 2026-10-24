@@ -1,6 +1,7 @@
 import copy
 import warnings
 from collections.abc import Generator
+from functools import cached_property
 from typing import Any, ClassVar, Self
 
 import numpy as np
@@ -636,9 +637,13 @@ class CostLoss:
         )
         self.cost_function = _safe_lambdify(self.cost_equation)
 
+    @cached_property
+    def _parameter_symbols(self) -> set[sympy.Symbol]:
+        return set(self.cost_equation.free_symbols - LABEL_AND_SCORE_SYMBOLS)
+
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the cost loss."""
-        _check_parameters(self.cost_equation.free_symbols - LABEL_AND_SCORE_SYMBOLS, kwargs)
+        _check_parameters(self._parameter_symbols, kwargs)
         return float(np.mean(_safe_run_lambda(self.cost_function, self.cost_equation, y=y_true, s=y_score, **kwargs)))
 
 
@@ -662,9 +667,13 @@ class CostBoostGradientConst:
         self.gradient_const_eq = y * (-tp_benefit - fn_cost) + (1 - y) * (fp_cost + tn_benefit)
         self.gradient_const_fn = _safe_lambdify(self.gradient_const_eq)
 
+    @cached_property
+    def _parameter_symbols(self) -> set[sympy.Symbol]:
+        return set(self.gradient_const_eq.free_symbols - LABEL_SYMBOLS)
+
     def __call__(self, y_true: FloatNDArray, **kwargs: Any) -> FloatNDArray:
         """Compute the gradient constants."""
-        _check_parameters(self.gradient_const_eq.free_symbols - LABEL_SYMBOLS, kwargs)
+        _check_parameters(self._parameter_symbols, kwargs)
         gradient_const_value = _safe_run_lambda_array(
             self.gradient_const_fn, self.gradient_const_eq, shape=y_true.shape[0], y=y_true, **kwargs
         )
@@ -751,10 +760,13 @@ class CostOptimalThreshold:
         self.calculate_denominator = _safe_lambdify(self.denominator_expression)
         self.calculate_numerator = _safe_lambdify(self.numerator_expression)
 
+    @cached_property
+    def _parameter_symbols(self) -> set[sympy.Symbol]:
+        return set(self.denominator_expression.free_symbols | self.numerator_expression.free_symbols)
+
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: Any) -> FloatNDArray | float:
         """Compute the optimal threshold(s). `y_true` and `y_score` are unused and kept for API compatibility."""
-        all_symbols = self.denominator_expression.free_symbols | self.numerator_expression.free_symbols
-        _check_parameters(all_symbols, parameters)
+        _check_parameters(self._parameter_symbols, parameters)
         denominator = _safe_run_lambda(self.calculate_denominator, self.denominator_expression, **parameters)
         numerator = _safe_run_lambda(self.calculate_numerator, self.numerator_expression, **parameters)
         return _solve_optimal_threshold(numerator, denominator)

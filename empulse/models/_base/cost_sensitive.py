@@ -215,7 +215,7 @@ class CostSensitiveClassifier(RoutesLossParameters, ABC, ClassifierMixin, BaseEs
         params: dict[str, Any],
     ) -> dict[str, Any]:
         loss = self._get_metric_loss()
-        if not isinstance(loss, BaseMetric):
+        if loss is None:
             params = dict(params)
             params.update(
                 self._check_costs(tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, caller='predict')
@@ -268,11 +268,9 @@ class CostSensitiveClassifier(RoutesLossParameters, ABC, ClassifierMixin, BaseEs
             tn_cost = loss_params.get('tn_cost', 0.0)
             fn_cost = loss_params.get('fn_cost', 0.0)
             fp_cost = loss_params.get('fp_cost', 0.0)
-        elif isinstance(loss_, BaseMetric):
+        else:
             loss_._require(Capability.CLASS_COSTS, requester=self.__class__.__name__)
             fp_cost, fn_cost, tp_cost, tn_cost = loss_._evaluate_costs(replace_stochastic=True, **loss_params)
-        else:
-            raise ValueError(f'Unknown loss function: {loss_}.')
 
         # This model requires scalar (class-dependent) costs, so instance-dependent
         # (array-like) costs are aggregated to their mean value.

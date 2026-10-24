@@ -170,21 +170,6 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         y_pred: NDArray[Any] = np.where(is_positive, self.classes_[positive_index], self.classes_[1 - positive_index])
         return y_pred
 
-    @staticmethod
-    def _all_costs_unchanged(
-        tp_cost: FloatArrayLike | float | Parameter,
-        tn_cost: FloatArrayLike | float | Parameter,
-        fn_cost: FloatArrayLike | float | Parameter,
-        fp_cost: FloatArrayLike | float | Parameter,
-    ) -> bool:
-        """Check if all costs are unchanged (i.e., not provided by the caller)."""
-        return all((
-            tp_cost is Parameter.UNCHANGED,
-            tn_cost is Parameter.UNCHANGED,
-            fn_cost is Parameter.UNCHANGED,
-            fp_cost is Parameter.UNCHANGED,
-        ))
-
     def _should_skip_cost_sensitive_fit(self, params: dict[str, Any]) -> bool:
         """
         Check if cost-sensitive fitting should be skipped.
@@ -212,7 +197,8 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         Returns True when no new cost information is provided at predict time,
         meaning the caller wants to use whatever decision was learned during fit.
         """
-        return self._all_costs_unchanged(tp_cost, tn_cost, fn_cost, fp_cost) and not loss_params
+        costs = (tp_cost, tn_cost, fn_cost, fp_cost)
+        return all(cost is Parameter.UNCHANGED for cost in costs) and not loss_params
 
     def _unfitted_estimator(self) -> tuple[str, Any]:
         """Return the routing name and an unfitted copy of the estimator to fit."""

@@ -52,13 +52,7 @@ class Partition(NamedTuple):
     """The support split into regions, each labelled with the hull vertex that is optimal on it."""
 
     bounds: list[float]
-    """Region edges, ascending, of length ``len(vertex_indices) + 1``."""
-
-    upper_bound: float
-    """Upper end of the stochastic variable's support."""
-
-    lower_bound: float
-    """Lower end of the stochastic variable's support."""
+    """Region edges, ascending, of length ``len(vertex_indices) + 1``; the first and last are the support's ends."""
 
     tprs: list[float]
     """True positive rate of the optimal vertex on each region."""
@@ -389,8 +383,6 @@ def partition_support(
     vertex_indices = np.asarray(kept, dtype=np.intp)
     return Partition(
         bounds=bounds,
-        upper_bound=float(upper_bound),
-        lower_bound=float(lower_bound),
         tprs=np.asarray(true_positive_rates, dtype=np.float64)[vertex_indices].tolist(),
         fprs=np.asarray(false_positive_rates, dtype=np.float64)[vertex_indices].tolist(),
         vertex_indices=vertex_indices,

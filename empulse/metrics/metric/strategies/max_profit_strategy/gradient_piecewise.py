@@ -7,15 +7,14 @@ from scipy.special import expit
 
 from ....._types import Float64Array, FloatNDArray
 from ..._compile import _safe_lambdify
-from ..._symbolic import _subs_by_name
 from .common import (
     _BaseMaxProfitLogitObjective,
     _convex_hull,
     _smooth_step_derivatives,
     extract_distribution_parameters,
 )
-from .envelope import Partition, PolynomialEnvelope
-from .piecewise import BasePositiveDistribution, compute_piecewise_bounds
+from .envelope import Partition, PolynomialEnvelope, partition_support
+from .piecewise import BasePositiveDistribution, _resolve_support
 
 # The hull state cached between gradient steps: (bounds, seg_tprs, seg_fprs, M).
 _HullCache = tuple[FloatNDArray, FloatNDArray, FloatNDArray, int]
@@ -77,19 +76,7 @@ class _PiecewiseDerivativeState:
         )
 
         # Float bounds of the distribution, computed once to keep sympy out of the loop.
-        lower_b = self.score_function.random_var_bounds[0]
-        if isinstance(lower_b, sympy.Expr):
-            lower_b = _subs_by_name(lower_b, self.dist_params)
-            self.lower_bound = -np.inf if lower_b == -sympy.oo else float(lower_b)
-        else:
-            self.lower_bound = float(lower_b)
-
-        upper_b = self.score_function.random_var_bounds[1]
-        if isinstance(upper_b, sympy.Expr):
-            upper_b = _subs_by_name(upper_b, self.dist_params)
-            self.upper_bound = np.inf if upper_b == sympy.oo else float(upper_b)
-        else:
-            self.upper_bound = float(upper_b)
+        self.lower_bound, self.upper_bound = _resolve_support(self.score_function.random_var_bounds, self.dist_params)
 
         F_0, F_1 = sympy.symbols('F_0 F_1')  # ruff: ignore[non-lowercase-variable-in-function]
         self.da_dF0_eqs = []
@@ -135,15 +122,7 @@ class _PiecewiseDerivativeState:
             ],
             axis=-1,
         )
-        return compute_piecewise_bounds(
-            PolynomialEnvelope(coefficients),
-            tprs,
-            fprs,
-            self.score_function.random_var_bounds,
-            self.dist_params,
-            lower_bound=self.lower_bound,
-            upper_bound=self.upper_bound,
-        )
+        return partition_support(PolynomialEnvelope(coefficients), tprs, fprs, self.lower_bound, self.upper_bound)
 
 
 class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective, _PiecewiseDerivativeState):

@@ -406,65 +406,23 @@ def savings_score(
         y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_input
     )
 
+    def cost_of(prediction: FloatArrayLike) -> float:
+        return cost_loss(
+            y_true, prediction, tp_cost=tp_cost, fp_cost=fp_cost, tn_cost=tn_cost, fn_cost=fn_cost, check_input=False
+        )
+
     if not isinstance(baseline, str):
-        baseline = np.asarray(baseline)
-        cost_base = cost_loss(
-            y_true,
-            baseline,
-            tp_cost=tp_cost,
-            fp_cost=fp_cost,
-            tn_cost=tn_cost,
-            fn_cost=fn_cost,
-            check_input=False,
-        )
+        cost_base = cost_of(np.asarray(baseline))
     elif baseline == 'zero_one':
-        cost_base = min(
-            cost_loss(
-                y_true,
-                np.zeros_like(y_true),
-                tp_cost=tp_cost,
-                fp_cost=fp_cost,
-                tn_cost=tn_cost,
-                fn_cost=fn_cost,
-                check_input=False,
-            ),
-            cost_loss(
-                y_true,
-                np.ones_like(y_true),
-                tp_cost=tp_cost,
-                fp_cost=fp_cost,
-                tn_cost=tn_cost,
-                fn_cost=fn_cost,
-                check_input=False,
-            ),
-        )
+        cost_base = min(cost_of(np.zeros_like(y_true)), cost_of(np.ones_like(y_true)))
     elif baseline == 'one':
-        cost_base = cost_loss(
-            y_true,
-            np.ones_like(y_true),
-            tp_cost=tp_cost,
-            fp_cost=fp_cost,
-            tn_cost=tn_cost,
-            fn_cost=fn_cost,
-            check_input=False,
-        )
+        cost_base = cost_of(np.ones_like(y_true))
     elif baseline == 'zero':
-        cost_base = cost_loss(
-            y_true,
-            np.zeros_like(y_true),
-            tp_cost=tp_cost,
-            fp_cost=fp_cost,
-            tn_cost=tn_cost,
-            fn_cost=fn_cost,
-            check_input=False,
-        )
+        cost_base = cost_of(np.zeros_like(y_true))
     else:
         raise ValueError("Invalid baseline. Must be 'zero_one', 'zero', 'one', or an array-like.")
 
-    cost = cost_loss(
-        y_true, y_pred, tp_cost=tp_cost, fp_cost=fp_cost, tn_cost=tn_cost, fn_cost=fn_cost, check_input=False
-    )
-    return _relative_savings(cost, cost_base)
+    return _relative_savings(cost_of(y_pred), cost_base)
 
 
 expected_savings_score = make_generic_savings_metric()

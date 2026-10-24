@@ -1,4 +1,5 @@
 import warnings
+from functools import cached_property
 from typing import Any, Literal, Self
 
 import numpy as np
@@ -134,6 +135,11 @@ class SavingsScore:
         self.all_zero_function = _safe_lambdify(self.all_zero_equation)
         self.all_one_function = _safe_lambdify(self.all_one_equation)
 
+    @cached_property
+    def _parameter_symbols(self) -> set[sympy.Symbol]:
+        equations = (self.cost_equation, self.all_zero_equation, self.all_one_equation)
+        return set().union(*(equation.free_symbols for equation in equations)) - LABEL_AND_SCORE_SYMBOLS
+
     def __call__(
         self,
         y_true: IntNDArray,
@@ -153,10 +159,7 @@ class SavingsScore:
         **kwargs: Any,
     ) -> float:
         """Compute the average cost of the *baseline* classifier, which the savings are relative to."""
-        all_symbols = (
-            self.cost_equation.free_symbols | self.all_zero_equation.free_symbols | self.all_one_equation.free_symbols
-        )
-        _check_parameters(all_symbols - LABEL_AND_SCORE_SYMBOLS, kwargs)
+        _check_parameters(self._parameter_symbols, kwargs)
 
         if not isinstance(baseline, str):
             baseline_score = np.broadcast_to(np.asarray(baseline, dtype=np.float64), y_true.shape)

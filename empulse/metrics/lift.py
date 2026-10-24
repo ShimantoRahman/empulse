@@ -12,7 +12,6 @@ def _validate_input(
     _check_shape(y_true, y_score)
     _check_binary(y_true)
     _check_variance(y_true)
-    _check_shape(y_true, y_score)
     _check_fraction(fraction, 'fraction')
     if fraction == 0:
         raise ValueError('fraction should be greater than 0, got a value of 0 instead.')

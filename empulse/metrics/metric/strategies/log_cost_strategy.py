@@ -1,4 +1,5 @@
 import copy
+from functools import cached_property
 from typing import Any, ClassVar, Self
 
 import numpy as np
@@ -184,14 +185,16 @@ class LogCostBoostGradient:
         self.loss_const1_fn = _safe_lambdify(self.loss_const1_eq)
         self.loss_const2_fn = _safe_lambdify(self.loss_const2_eq)
 
+    @cached_property
+    def _parameter_symbols(self) -> set[sympy.Symbol]:
+        return set((self.loss_const1_eq.free_symbols | self.loss_const2_eq.free_symbols) - LABEL_SYMBOLS)
+
     def __call__(
         self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
     ) -> tuple[FloatNDArray, FloatNDArray]:
         """Compute the gradient and hessian of the log-cost loss wrt gradient boosting raw scores."""
         y_true = np.asarray(y_true, dtype=np.float64).reshape(-1)
-        _check_parameters(
-            (self.loss_const1_eq.free_symbols | self.loss_const2_eq.free_symbols) - LABEL_SYMBOLS, parameters
-        )
+        _check_parameters(self._parameter_symbols, parameters)
         loss_const1 = _safe_run_lambda_array(
             self.loss_const1_fn, self.loss_const1_eq, shape=y_true.shape[0], y=y_true, **parameters
         )
@@ -521,9 +524,13 @@ class LogCostLoss:
         )
         self.cost_function = _safe_lambdify(self.cost_equation)
 
+    @cached_property
+    def _parameter_symbols(self) -> set[sympy.Symbol]:
+        return set(self.cost_equation.free_symbols - LABEL_AND_SCORE_SYMBOLS)
+
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the log-cost loss."""
-        _check_parameters(self.cost_equation.free_symbols - LABEL_AND_SCORE_SYMBOLS, kwargs)
+        _check_parameters(self._parameter_symbols, kwargs)
         y_score = np.asarray(y_score, dtype=np.float64)
         epsilon = np.finfo(y_score.dtype).eps
         y_score = np.clip(y_score, epsilon, 1 - epsilon)

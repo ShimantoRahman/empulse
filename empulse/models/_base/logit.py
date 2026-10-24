@@ -1,11 +1,9 @@
 from abc import ABC
-from collections.abc import Callable
 from numbers import Integral, Real
-from typing import Any, ClassVar, Protocol, Self
+from typing import Any, ClassVar, Self
 
 import numpy as np
 from joblib import effective_n_jobs
-from scipy.optimize import OptimizeResult
 from scipy.special import expit
 from sklearn.utils._param_validation import Interval
 from sklearn.utils.validation import check_is_fitted
@@ -15,19 +13,6 @@ from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstra
 from ...metrics import BaseMetric
 from ...optimizers import Optimizer
 from .cost_sensitive import CostSensitiveClassifier
-
-
-class OptimizeFnKwargs(Protocol):
-    def __call__(
-        self, objective: Callable[[FloatNDArray], float], X: FloatNDArray, **kwargs: Any
-    ) -> OptimizeResult: ...
-
-
-class OptimizeFnNoKwargs(Protocol):
-    def __call__(self, objective: Callable[[FloatNDArray], float], X: FloatNDArray) -> OptimizeResult: ...
-
-
-OptimizeFn = OptimizeFnKwargs | OptimizeFnNoKwargs | Callable[..., OptimizeResult]
 
 
 class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
