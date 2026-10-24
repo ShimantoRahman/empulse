@@ -11,11 +11,11 @@ from sympy.stats.rv import is_random
 from ....._common._objective import ElasticNetPenalty, RankingLogitValueObjective
 from ....._types import FloatNDArray, IntNDArray
 from ....common import classification_threshold
-from ..._compile import CountScoreFn, _safe_lambdify, _safe_run_lambda
+from ..._compile import CountScoreFn, _safe_run_lambda
 from ..._direction import Direction
 from ..._distributions import spec_for
 from ..._parameter_domain import _check_parameters
-from ..._stochastic import expectation_over_random_vars
+from ..._stochastic import compiled_expectation
 from ..._symbolic import _is_affine_in, _latex
 from ...capabilities import Capability
 from .._class_terms import ClassTerms
@@ -632,10 +632,12 @@ class MaxProfit(ClassTerms, MetricStrategy):
         gradient magnitude. Substituting each random variable by its mean gives the same scale the
         deterministic route would use, which keeps ``C`` comparable between the two.
         """
-        mean_terms = expectation_over_random_vars(self._tp_benefit, self._tn_benefit, self._fp_cost, self._fn_cost)
         scalar_params = {name: float(np.mean(value)) for name, value in parameters.items()}
         tp_val, tn_val, fp_val, fn_val = (
-            float(_safe_run_lambda(_safe_lambdify(term), term, **scalar_params)) for term in mean_terms
+            float(_safe_run_lambda(function, term, **scalar_params))
+            for term, function in map(
+                compiled_expectation, (self._tp_benefit, self._tn_benefit, self._fp_cost, self._fn_cost)
+            )
         )
         return _max_profit_objective_scale(y_true, tp_val, tn_val, fp_val, fn_val)
 

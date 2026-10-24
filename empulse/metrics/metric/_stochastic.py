@@ -7,10 +7,14 @@ per-instance costs to a scalar (:class:`~empulse.metrics.MaxProfit`) accept a st
 matrix at all. :func:`_check_distribution_parameters` and friends validate a random variable's
 own shape parameters (e.g. a Beta distribution's ``alpha``/``beta`` must be positive) using the
 distribution's own ``check``, so a cost matrix's stochastic terms get that validation for free.
+
+:func:`compiled_expectation` is the one place a term's expectation is computed for evaluation:
+what models read as a metric's class costs, and what scales MaxProfit's training penalty.
 """
 
 import warnings
 from collections.abc import Callable, Iterable, Mapping
+from functools import lru_cache
 from numbers import Real
 from typing import Any
 
@@ -18,6 +22,7 @@ import numpy as np
 import sympy
 import sympy.stats.crv_types
 
+from ._compile import PicklableLambda, _safe_lambdify
 from ._distributions import spec_for
 from ._symbolic import _subs_by_name
 
@@ -78,6 +83,19 @@ def expectation_over_random_vars(*expressions: sympy.Expr) -> tuple[sympy.Expr, 
 
     means = {symbol: _distribution_mean(symbol) for symbol in random_symbols}
     return tuple(_expectation(expression, means) for expression in expressions)
+
+
+@lru_cache(maxsize=512)
+def compiled_expectation(expression: sympy.Expr) -> tuple[sympy.Expr, PicklableLambda]:
+    """
+    Return the expectation of *expression* over its random variables, and that expectation compiled.
+
+    Worked out once per expression, however many metrics or calls need it: the expectation can take
+    sympy a while, and compiling it longer. The expectation of a term does not depend on the other
+    terms, since the random variables are independent.
+    """
+    (expected,) = expectation_over_random_vars(expression)
+    return expected, _safe_lambdify(expected)
 
 
 def _expectation(expression: sympy.Expr, means: dict[sympy.Expr, sympy.Expr]) -> sympy.Expr:

@@ -10,10 +10,10 @@ from numpy.typing import NDArray
 
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray
 from .._validation import _check_y_pred, _check_y_true
-from ._compile import CountScoreFn, PicklableLambda, _safe_lambdify, _safe_run_lambda
+from ._compile import CountScoreFn, _safe_lambdify, _safe_run_lambda
 from ._direction import Direction
 from ._parameter_domain import _check_parameter_domains
-from ._stochastic import expectation_over_random_vars
+from ._stochastic import compiled_expectation
 from .base_metric import BaseMetric, _reject_sample_weight
 from .cost_matrix import (
     CostMatrix,
@@ -222,20 +222,6 @@ class Metric(BaseMetric):
         self._tp_cost_fn = _safe_lambdify(self.tp_cost)
         self._tn_cost_fn = _safe_lambdify(self.tn_cost)
         self._symbols = _symbol_names(self.tp_cost, self.tn_cost, self.fp_cost, self.fn_cost)
-        # Built on the first _evaluate_costs(replace_stochastic=True) call; most metrics never need it.
-        self._mean_substituted_costs: (
-            tuple[
-                sympy.Expr,
-                sympy.Expr,
-                sympy.Expr,
-                sympy.Expr,
-                PicklableLambda,
-                PicklableLambda,
-                PicklableLambda,
-                PicklableLambda,
-            ]
-            | None
-        ) = None
 
     @property
     def strategy(self) -> MetricStrategy:
@@ -817,21 +803,9 @@ class Metric(BaseMetric):
         """
         parameters = self._prepare_parameters(validate=False, **parameters)  # type: ignore[arg-type]
         if replace_stochastic and self._is_stochastic:
-            if self._mean_substituted_costs is None:
-                fp_expr, fn_expr, tp_expr, tn_expr = expectation_over_random_vars(
-                    self.fp_cost, self.fn_cost, self.tp_cost, self.tn_cost
-                )
-                self._mean_substituted_costs = (
-                    fp_expr,
-                    fn_expr,
-                    tp_expr,
-                    tn_expr,
-                    _safe_lambdify(fp_expr),
-                    _safe_lambdify(fn_expr),
-                    _safe_lambdify(tp_expr),
-                    _safe_lambdify(tn_expr),
-                )
-            fp_expr, fn_expr, tp_expr, tn_expr, fp_fn, fn_fn, tp_fn, tn_fn = self._mean_substituted_costs
+            (fp_expr, fp_fn), (fn_expr, fn_fn), (tp_expr, tp_fn), (tn_expr, tn_fn) = (
+                compiled_expectation(cost) for cost in (self.fp_cost, self.fn_cost, self.tp_cost, self.tn_cost)
+            )
         else:
             fp_expr, fn_expr, tp_expr, tn_expr = self.fp_cost, self.fn_cost, self.tp_cost, self.tn_cost
             fp_fn, fn_fn, tp_fn, tn_fn = self._fp_cost_fn, self._fn_cost_fn, self._tp_cost_fn, self._tn_cost_fn
