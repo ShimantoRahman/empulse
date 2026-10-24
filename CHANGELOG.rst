@@ -18,6 +18,20 @@ Metrics
   ``optimal_threshold`` of :class:`~empulse.metrics.MaxProfit`, :class:`~empulse.metrics.MinCost`,
   :class:`~empulse.metrics.EmpiricalMaxProfit` and :class:`~empulse.metrics.EmpiricalMinCost`
   return ``inf`` instead of 1.0, which targeted some samples on decision scores.
+- |Fix| The ``optimal_threshold`` and ``optimal_rate`` of :class:`~empulse.metrics.Cost`,
+  :class:`~empulse.metrics.Profit`, :class:`~empulse.metrics.Savings` and
+  :class:`~empulse.metrics.LogCost`, and so :class:`~empulse.models.CSThresholdClassifier`, no
+  longer target everyone when targeting nobody is optimal. When the sum of the costs of the wrong
+  decisions minus the costs of the right ones is negative, as with ``fp_cost=1`` and ``tp_cost=3``,
+  the break-even point was clipped into ``[0, 1]`` in the wrong direction. Targeting nobody now
+  returns a threshold of ``inf`` instead of 1.0, so a probability of exactly 1.0 is no longer
+  targeted, and the warning says the costs imply targeting every sample or none. Costs that make
+  targeting pay off the less likely a sample is to be positive, which no threshold can express, raise
+  a ``ValueError``.
+- |Fix| :func:`~empulse.metrics.cost_loss` and :func:`~empulse.metrics.savings_score` decide
+  probabilities by whichever decision costs less in expectation, for any signs of the costs, instead
+  of a break-even point that inverted the decision when the costs of the wrong decisions were
+  smaller than those of the right ones.
 - |Fix| A cost-matrix symbol named after a function its expression calls, such as a Weibull scale
   named ``gamma``, no longer breaks the metric.
 - |Fix| Instance-dependent distribution parameters are validated when the distribution has another

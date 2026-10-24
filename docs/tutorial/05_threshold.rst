@@ -61,10 +61,13 @@ per row. Asking it for a threshold returns **one threshold per customer**, not a
 
     thresholds = expected_profit.optimal_threshold(y_test, y_score, clv=clv_test)
 
-    print(f'{np.shape(thresholds)}, mean {np.mean(thresholds):.4f}, '
-          f'min {np.min(thresholds):.4f}, max {np.max(thresholds):.4f}')
+    never = np.isinf(thresholds)
+    print(f'{np.shape(thresholds)}, never contact {never.sum()}, others: '
+          f'mean {np.mean(thresholds[~never]):.4f}, '
+          f'min {np.min(thresholds[~never]):.4f}, max {np.max(thresholds[~never]):.4f}')
 
-945 thresholds, averaging **0.21** but ranging from **0.15** to **1.0**. It is worth contacting a
+945 thresholds: 36 customers are never worth contacting (threshold ``inf``, see the caveat below),
+and the rest average **0.18** but range from **0.15** to **0.81**. It is worth contacting a
 high-value customer at a much lower churn probability than a low-value one. That is precisely the
 behaviour a single global threshold cannot express, and one of the strongest reasons to use
 instance-dependent costs.
@@ -98,17 +101,18 @@ A caveat on this dataset
     132 of the 3150 customers have a Customer Value of exactly **0** (35 of them in this test set).
     Contacting them can only lose money: there is no value to retain, and the call still costs
     something. :meth:`~empulse.metrics.Metric.optimal_threshold` handles this correctly by
-    assigning them a threshold of ``1.0`` — never contact — rather than failing. That is the
-    ``max 1.0`` seen above.
+    assigning them a threshold of ``inf`` — never contact — rather than failing, so that not even a
+    predicted probability of exactly 1.0 reaches it. Those are the customers counted as never
+    contacted above.
 
-    You will see a ``UserWarning`` here saying the computed threshold fell outside ``[0, 1]`` and
-    was clipped. That is this situation: for a customer worth nothing, the break-even point is off
-    the end of the scale, and clipping it to ``1.0`` is the right answer.
+    You will see a ``UserWarning`` here saying the cost matrix implies targeting every sample or
+    none. That is this situation: for a customer worth nothing, the break-even point is off the end
+    of the scale, and never contacting them is the right answer.
 
     Worth knowing generally: a cost matrix that collapses to zero for a row is a modelling signal,
     not just a numerical edge case. It says those customers carry no business consequence either
     way. If **every** term genuinely cancels, contacting them and not contacting them cost the same,
-    and ``optimal_threshold`` gives them a threshold of ``1.0`` as well: they are not contacted.
+    and ``optimal_threshold`` gives them a threshold of ``inf`` as well: they are not contacted.
 
 Letting a meta-estimator do it
 ==============================

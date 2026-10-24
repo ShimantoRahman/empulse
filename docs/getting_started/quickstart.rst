@@ -122,8 +122,8 @@ metric or business parameters needed, since ``clv`` already lives in the cost ma
 This says to contact roughly **23.5%** of customers.
 
 .. note::
-    Running this raises a ``UserWarning`` saying the optimal threshold fell outside ``[0, 1]`` and
-    was clipped. Some customers in this dataset have a lifetime value lower than what it costs to
+    Running this raises a ``UserWarning`` saying the cost matrix implies targeting every sample or
+    none. Some customers in this dataset have a lifetime value lower than what it costs to
     contact them, so no predicted probability could ever justify targeting them — the cost matrix
     implies an always-negative decision for them. That is inherent to this dataset, not a bug, and
     safe to ignore here.

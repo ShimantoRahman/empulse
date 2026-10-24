@@ -639,7 +639,8 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
         The fitted classifier.
 
     threshold_ : float
-        The optimal decision threshold determined during fitting.
+        The optimal decision threshold determined during fitting. It is ``inf`` when the costs make
+        targeting nobody optimal, so that no score reaches it.
 
     Notes
     -----

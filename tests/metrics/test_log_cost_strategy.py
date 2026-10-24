@@ -291,7 +291,7 @@ def test_log_cost_optimal_threshold_is_bayes_optimal_for_log_cost_scores(tp, tn,
 
 
 def test_log_cost_optimal_threshold_keeps_an_always_negative_decision():
-    """A matrix under which targeting never pays keeps Cost's (clipped) threshold, targeting nobody."""
+    """A matrix under which targeting never pays keeps Cost's threshold, targeting nobody."""
     tp, fp = sympy.symbols('tp fp')
     cost_matrix = CostMatrix().add_tp_cost(tp).add_fp_cost(fp)
     log_cost_metric = Metric(cost_matrix, LogCost())
@@ -301,12 +301,12 @@ def test_log_cost_optimal_threshold_keeps_an_always_negative_decision():
     y_proba = np.array([0.2, 0.8, 0.3, 0.9])
     params = {'tp': 1.0, 'fp': 2.0}
 
-    with pytest.warns(UserWarning, match='clipped'):
+    with pytest.warns(UserWarning, match='every sample or none'):
         log_cost_threshold = log_cost_metric.optimal_threshold(y, y_proba, **params)
-    with pytest.warns(UserWarning, match='clipped'):
+    with pytest.warns(UserWarning, match='every sample or none'):
         cost_threshold = cost_metric.optimal_threshold(y, y_proba, **params)
     assert log_cost_threshold == pytest.approx(cost_threshold)
-    with pytest.warns(UserWarning, match='clipped'):
+    with pytest.warns(UserWarning, match='every sample or none'):
         assert log_cost_metric.optimal_rate(y, y_proba, **params) == pytest.approx(0.0)
 
 

@@ -676,16 +676,22 @@ def _solve_optimal_threshold(
     numerator: FloatNDArray | float, denominator: FloatNDArray | float
 ) -> FloatNDArray | float:
     """
-    Solve ``numerator / denominator`` for the optimal threshold, guarding against degenerate cases.
+    Solve for the threshold at or above which targeting a sample costs no more than not targeting it.
 
-    A sample is targeted when its probability ``p`` satisfies ``p * denominator > numerator``. Where
-    the denominator is zero, the costs do not depend on ``p``, so the sample is always targeted when
-    that costs less (a negative numerator, threshold ``0``) and otherwise never (threshold ``1``),
-    which includes a sample for which both decisions cost the same. A threshold outside ``[0, 1]``
-    is clipped into it.
+    A sample is targeted when its probability ``p`` satisfies ``p * denominator > numerator``, so with a
+    positive denominator the threshold is ``numerator / denominator``. Every other case targets either
+    every sample, returned as threshold ``0``, or none, returned as ``inf`` so that no score reaches it:
 
-    Both an always-or-never decision implied by unequal costs and a clipped threshold warn, since
-    they usually mean the cost matrix or its parameters are not what was intended.
+    - a ratio below 0 targets every sample, and one above 1 none;
+    - a zero denominator means the costs do not depend on ``p``: the sample is targeted when that costs
+      less (a negative numerator) and otherwise never, including when both decisions cost the same;
+    - a negative denominator targets the samples *below* the ratio: none when the ratio is at most 0,
+      and every sample when it is at least 1, since a probability of 1 then costs the same either way.
+
+    A decision for every sample or none implied by unequal costs warns, since it usually means the cost
+    matrix or its parameters are not what was intended. A negative denominator with a ratio in
+    ``(0, 1)`` raises: the costs then favour targeting the samples least likely to be positive, which no
+    threshold on ``p`` can express.
 
     Parameters
     ----------
@@ -697,27 +703,42 @@ def _solve_optimal_threshold(
     Returns
     -------
     threshold : float or ndarray
-        The optimal threshold(s), each in ``[0, 1]``.
+        The optimal threshold(s): in ``[0, 1]``, or ``inf`` to target nobody.
+
+    Raises
+    ------
+    ValueError
+        If the costs favour targeting the samples least likely to be positive.
     """
     is_scalar = np.ndim(numerator) == 0 and np.ndim(denominator) == 0
     numerator, denominator = np.broadcast_arrays(
         np.asarray(numerator, dtype=np.float64), np.asarray(denominator, dtype=np.float64)
     )
-    constant_cost = denominator == 0
     with np.errstate(divide='ignore', invalid='ignore'):
-        threshold = np.where(constant_cost, np.where(numerator < 0, 0.0, 1.0), numerator / denominator)
+        ratio = numerator / denominator
+    increasing = denominator > 0
+    decreasing = denominator < 0
+    if np.any(decreasing & (ratio > 0) & (ratio < 1)):
+        raise ValueError(
+            'The cost matrix makes targeting a sample pay off the less likely it is to be positive, for '
+            '(at least some of) the given parameters, so no threshold on the predicted probability is '
+            'optimal. Check the signs of the costs and benefits, or whether the positive class is the '
+            'one you meant.'
+        )
 
-    always_or_never = constant_cost & (numerator != 0)
-    if np.any(always_or_never | (threshold < 0) | (threshold > 1)):
+    always = np.where(increasing, ratio <= 0, np.where(decreasing, ratio >= 1, numerator < 0))
+    interior = increasing & (ratio > 0) & (ratio <= 1)
+    threshold = np.where(interior, ratio, np.where(always, 0.0, np.inf))
+
+    tie = (denominator == 0) & (numerator == 0)
+    if np.any(~interior & ~tie & ~(increasing & (ratio == 0))):
         warnings.warn(
-            'The optimal threshold computed from the cost matrix fell outside [0, 1] and was '
-            'clipped. This means the cost matrix implies an always-positive or always-negative '
-            'decision rule for (at least some of) the given parameters - double check the cost '
-            'matrix and the parameter values passed in.',
+            'The cost matrix implies targeting every sample or none for (at least some of) the given '
+            'parameters, so the optimal threshold is 0 or inf - double check the cost matrix and the '
+            'parameter values passed in.',
             UserWarning,
             stacklevel=3,
         )
-    threshold = np.clip(threshold, 0.0, 1.0)
     return float(threshold) if is_scalar else threshold
 
 

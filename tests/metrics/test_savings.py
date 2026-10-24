@@ -95,6 +95,35 @@ def test_cost_loss_calibrated_probabilities(y_true, y_pred, tp_cost, fp_cost, tn
 
 
 @pytest.mark.parametrize(
+    ('tp_cost', 'fp_cost', 'tn_cost', 'fn_cost'),
+    [(3.0, 1.0, 0.0, 0.0), (0.0, -1.0, 0.0, -1.0), (0.0, 1.0, 0.0, -3.0), (1.0, 1.0, 1.0, 1.0), (0.0, -2.0, 0.0, 1.0)],
+    ids=['targeting_never_pays', 'least_likely_positives', 'negative_ratio', 'constant_costs', 'targeting_always_pays'],
+)
+def test_cost_loss_decides_probabilities_at_the_cheaper_expected_cost(tp_cost, fp_cost, tn_cost, fn_cost):
+    """Each probability is decided by whichever decision costs less in expectation, whatever the cost signs."""
+    y_true = np.array([1, 0, 1, 0, 1, 0])
+    y_proba = np.array([0.95, 0.8, 0.6, 0.4, 0.2, 0.05])
+    cost_of_targeting = y_proba * tp_cost + (1 - y_proba) * fp_cost
+    cost_of_not_targeting = y_proba * fn_cost + (1 - y_proba) * tn_cost
+    y_pred = (cost_of_targeting < cost_of_not_targeting).astype(int)
+
+    expected = cost_loss(y_true, y_pred, tp_cost=tp_cost, fp_cost=fp_cost, tn_cost=tn_cost, fn_cost=fn_cost)
+
+    assert cost_loss(
+        y_true, y_proba, tp_cost=tp_cost, fp_cost=fp_cost, tn_cost=tn_cost, fn_cost=fn_cost
+    ) == pytest.approx(expected)
+
+
+def test_cost_loss_targets_nobody_when_targeting_never_pays():
+    """With fp_cost=1 and tp_cost=3, targeting costs more for every probability, so the cost is 0."""
+    y_true = np.array([1, 0, 1, 0])
+    y_proba = np.array([0.9, 0.2, 0.6, 0.4])
+
+    assert cost_loss(y_true, y_proba, tp_cost=3.0, fp_cost=1.0) == 0.0
+    assert savings_score(y_true, y_proba, tp_cost=3.0, fp_cost=1.0, baseline='one') == pytest.approx(1.0)
+
+
+@pytest.mark.parametrize(
     'y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, msg',
     [
         ([1, 0, 0, 1], [1, 1, 0, 0], 0.0, 0.0, 0.0, 0.0, r'All costs are zero.'),

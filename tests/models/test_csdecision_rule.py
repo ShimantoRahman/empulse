@@ -8,6 +8,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.tree import DecisionTreeClassifier
 
 from empulse.metrics import (
     Capability,
@@ -226,6 +227,28 @@ class TestFitWithCosts:
         clf = _make_model(classifier_type, kind, loss=loss)
         clf.fit(X, y, alpha=0.1)
         assert hasattr(clf, 'decision_')
+
+
+class TestDecisionDirection:
+    """The threshold follows the cost-optimal decision, whatever the signs of the costs."""
+
+    def test_targeting_nobody_excludes_probabilities_of_exactly_one(self, data):
+        """With fp_cost=1 and tp_cost=3 targeting never pays, so a tree's probabilities of 1.0 stay negative."""
+        X, y = data
+        clf = CSThresholdClassifier(DecisionTreeClassifier(random_state=0), calibrator=None, tp_cost=3.0, fp_cost=1.0)
+        with pytest.warns(UserWarning, match='every sample or none'):
+            clf.fit(X, y)
+
+        assert clf.threshold_ == np.inf
+        assert (clf.estimator_.predict_proba(X)[:, 1] == 1.0).any()
+        assert not clf.predict(X).any()
+
+    def test_costs_favouring_the_least_likely_positives_raise(self, data):
+        X, y = data
+        clf = CSThresholdClassifier(LogisticRegression(), calibrator=None, fp_cost=-1.0, fn_cost=-1.0)
+
+        with pytest.raises(ValueError, match='less likely it is to be positive'):
+            clf.fit(X, y)
 
 
 class TestInstanceDependentCostsReduceToTheirAverage:

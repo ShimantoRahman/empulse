@@ -303,16 +303,16 @@ def test_optimal_threshold_predict_time_empty_arrays_skip_length_check():
 
 @pytest.mark.parametrize(
     ('a', 'b', 'expected'),
-    [(1.0, -1.0, 1.0), (-1.0, 1.0, 0.0)],
+    [(1.0, -1.0, np.inf), (-1.0, 1.0, 0.0)],
     ids=['targeting_always_costs_more', 'targeting_always_costs_less'],
 )
 def test_costs_that_do_not_depend_on_the_probability_decide_always_or_never(a, b, expected):
     """Where the threshold's denominator is 0, the cheaper decision holds for every probability."""
     metric = Metric(COST_MATRIX, Cost())
 
-    with pytest.warns(UserWarning, match=r'fell outside \[0, 1\]'):
+    with pytest.warns(UserWarning, match='every sample or none'):
         assert metric.optimal_threshold(Y_TRUE, Y_SCORE, a=a, b=b) == expected
-    with pytest.warns(UserWarning, match=r'fell outside \[0, 1\]'):
+    with pytest.warns(UserWarning, match='every sample or none'):
         assert metric.optimal_rate(Y_TRUE, Y_SCORE, a=a, b=b) == np.mean(expected <= Y_SCORE)
 
 
@@ -325,17 +325,77 @@ def test_a_sample_whose_decisions_cost_the_same_is_never_targeted_without_a_warn
         warnings.simplefilter('error')
         thresholds = metric.optimal_threshold(Y_TRUE, Y_SCORE, a=a, b=b)
 
-    np.testing.assert_allclose(thresholds, [0.2, 1.0, 0.2, 1.0, 0.2])
+    np.testing.assert_allclose(thresholds, [0.2, np.inf, 0.2, np.inf, 0.2])
 
 
-def test_out_of_range_threshold_is_clipped_and_warns():
-    """A threshold outside [0, 1] must be clipped into range and warn, not returned raw."""
+@pytest.mark.parametrize(
+    ('a', 'b', 'expected'),
+    [(1.0, -3.0, np.inf), (-1.0, 3.0, 0.0), (3.0, -1.0, np.inf), (-3.0, 1.0, 0.0)],
+    ids=['negative_ratio_below_zero', 'positive_ratio_below_zero', 'ratio_above_one', 'negative_ratio_above_one'],
+)
+def test_threshold_outside_the_probability_range_targets_everyone_or_nobody(a, b, expected):
+    """
+    A ratio outside [0, 1] decides every sample alike, by the sign of the denominator: clipping it
+    instead targets everyone where targeting nobody is optimal when the denominator is negative.
+    """
     metric = Metric(COST_MATRIX, Cost())
 
-    with pytest.warns(UserWarning, match=r'fell outside \[0, 1\]'):
-        threshold = metric.optimal_threshold(Y_TRUE, Y_SCORE, a=1.0, b=-3.0)
+    with pytest.warns(UserWarning, match='every sample or none'):
+        threshold = metric.optimal_threshold(Y_TRUE, Y_SCORE, a=a, b=b)
 
-    assert 0.0 <= threshold <= 1.0
+    assert threshold == expected
+
+
+@pytest.mark.parametrize('a', [-3.0, -1.0, -0.5, 0.0, 0.5, 1.0, 3.0])
+@pytest.mark.parametrize('b', [-3.0, -1.0, -0.5, 0.0, 0.5, 1.0, 3.0])
+def test_optimal_threshold_targets_exactly_where_targeting_costs_less(a, b):
+    """Targeting the probabilities at or above the threshold never costs more than the other decision."""
+    metric = Metric(COST_MATRIX, Cost())
+    probability = np.linspace(0.0, 1.0, 101)
+    cost_of_targeting = (1 - probability) * a
+    cost_of_not_targeting = probability * b
+
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', UserWarning)
+        try:
+            threshold = metric.optimal_threshold(Y_TRUE, Y_SCORE, a=a, b=b)
+        except ValueError:
+            # Raised only when no threshold is optimal: targeting strictly pays off at p=0 and strictly
+            # loses at p=1, a decreasing rule.
+            assert cost_of_targeting[0] < cost_of_not_targeting[0]
+            assert cost_of_targeting[-1] > cost_of_not_targeting[-1]
+            return
+
+    cost_of_decision = np.where(probability >= threshold, cost_of_targeting, cost_of_not_targeting)
+    best_cost = np.minimum(cost_of_targeting, cost_of_not_targeting)
+    np.testing.assert_allclose(cost_of_decision, best_cost, atol=1e-12)
+
+
+def test_costs_tied_at_a_probability_of_one_target_everyone_instead_of_raising():
+    """With a negative denominator and a ratio of exactly 1, positives cost the same either way, so target all."""
+    metric = Metric(COST_MATRIX, Cost())
+
+    with pytest.warns(UserWarning, match='every sample or none'):
+        assert metric.optimal_threshold(Y_TRUE, Y_SCORE, a=-1.0, b=0.0) == 0.0
+
+
+def test_costs_favouring_the_least_likely_positives_raise():
+    """No threshold on the probability is optimal when targeting pays off for the least likely positives."""
+    metric = Metric(COST_MATRIX, Cost())
+
+    with pytest.raises(ValueError, match='less likely it is to be positive'):
+        metric.optimal_threshold(Y_TRUE, Y_SCORE, a=-1.0, b=-1.0)
+    with pytest.raises(ValueError, match='less likely it is to be positive'):
+        metric.optimal_rate(Y_TRUE, Y_SCORE, a=-1.0, b=-1.0)
+
+
+def test_targeting_nobody_excludes_scores_of_exactly_one():
+    """The threshold for targeting nobody is not reached by a probability of exactly 1."""
+    metric = Metric(COST_MATRIX, Cost())
+    y_score = np.array([1.0, 1.0, 0.5, 0.0, 1.0])
+
+    with pytest.warns(UserWarning, match='every sample or none'):
+        assert metric.optimal_rate(Y_TRUE, y_score, a=3.0, b=-1.0) == 0.0
 
 
 def test_in_range_threshold_does_not_warn():

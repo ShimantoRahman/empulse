@@ -171,12 +171,11 @@ def cost_loss(
         y_true, y_pred, tp_cost, fp_cost, tn_cost, fn_cost, check_input
     )
 
-    # Scores that are not binary are thresholded at the cost-optimal threshold.
+    # Scores that are not binary are decided cost-optimally: a sample is targeted when that costs less
+    # in expectation, i.e. when p * (fp - tn + fn - tp) > fp - tn. Comparing without dividing keeps the
+    # decision right when the denominator is zero or negative.
     if not np.all((y_pred == 0) | (y_pred == 1)):
-        denominator = fp_cost - tn_cost + fn_cost - tp_cost
-        denominator = np.where(denominator == 0, np.finfo(float).eps, denominator)
-        optimal_thresholds = (fp_cost - tn_cost) / denominator
-        y_pred = (y_pred > optimal_thresholds).astype(int)
+        y_pred = (y_pred * (fp_cost - tn_cost + fn_cost - tp_cost) > fp_cost - tn_cost).astype(int)
 
     cost = _compute_expected_cost(y_true, y_pred, tp_cost, tn_cost, fn_cost, fp_cost)
 
