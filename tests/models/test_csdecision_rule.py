@@ -730,3 +730,187 @@ class TestFitParamsReachTheWrappedEstimator:
         clf = CSThresholdClassifier(CSLogitClassifier(), calibrator=None).fit(X, y, fp_cost=1.0, fn_cost=5.0)
         expected = CSLogitClassifier().fit(X, y, fp_cost=1.0, fn_cost=5.0)
         np.testing.assert_allclose(clf.estimator_.coef_, expected.coef_)
+
+    def test_costs_reach_a_cost_sensitive_estimator_inside_the_default_calibrator(self, data):
+        """The calibrator forwards its keyword arguments, so the costs must not stop at it."""
+        X, y = data
+        clf = CSThresholdClassifier(CSLogitClassifier(), random_state=0).fit(X, y, fp_cost=1.0, fn_cost=5.0)
+        expected = CSLogitClassifier().fit(X, y, fp_cost=1.0, fn_cost=5.0)
+        inner = clf.estimator_.calibrated_classifiers_[0].estimator
+        np.testing.assert_allclose(inner.coef_, expected.coef_)
+
+    def test_costs_are_swapped_for_an_estimator_whose_positive_class_is_the_other(self, data):
+        """With ``pos_label=0``, a missed class 0 is a false negative for the wrapper but a false positive inside."""
+        X, y = data
+        clf = CSThresholdClassifier(CSLogitClassifier(), calibrator=None, pos_label=0)
+        clf.fit(X, y, fp_cost=1.0, fn_cost=5.0, tp_cost=0.5)
+        expected = CSLogitClassifier().fit(X, y, fp_cost=5.0, fn_cost=1.0, tn_cost=0.5)
+        np.testing.assert_allclose(clf.estimator_.coef_, expected.coef_)
+
+    @pytest.mark.parametrize(
+        ('outer', 'inner', 'swapped'), [(0, 0, True), (0, 1, True), (1, 0, False), (None, 0, False)]
+    )
+    def test_costs_reach_a_nested_wrapper_stated_for_its_own_positive_class(self, data, outer, inner, swapped):
+        """A wrapped estimator with a ``pos_label`` of its own swaps the costs itself, so they reach it unswapped."""
+        X, y = data
+        nested = CSThresholdClassifier(CSLogitClassifier(), calibrator=None, pos_label=inner)
+        clf = CSThresholdClassifier(nested, calibrator=None, pos_label=outer).fit(X, y, fp_cost=1.0, fn_cost=5.0)
+
+        if swapped:
+            expected = CSLogitClassifier().fit(X, y, fp_cost=5.0, fn_cost=1.0)
+        else:
+            expected = CSLogitClassifier().fit(X, y, fp_cost=1.0, fn_cost=5.0)
+        np.testing.assert_allclose(clf.estimator_.estimator_.coef_, expected.coef_)
+
+    def test_sample_weight_routed_through_the_default_calibrator(self, data):
+        """The calibrator is built internally, so its weight request follows the estimator's."""
+        X, y = data
+        weights = np.where(y == 1, 3.0, 1.0)
+        with config_context(enable_metadata_routing=True):
+            estimator = LogisticRegression().set_fit_request(sample_weight=True)
+            clf = CSThresholdClassifier(estimator, random_state=0)
+            clf.set_fit_request(fp_cost=True, fn_cost=True)
+            clf.fit(X, y, fp_cost=1.0, fn_cost=5.0, sample_weight=weights)
+        expected = CSThresholdClassifier(LogisticRegression(), random_state=0)
+        expected.fit(X, y, fp_cost=1.0, fn_cost=5.0, sample_weight=weights)
+        np.testing.assert_allclose(clf.predict_proba(X), expected.predict_proba(X))
+
+    def test_a_non_cost_array_parameter_of_another_length_reaches_the_estimator(self, data):
+        X, y = data
+        feature_weights = np.ones(X.shape[1])
+
+        class _FeatureWeighted(LogisticRegression):
+            def fit(self, X, y, feature_weights=None):
+                self.feature_weights_ = feature_weights
+                return super().fit(X, y)
+
+        clf = CSThresholdClassifier(_FeatureWeighted(), calibrator=None)
+        clf.fit(X, y, fp_cost=1.0, fn_cost=5.0, feature_weights=feature_weights)
+        np.testing.assert_array_equal(clf.estimator_.feature_weights_, feature_weights)
+
+
+class TestDecisionOfAScoreDependentLoss:
+    """A threshold that depends on the scores is learned from the costs the parameters make up."""
+
+    def test_instance_dependent_parameters_are_not_averaged_before_they_are_combined(self, data):
+        """``tp_benefit = a * b`` with ``b = 1 / a`` is 1 everywhere, which averaging ``a`` and ``b`` first breaks."""
+        X, y = data
+        a, b = sympy.symbols('a b')
+        loss = Metric(CostMatrix().add_tp_benefit(a * b).add_fp_cost(1), MaxProfit())
+        a_values = np.random.default_rng(0).uniform(0.5, 4.0, size=len(y))
+
+        clf = CSThresholdClassifier(LogisticRegression(), calibrator=None, loss=loss)
+        clf.fit(X, y, a=a_values, b=1 / a_values)
+
+        y_score = clf.predict_proba(X)[:, 1]
+        assert clf.threshold_ == pytest.approx(loss.optimal_threshold(y, y_score, a=1.0, b=1.0))
+
+
+class TestRefitAndPredictTimeCosts:
+    """Predict-time costs and refits start from what the latest fit learned."""
+
+    def test_a_cost_not_passed_to_predict_keeps_its_fit_value(self, data):
+        X, y = data
+        clf = CSThresholdClassifier(LogisticRegression(), calibrator=None).fit(X, y, fp_cost=5.0, fn_cost=10.0)
+
+        np.testing.assert_array_equal(clf.predict(X, fn_cost=10.0), clf.predict(X))
+        np.testing.assert_array_equal(clf.predict(X, fp_cost=10.0), clf.predict(X, fp_cost=10.0, fn_cost=10.0))
+
+    def test_an_instance_dependent_fit_cost_falls_back_to_its_average(self, data):
+        X, y = data
+        fp_cost = np.linspace(1.0, 9.0, len(y))
+        clf = CSThresholdClassifier(LogisticRegression(), calibrator=None).fit(X, y, fp_cost=fp_cost, fn_cost=10.0)
+
+        np.testing.assert_array_equal(clf.predict(X, fn_cost=10.0), clf.predict(X, fp_cost=5.0, fn_cost=10.0))
+
+    def test_a_refit_without_costs_forgets_the_previous_decision(self, data):
+        X, y = data
+        clf = CSThresholdClassifier(LogisticRegression(), calibrator=None).fit(X, y, fp_cost=1.0, fn_cost=9.0)
+        clf.fit(X[:, :5], y)
+
+        assert clf.threshold_ is None
+        with pytest.raises(ValueError, match='decision has not been set during fit'):
+            clf.predict(X[:, :5])
+
+    def test_a_fit_without_costs_fits_the_calibrated_estimator(self, data):
+        """Fitting without costs, to pass them to predict, still calibrates the probabilities they are applied to."""
+        X, y = data
+        without_costs = CSThresholdClassifier(LogisticRegression(), random_state=0).fit(X, y)
+        with_costs = CSThresholdClassifier(LogisticRegression(), random_state=0).fit(X, y, fp_cost=1.0, fn_cost=5.0)
+
+        np.testing.assert_allclose(without_costs.predict_proba(X), with_costs.predict_proba(X))
+
+    def test_a_predict_time_cost_of_the_wrong_length_is_rejected(self, data):
+        X, y = data
+        clf = CSThresholdClassifier(LogisticRegression(), calibrator=None).fit(X, y, fp_cost=1.0, fn_cost=5.0)
+
+        with pytest.raises(ValueError, match="'fn_cost' has length 7, but expected length 10"):
+            clf.predict(X[:10], fn_cost=np.full(7, 5.0))
+
+
+class TestOutOfFoldDecision:
+    """With ``cv``, a decision that depends on the scores is learned from out-of-fold scores."""
+
+    def test_threshold_of_a_score_dependent_loss_uses_out_of_fold_scores(self, data):
+        from sklearn.model_selection import KFold, cross_val_predict
+
+        X, y = data
+        loss = Metric(CostMatrix().add_tp_benefit(10).add_fp_cost(3), MaxProfit())
+        cv = KFold(n_splits=4, shuffle=True, random_state=0)
+
+        clf = CSThresholdClassifier(LogisticRegression(), calibrator=None, loss=loss, cv=cv).fit(X, y)
+
+        oof_score = cross_val_predict(LogisticRegression(), X, y, cv=cv, method='predict_proba')[:, 1]
+        assert clf.threshold_ == pytest.approx(loss.optimal_threshold(y, oof_score))
+        np.testing.assert_allclose(clf.estimator_.coef_, LogisticRegression().fit(X, y).coef_)
+
+    def test_rate_uses_out_of_fold_scores(self, data):
+        from sklearn.model_selection import KFold, cross_val_predict
+
+        X, y = data
+        loss = Metric(CostMatrix().add_tp_benefit(10).add_fp_cost(3), MaxProfit())
+        cv = KFold(n_splits=4, shuffle=True, random_state=0)
+
+        clf = CSRateClassifier(LogisticRegression(), loss=loss, cv=cv).fit(X, y)
+
+        oof_score = cross_val_predict(LogisticRegression(), X, y, cv=cv, method='predict_proba')[:, 1]
+        assert clf.rate_ == pytest.approx(loss.optimal_rate(y, oof_score))
+
+    def test_a_cost_only_threshold_ignores_cv(self, data, monkeypatch):
+        from empulse.models.threshold import csdecision_rule
+
+        def _fail(*args, **kwargs):
+            raise AssertionError('a threshold that depends only on the costs needs no out-of-fold scores')
+
+        monkeypatch.setattr(csdecision_rule, 'cross_val_predict', _fail)
+        X, y = data
+        clf = CSThresholdClassifier(LogisticRegression(), calibrator=None, cv=5).fit(X, y, fp_cost=1.0, fn_cost=4.0)
+
+        assert clf.threshold_ == pytest.approx(0.2)
+
+
+class TestRateTargetsExactlyItsShare:
+    """CSRate predicts exactly ``ceil(rate * n)`` positives, however many scores tie."""
+
+    def test_a_rate_of_k_over_n_targets_k_of_n_samples(self, data):
+        """0.07 * 100 is 7.000000000000001 in floating point, which must not round up to 8."""
+        X, y = data
+        X, y = X[:100], y[:100]
+        clf = CSRateClassifier(LogisticRegression()).fit(X, y, fp_cost=1.0, fn_cost=1.0)
+
+        for k in range(101):
+            clf.decision_ = k / 100
+            assert clf.predict(X).sum() == k
+
+    @pytest.mark.parametrize('rate', [0.1, 0.25, 0.4, 0.0, 1.0])
+    def test_ties_at_the_cut_off_do_not_exceed_the_rate(self, data, rate):
+        X, y = data
+        clf = CSRateClassifier(DecisionTreeClassifier(max_depth=2, random_state=0)).fit(X, y, fp_cost=1.0, fn_cost=2.0)
+        clf.decision_ = rate
+        y_score = clf.predict_proba(X)[:, 1]
+        assert np.unique(y_score).size < 5
+
+        y_pred = clf.predict(X)
+
+        assert y_pred.sum() == int(np.ceil(rate * len(y)))
+        assert y_score[y_pred == 1].min(initial=np.inf) >= y_score[y_pred == 0].max(initial=-np.inf)

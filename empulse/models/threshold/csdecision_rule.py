@@ -8,7 +8,7 @@ from sklearn import clone, get_config
 from sklearn.base import BaseEstimator, MetaEstimatorMixin
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.exceptions import NotFittedError
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, check_cv, cross_val_predict
 from sklearn.utils._param_validation import HasMethods, StrOptions
 from sklearn.utils.fixes import parse_version
 from sklearn.utils.metadata_routing import MetadataRouter, MethodMapping, get_routing_for_object, process_routing
@@ -27,6 +27,20 @@ from .._base.cost_sensitive import CostSensitiveClassifier
 
 def _to_class_dependent_cost(cost: float | FloatNDArray) -> float:
     return float(np.mean(cost)) if isinstance(cost, np.ndarray) else cost
+
+
+def _scalar_if_single(value: Any) -> Any:
+    """Return a one-element array as its scalar, which applies to every sample; anything else as is."""
+    return float(value.reshape(-1)[0]) if isinstance(value, np.ndarray) and value.size == 1 else value
+
+
+# The plain costs as a classifier whose positive class is the other class sees them.
+_COSTS_FOR_OTHER_POSITIVE_CLASS = {
+    'tp_cost': 'tn_cost',
+    'tn_cost': 'tp_cost',
+    'fp_cost': 'fn_cost',
+    'fn_cost': 'fp_cost',
+}
 
 
 def _class_dependent_metric(loss: BaseMetric, loss_params: dict[str, Any]) -> Metric | None:
@@ -78,6 +92,7 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         **CostSensitiveClassifier._parameter_constraints,
         'estimator': [HasMethods(['fit', 'predict_proba'])],
         'pos_label': [Real, str, 'boolean', None],
+        'cv': ['cv_object'],
     }
     # Keyword arguments other than the loss's parameters go to the estimator's fit.
     _extra_fit_params: ClassVar[frozenset[str] | None] = None
@@ -95,9 +110,11 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         fp_cost: FloatArrayLike | float = 0.0,
         loss: BaseMetric | None = None,
         pos_label: int | bool | str | None = None,
+        cv: Any = None,
     ):
         self.estimator = estimator
         self.pos_label = pos_label
+        self.cv = cv
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
 
     @property
@@ -126,12 +143,20 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
 
     def _positive_class_index(self) -> int:
         """Return the index in :attr:`classes_` of the positive class: ``pos_label``, or ``classes_[1]``."""
+        return self._positive_index_in(self.classes_)
+
+    def _positive_index_in(self, classes: NDArray[Any]) -> int:
+        """Return the index in the sorted *classes* of the positive class: ``pos_label``, or ``classes[1]``."""
         if self.pos_label is None:
             return 1
-        matches = np.flatnonzero(self.classes_ == self.pos_label)
+        matches = np.flatnonzero(classes == self.pos_label)
         if matches.size == 0:
-            raise ValueError(f'pos_label={self.pos_label!r} is not one of the classes {list(self.classes_)}.')
+            raise ValueError(f'pos_label={self.pos_label!r} is not one of the classes {list(classes)}.')
         return int(matches[0])
+
+    def _decision_uses_scores(self, loss: BaseMetric) -> bool:
+        """Return whether the decision learned with *loss* depends on the training scores, not only on costs."""
+        return True
 
     def _positive_score(self, X: FloatArrayLike) -> FloatNDArray:
         """Return the predicted probability of the positive class for each sample of `X`."""
@@ -188,36 +213,6 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         """
         return self._all_costs_unchanged(tp_cost, tn_cost, fn_cost, fp_cost) and not loss_params
 
-    def _fit_estimator(
-        self, X: FloatArrayLike, y: ArrayLike, **params: Any
-    ) -> tuple[Any, FloatNDArray, dict[str, Any]]:
-        """
-        Fit the underlying estimator and return scores and loss parameters.
-
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-            Training data.
-        y : array-like of shape (n_samples,)
-            Target values.
-        **params : dict
-            Parameters containing both loss params and estimator routing params.
-
-        Returns
-        -------
-        estimator_ : Estimator
-            The fitted estimator.
-        y_proba : ndarray of shape (n_samples, n_classes)
-            Predicted probabilities of each class.
-        loss_params : dict
-            Parameters extracted for the loss function.
-        """
-        loss_params = _extract_loss_params(params, self._get_loss_or_default())
-        child, estimator = self._unfitted_estimator()
-        estimator_ = estimator.fit(X, y, **self._child_fit_params(child, estimator, params, loss_params))
-        y_proba: FloatNDArray = estimator_.predict_proba(X)
-        return estimator_, y_proba, loss_params
-
     def _unfitted_estimator(self) -> tuple[str, Any]:
         """Return the routing name and an unfitted copy of the estimator to fit."""
         return 'estimator', clone(self.estimator)
@@ -231,7 +226,13 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         return tags
 
     def _child_fit_params(
-        self, child: str, child_estimator: Any, params: dict[str, Any], loss_params: dict[str, Any]
+        self,
+        child: str,
+        child_estimator: Any,
+        params: dict[str, Any],
+        loss_params: dict[str, Any],
+        *,
+        classes: NDArray[Any] | None = None,
     ) -> dict[str, Any]:
         """
         Return the ``fit`` keyword arguments for the wrapped estimator (or its calibrator) named `child`.
@@ -239,8 +240,16 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         With metadata routing enabled, the loss parameters the child requested are routed to it along
         with everything that is not a loss parameter, which scikit-learn checks was requested. Without
         routing, every argument that is not a loss parameter is forwarded, and so are the loss
-        parameters the child's ``fit`` names, such as the costs of a cost-sensitive model.
+        parameters the child's ``fit`` names, such as the costs of a cost-sensitive model. A
+        :class:`~sklearn.calibration.CalibratedClassifierCV` forwards its keyword arguments to its
+        estimator, so for it the estimator's ``fit`` is the one that has to name them.
+
+        Given the sorted `classes`, plain costs are stated for ``pos_label``, so they are renamed for an
+        estimator whose positive class is the other one: ``classes[1]``, or its own ``pos_label``.
         """
+        consumer = child_estimator
+        if isinstance(child_estimator, CalibratedClassifierCV):
+            consumer = child_estimator.estimator
         if get_config()['enable_metadata_routing']:
             requested = get_routing_for_object(child_estimator).consumes('fit', loss_params.keys())
             routed = process_routing(
@@ -248,12 +257,23 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
                 'fit',
                 **{key: value for key, value in params.items() if key not in loss_params or key in requested},
             )
-            return dict(routed[child].fit)
-        return {
-            key: value
-            for key, value in params.items()
-            if key not in loss_params or has_fit_parameter(child_estimator, key)
-        }
+            fit_params = dict(routed[child].fit)
+        else:
+            fit_params = {
+                key: value
+                for key, value in params.items()
+                if key not in loss_params or has_fit_parameter(consumer, key)
+            }
+        if classes is not None:
+            consumer_pos_label = consumer.get_params(deep=False).get('pos_label')
+            consumer_index = 1
+            if consumer_pos_label is not None:
+                # An unknown ``pos_label`` is the consumer's to reject when it is fitted.
+                matches = np.flatnonzero(classes == consumer_pos_label)
+                consumer_index = int(matches[0]) if matches.size else 1
+            if self._positive_index_in(classes) != consumer_index:
+                fit_params = {_COSTS_FOR_OTHER_POSITIVE_CLASS.get(key, key): value for key, value in fit_params.items()}
+        return fit_params
 
     @abstractmethod
     def _compute_decision(
@@ -354,19 +374,43 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
             Returns an instance of self.
         """
         X, y = indexable(X, y)
+        # Nothing a previous fit learned may outlive this one, such as a decision this fit does not learn.
+        for attribute in ('decision_', 'n_features_in_', 'feature_names_in_'):
+            if attribute in vars(self):
+                delattr(self, attribute)
 
-        if self._should_skip_cost_sensitive_fit(params):
-            loss_param_names = self._get_loss_or_default()._all_symbols
-            estimator_params = {k: v for k, v in params.items() if k not in loss_param_names}
-            self.estimator_ = clone(self.estimator).fit(X, y, **estimator_params)
-        else:
-            self.estimator_, y_proba, loss_params = self._fit_estimator(X, y, **params)
+        plain_costs = self._get_metric_loss() is None
+        loss_params = _extract_loss_params(params, self._get_loss_or_default())
+        child, estimator = self._unfitted_estimator()
+        child_params = self._child_fit_params(
+            child,
+            estimator,
+            params,
+            loss_params,
+            classes=np.unique(y) if plain_costs else None,
+        )
+        self.estimator_ = estimator.fit(X, y, **child_params)
+        if plain_costs:
+            # The fallback for a cost not passed to predict.
+            self._fit_costs = {name: _to_class_dependent_cost(params[name]) for name in self._cost_names}
+
+        if not self._should_skip_cost_sensitive_fit(params):
+            if self.cv is not None and self._decision_uses_scores(loss):
+                y_proba = cross_val_predict(
+                    self._unfitted_estimator()[1],
+                    X,
+                    y,
+                    cv=check_cv(self.cv, y, classifier=True),
+                    method='predict_proba',
+                    params=child_params,
+                )
+            else:
+                y_proba = self.estimator_.predict_proba(X)
             # Costs are defined against the positive class, so both the target and the score the
             # decision is computed from are those of `pos_label` (by default `classes_[1]`).
             positive_index = self._positive_class_index()
             y_binary = np.where(np.asarray(y) == self.classes_[positive_index], 1, 0)
-            y_score = y_proba[:, positive_index]
-            self.decision_ = self._compute_decision(loss, y_binary, y_score, loss_params)
+            self.decision_ = self._compute_decision(loss, y_binary, y_proba[:, positive_index], loss_params)
 
         if hasattr(self.estimator_, 'n_features_in_'):
             self.n_features_in_ = self.estimator_.n_features_in_
@@ -418,7 +462,8 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
 
         Notes
         -----
-        If all costs are zero, then ``fp_cost=1`` and ``fn_cost=1`` are used to avoid division by zero.
+        Without a ``loss``, a cost not passed to ``predict`` keeps the value it had in ``fit``: its average
+        over the samples, for an instance-dependent cost.
         """
         if self._should_use_fitted_decision(tp_cost, tn_cost, fn_cost, fp_cost, loss_params):
             check_is_fitted(self)
@@ -447,10 +492,16 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
                     'alone, so it cannot be recomputed from cost parameters passed to predict().'
                 )
 
-            loss_params = self._add_standard_costs_to_params(
-                tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost, params=loss_params
-            )
+            costs = {'tp_cost': tp_cost, 'tn_cost': tn_cost, 'fn_cost': fn_cost, 'fp_cost': fp_cost}
+            fit_costs = getattr(self, '_fit_costs', None)
+            if fit_costs is not None and self._get_metric_loss() is None:
+                costs = {
+                    name: fit_costs.get(name, value) if value is Parameter.UNCHANGED else value
+                    for name, value in costs.items()
+                }
+            loss_params = self._add_standard_costs_to_params(**costs, params=loss_params)
             y_score = self._positive_score(X)
+            loss_params = self._normalize_cost_shapes(loss_params, size=len(y_score), names=loss._all_parameters)
             decision = self._compute_decision_at_predict(y_score, loss, loss_params)
 
         return self._apply_decision(y_score, decision)
@@ -630,6 +681,18 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
             It is not recommended to pass instance-dependent costs to the ``__init__`` method.
             Instead, pass them to the ``fit`` or ``predict`` method.
 
+    cv : int, cross-validation generator, iterable or None, default=None
+        Where the scores the threshold is learned from come from, when the threshold depends on them,
+        as it does for a ``loss`` such as :class:`~empulse.metrics.MaxProfit`. A threshold that depends
+        only on the costs, such as the default, ignores it.
+
+        - If None, the scores of the estimator fitted on all the training data, which flatter an
+          estimator that overfits it.
+        - Otherwise, out-of-fold scores from :func:`~sklearn.model_selection.cross_val_predict` with
+          this splitting strategy (see :func:`~sklearn.model_selection.check_cv`), at the cost of
+          fitting the estimator, with its calibrator if any, once more per fold. ``estimator_`` is
+          still fitted on all the training data.
+
     Attributes
     ----------
     classes_ : numpy.ndarray of shape (n_classes,)
@@ -669,12 +732,14 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
         tn_cost: FloatArrayLike | float = 0.0,
         fn_cost: FloatArrayLike | float = 0.0,
         fp_cost: FloatArrayLike | float = 0.0,
+        cv: Any = None,
     ):
         self.calibrator = calibrator
         self.random_state = random_state
         super().__init__(
             estimator,
             pos_label=pos_label,
+            cv=cv,
             loss=loss,
             tp_cost=tp_cost,
             tn_cost=tn_cost,
@@ -685,7 +750,13 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
     def _get_calibrator(self, estimator: Any) -> Any:
         if self.calibrator in {'sigmoid', 'isotonic'}:
             cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=self.random_state)
-            return CalibratedClassifierCV(estimator, method=self.calibrator, cv=cv, ensemble=False)
+            calibrator = CalibratedClassifierCV(estimator, method=self.calibrator, cv=cv, ensemble=False)
+            if get_config()['enable_metadata_routing']:
+                # No caller can state the request of a calibrator built here, so it weights the
+                # calibration by the sample weights exactly when the estimator is fitted with them.
+                weighted = bool(get_routing_for_object(estimator).consumes('fit', ['sample_weight']))
+                calibrator.set_fit_request(sample_weight=weighted)
+            return calibrator
         else:
             # Clone so refitting cannot mutate the calibrator the caller passed to __init__.
             return clone(self.calibrator).set_params(estimator=estimator)  # type: ignore[union-attr]
@@ -701,6 +772,9 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
         """The optimal decision threshold determined during fitting."""
         return getattr(self, 'decision_', None)
 
+    def _decision_uses_scores(self, loss: BaseMetric) -> bool:
+        return Capability.COST_ONLY_DECISION not in loss.capabilities
+
     def _compute_decision(
         self,
         loss: BaseMetric,
@@ -708,12 +782,12 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
         y_score: FloatNDArray,
         loss_params: dict[str, Any],
     ) -> float | FloatNDArray:
-        # A single threshold needs class-dependent costs.
+        # A single threshold needs class-dependent costs. A loss whose decision depends on the scores
+        # reduces instance-dependent parameters itself, from the costs they make up.
         class_dependent_loss = _class_dependent_metric(loss, loss_params)
         if class_dependent_loss is not None:
             return class_dependent_loss.optimal_threshold(y, y_score)
-        for key, value in list(loss_params.items()):
-            loss_params[key] = _to_class_dependent_cost(value)
+        loss_params = {key: _scalar_if_single(value) for key, value in loss_params.items()}
         return loss.optimal_threshold(y, y_score, **loss_params)
 
     def _compute_decision_at_predict(
@@ -829,6 +903,16 @@ class CSRateClassifier(CSDecisionRuleClassifier):
         The label of the positive class, which the costs refer to.
         If None, the greater of the two classes (``classes_[1]``) is the positive class.
 
+    cv : int, cross-validation generator, iterable or None, default=None
+        Where the scores the rate is learned from come from.
+
+        - If None, the scores of the estimator fitted on all the training data, which flatter an
+          estimator that overfits it.
+        - Otherwise, out-of-fold scores from :func:`~sklearn.model_selection.cross_val_predict` with
+          this splitting strategy (see :func:`~sklearn.model_selection.check_cv`), at the cost of
+          fitting the estimator, with its calibrator if any, once more per fold. ``estimator_`` is
+          still fitted on all the training data.
+
     Attributes
     ----------
     classes_ : numpy.ndarray of shape (n_classes,)
@@ -839,6 +923,13 @@ class CSRateClassifier(CSDecisionRuleClassifier):
 
     rate_ : float
         The optimal positive rate determined during fitting.
+
+    Notes
+    -----
+    The rate applies to each call of :meth:`predict`: exactly ``ceil(rate_ * n_samples)`` of the samples
+    passed are predicted positive, those with the highest scores, with ties going to the samples passed
+    first. A sample's prediction therefore depends on the others it is predicted with; a single sample is
+    predicted positive whenever ``rate_ > 0``. Predict the whole population to target at once.
     """
 
     @property
@@ -864,19 +955,10 @@ class CSRateClassifier(CSDecisionRuleClassifier):
         return loss.optimal_rate(np.array([]), y_score, **loss_params)
 
     def _apply_decision(self, y_score: FloatNDArray, decision: Any) -> NDArray[Any]:
-        n_samples = len(y_score)
-
-        if np.isnan(decision):
-            return self._labels_for(np.zeros(n_samples, dtype=bool))
-
-        n_positive = int(np.ceil(decision * n_samples))
-
-        if n_positive == 0:
-            return self._labels_for(np.zeros(n_samples, dtype=bool))
-        if n_positive >= n_samples:
-            return self._labels_for(np.ones(n_samples, dtype=bool))
-
-        threshold_idx = np.argsort(y_score)[-n_positive]
-        threshold = y_score[threshold_idx]
-
-        return self._labels_for(y_score >= threshold)
+        is_positive = np.zeros(len(y_score), dtype=bool)
+        if not np.isnan(decision):
+            # Exactly the top ``ceil(rate * n)`` scores, so tied scores cannot push the count past the rate.
+            # Rounding first keeps a rate of k / n from targeting k + 1 samples, as 0.07 * 100 would.
+            n_positive = int(np.ceil(np.round(decision * len(y_score), 9)))
+            is_positive[np.argsort(-np.asarray(y_score, dtype=np.float64), kind='stable')[:n_positive]] = True
+        return self._labels_for(is_positive)

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections.abc import Collection
 from numbers import Real
 from typing import Any, ClassVar, Protocol, Self
 
@@ -155,11 +156,10 @@ class CostSensitiveClassifier(RoutesLossParameters, ABC, ClassifierMixin, BaseEs
                 fn_cost=fn_cost,
                 fp_cost=fp_cost,
             )
-        loss_params = self._normalize_cost_shapes(loss_params, size=y.size)
-
         loss = loss_ if loss_ is not None else self._get_default_loss()
 
         known = loss._all_parameters
+        loss_params = self._normalize_cost_shapes(loss_params, size=y.size, names=known)
         if self._extra_fit_params is not None:
             unknown = sorted(set(loss_params) - known - self._extra_fit_params)
             if unknown:
@@ -193,13 +193,14 @@ class CostSensitiveClassifier(RoutesLossParameters, ABC, ClassifierMixin, BaseEs
         y_pred: NDArray[Any] = self.classes_[np.argmax(y_proba, axis=1)]
         return y_pred
 
-    def _normalize_cost_shapes(self, loss_params: dict[str, Any], size: int) -> dict[str, Any]:
+    def _normalize_cost_shapes(self, loss_params: dict[str, Any], size: int, names: Collection[str]) -> dict[str, Any]:
+        """Flatten the arrays among the parameters in *names*, checking each has one value or one per sample."""
         for key, value in loss_params.items():
-            if isinstance(value, np.ndarray):
+            if key in names and isinstance(value, np.ndarray):
                 if value.size not in {1, size}:
                     raise ValueError(
                         f"Parameter '{key}' has length {value.size}, but expected length "
-                        f'{size} (one value per sample, matching y) or a single value '
+                        f'{size} (one value per sample) or a single value '
                         '(length 1, applied to every sample).'
                     )
                 loss_params[key] = value.reshape(-1)

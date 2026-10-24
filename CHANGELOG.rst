@@ -151,8 +151,8 @@ Models
   :class:`~empulse.metrics.MixtureMetric` of deterministic :class:`~empulse.metrics.MaxProfit`
   metrics, instead of the maximum profit of their averaged costs.
 - |Fix| :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.models.CSRateClassifier`
-  fitted with every cost zero fit only the wrapped estimator, as without costs, also when that
-  overrides non-zero costs set in the constructor.
+  fitted with every cost zero learn no decision, as without costs, also when that overrides non-zero
+  costs set in the constructor.
 - |Fix| :class:`~empulse.models.RobustCSClassifier` detects outliers on the positive class of a
   wrapped estimator's ``pos_label``, and accepts an outlier-sensitive parameter given as a list.
 - |Fix| :class:`~empulse.models.CSTreeClassifier`, :class:`~empulse.models.CSForestClassifier` and
@@ -174,6 +174,35 @@ Models
   can wrap a :class:`~sklearn.pipeline.Pipeline`. Without metadata routing, ``fit`` forwards its other
   keyword arguments, such as ``sample_weight``, to the wrapped estimator, and the costs too when the
   wrapped estimator's ``fit`` accepts them.
+- |Feature| :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.models.CSRateClassifier`
+  take a ``cv`` parameter to learn a decision that depends on the scores, such as a
+  :class:`~empulse.metrics.MaxProfit` threshold or any rate, from out-of-fold scores instead of the
+  scores of the training rows, which flatter an estimator that overfits them. A threshold that
+  depends only on the costs ignores it.
+- |Fix| :class:`~empulse.models.CSThresholdClassifier` with a loss whose threshold depends on the
+  scores, such as :class:`~empulse.metrics.MaxProfit`, and instance-dependent parameters learns its
+  threshold from the costs those parameters make up, instead of from the parameters' averages, which
+  is wrong for a cost such as their product.
+- |Fix| :class:`~empulse.models.CSThresholdClassifier`'s default calibrator passes the costs on to a
+  cost-sensitive estimator, which was trained on ``fp_cost=fn_cost=1`` instead, and with metadata
+  routing it is fitted with the sample weights the estimator requests, which raised before.
+- |Fix| :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.models.CSRateClassifier`
+  with ``pos_label`` set to the smaller class pass a cost-sensitive estimator the costs as it sees
+  them, with the true and false positives and negatives swapped, instead of inverting its training.
+- |Fix| :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.models.CSRateClassifier`
+  without a ``loss`` keep each cost not passed to ``predict`` at its value in ``fit``, instead of the
+  constructor's, which predicted every sample positive after ``fit(X, y, fp_cost=5, fn_cost=10)``
+  and ``predict(X, fn_cost=10)``. A predict-time cost with a length other than the samples' is
+  rejected with a clear error.
+- |Fix| :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.models.CSRateClassifier`
+  forget the decision of an earlier fit when refitted without costs, instead of applying it to the new
+  estimator, and fitted without costs they fit the same calibrated estimator as with costs.
+- |Fix| :class:`~empulse.models.CSRateClassifier` predicts exactly ``ceil(rate_ * n_samples)`` samples
+  positive. Tied scores at the cut-off made it predict more, up to five times the rate on a shallow
+  tree's scores, and rounding error one more for rates such as 0.07 of 100 samples. Its documentation
+  now says that the rate applies to each ``predict`` batch.
+- |Fix| Cost-sensitive models accept an array fit parameter whose length is not the number of
+  samples, such as a per-feature weight, when it is not a cost or loss parameter.
 - |Fix| :class:`~empulse.models.RobustCSClassifier` keeps the costs set on the wrapped estimator
   when neither ``fit`` nor its own constructor sets them, instead of overriding them with zero.
 - |Fix| After ``set_params(loss=...)``, ``set_fit_request`` accepts the new loss's parameters.

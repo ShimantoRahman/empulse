@@ -126,9 +126,10 @@ Cost Matrix
 plain ``tp_cost``/``tn_cost``/``fp_cost``/``fn_cost`` values, or a
 :class:`~empulse.metrics.Metric` as ``loss``. See :ref:`specifying_costs`.
 
-One consequence is specific to this model: with **instance-dependent** costs, ``threshold_``
-becomes an array of shape ``(n_samples,)`` rather than a scalar, because each row has its own
-break-even point. That is the strongest practical reason to use per-row costs at all.
+With **instance-dependent** costs each row has its own break-even point, which is the strongest
+practical reason to use per-row costs at all. ``threshold_`` is a single threshold, learned from
+each cost averaged over the training rows; pass the rows' own costs to ``predict`` to decide each
+row by its own threshold.
 
 .. themed-figure:: instance_thresholds
     :alt: At probability 0.25, a customer with false-negative cost 20 has threshold 0.333 and is
@@ -147,7 +148,10 @@ break-even point. That is the strongest practical reason to use per-row costs at
     model = CSThresholdClassifier(LogisticRegression(max_iter=500), fp_cost=1)
     model.fit(X_train, y_train, fn_cost=fn_cost)
 
-    print(np.shape(model.threshold_))
+    print(model.threshold_)  # one threshold, from the average fn_cost
+
+    fn_cost_test = np.random.default_rng(1).uniform(1, 20, size=len(y_test))
+    y_pred = model.predict(X_test, fn_cost=fn_cost_test)  # each row at its own threshold
 
 Getting those arrays through cross-validation needs metadata routing — see
 :ref:`instance_based_cv`.
@@ -225,8 +229,31 @@ useful when costs vary by deployment context (e.g. different campaigns):
 
 .. note::
     Overriding at predict time recomputes the threshold analytically from the new
-    costs — no re-fitting occurs.  This does **not** work with ``MaxProfit``-based
-    metrics because that strategy requires label information from the training set.
+    costs — no re-fitting occurs.  A cost you leave out keeps the value it had in ``fit``,
+    so ``model.predict(X, fp_cost=20)`` above would keep ``fn_cost=1``.  This does **not**
+    work with ``MaxProfit``-based metrics because that strategy requires label information
+    from the training set.
+
+Learning the Threshold from Out-of-Fold Scores
+----------------------------------------------
+
+A threshold computed from the costs alone, as with plain costs or a
+:class:`~empulse.metrics.Cost` metric, never looks at the training scores. A
+:class:`~empulse.metrics.MaxProfit` threshold does: it is the score at which the training
+profit peaks. An estimator that overfits, such as a deep random forest, scores its own
+training rows too confidently, and the threshold learned from those scores does not carry
+over to new data. Pass ``cv`` to learn it from out-of-fold scores instead, at the cost of one
+extra fit per fold; the fitted estimator is still trained on all the data:
+
+.. code-block:: python
+
+    from sklearn.ensemble import RandomForestClassifier
+
+    model = CSThresholdClassifier(RandomForestClassifier(), calibrator=None, loss=profit_metric, cv=5)
+    model.fit(X, y, clv=200, incentive_cost=10, contact_cost=1, accept_rate=0.3)
+
+``CSRateClassifier`` takes the same ``cv``, which matters for every rate, since a rate is
+always read off the scores.
 
 sklearn Integration
 -------------------
@@ -267,6 +294,12 @@ When to use ``CSRateClassifier`` over ``CSThresholdClassifier``
 * Your deployment has a fixed capacity constraint (e.g. *"we can only call 10 % of customers"*).  ``CSRateClassifier`` naturally implements a top-k selection rule.
 * Your probabilities are ordinal but not well-calibrated and you cannot or do not want to calibrate them.
 * You want a decision rule that is invariant to monotone transformations of the predicted scores.
+
+The rate applies to each call of ``predict``: exactly ``ceil(rate_ * n_samples)`` of the rows
+passed are predicted positive, the highest-scoring ones, with ties going to the rows passed
+first. A row's prediction therefore depends on the rows it is predicted with, and a single row
+is predicted positive whenever ``rate_ > 0``, so predict the whole population you will target
+at once.
 
 Quick Start
 -----------
