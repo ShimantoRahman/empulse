@@ -751,11 +751,14 @@ class CSThresholdClassifier(CSDecisionRuleClassifier):
         if self.calibrator in {'sigmoid', 'isotonic'}:
             cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=self.random_state)
             calibrator = CalibratedClassifierCV(estimator, method=self.calibrator, cv=cv, ensemble=False)
-            if get_config()['enable_metadata_routing']:
-                # No caller can state the request of a calibrator built here, so it weights the
-                # calibration by the sample weights exactly when the estimator is fitted with them.
-                weighted = bool(get_routing_for_object(estimator).consumes('fit', ['sample_weight']))
-                calibrator.set_fit_request(sample_weight=weighted)
+            # No caller can state the request of a calibrator built here, so it weights the calibration
+            # by the sample weights when the estimator is fitted with them. Otherwise the request stays
+            # unset: the calibrator routes its own ``sample_weight=None``, which an explicit ``False``
+            # would reject.
+            if get_config()['enable_metadata_routing'] and get_routing_for_object(estimator).consumes(
+                'fit', ['sample_weight']
+            ):
+                calibrator.set_fit_request(sample_weight=True)
             return calibrator
         else:
             # Clone so refitting cannot mutate the calibrator the caller passed to __init__.

@@ -762,6 +762,15 @@ class TestFitParamsReachTheWrappedEstimator:
             expected = CSLogitClassifier().fit(X, y, fp_cost=1.0, fn_cost=5.0)
         np.testing.assert_allclose(clf.estimator_.estimator_.coef_, expected.coef_)
 
+    def test_default_calibrator_under_routing_with_an_estimator_that_takes_no_weights(self, data):
+        """The calibrator passes ``sample_weight=None`` on, which an explicit refusal would reject."""
+        X, y = data
+        with config_context(enable_metadata_routing=True):
+            inner = CSLogitClassifier().set_fit_request(tp_cost=True, tn_cost=True, fp_cost=True, fn_cost=True)
+            clf = CSThresholdClassifier(inner, random_state=0).fit(X, y, fp_cost=1.0, fn_cost=5.0)
+
+        assert clf.threshold_ == pytest.approx(1 / 6)
+
     def test_sample_weight_routed_through_the_default_calibrator(self, data):
         """The calibrator is built internally, so its weight request follows the estimator's."""
         X, y = data
