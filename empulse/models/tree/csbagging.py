@@ -16,8 +16,8 @@ from ..._common._metaestimators import estimator_has
 from ..._common._sklearn_compat import Tags, get_tags, indices_to_mask, validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric
-from .._base.cost_sensitive import CostSensitiveClassifier
-from .._base.ensemble_weighting import accumulate_weighted_prediction, goodness_weights, subset_loss_params
+from .._base.cost_sensitive import CostSensitiveClassifier, subset_loss_params
+from .._base.ensemble_weighting import accumulate_weighted_prediction, goodness_weights
 from .cstree import CSTreeClassifier, _warn_if_trees_ignore_strategy
 
 

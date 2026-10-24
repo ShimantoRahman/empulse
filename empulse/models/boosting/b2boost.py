@@ -1,3 +1,4 @@
+from functools import cache
 from numbers import Real
 from typing import TYPE_CHECKING, Any, ClassVar, Self
 
@@ -16,6 +17,24 @@ if TYPE_CHECKING:
 from ..._common import Parameter
 from ...metrics import Cost, CostMatrix, Metric
 from .csboost import CSBoostClassifier
+
+
+@cache
+def _b2b_churn_metric() -> Metric:
+    """Build the B2B churn metric of :class:`B2BoostClassifier` once, when first used rather than on import."""
+    return Metric(
+        CostMatrix()
+        .add_tp_benefit(
+            sympy.Symbol('gamma')
+            * (sympy.Symbol('clv') - sympy.Symbol('clv') * sympy.Symbol('delta') - sympy.Symbol('f'))
+        )
+        .add_tp_benefit((1 - sympy.Symbol('gamma')) * -sympy.Symbol('f'))
+        .add_fp_cost(sympy.Symbol('clv') * sympy.Symbol('delta') + sympy.Symbol('f'))
+        .alias('accept_rate', sympy.Symbol('gamma'))
+        .alias('incentive_fraction', sympy.Symbol('delta'))
+        .alias('contact_cost', sympy.Symbol('f')),
+        Cost(),
+    )
 
 
 class B2BoostClassifier(CSBoostClassifier):
@@ -170,19 +189,6 @@ class B2BoostClassifier(CSBoostClassifier):
         'incentive_fraction': [Real],
         'contact_cost': [Real],
     }
-    _LOSS = Metric(
-        CostMatrix()
-        .add_tp_benefit(
-            sympy.Symbol('gamma')
-            * (sympy.Symbol('clv') - sympy.Symbol('clv') * sympy.Symbol('delta') - sympy.Symbol('f'))
-        )
-        .add_tp_benefit((1 - sympy.Symbol('gamma')) * -sympy.Symbol('f'))
-        .add_fp_cost(sympy.Symbol('clv') * sympy.Symbol('delta') + sympy.Symbol('f'))
-        .alias('accept_rate', sympy.Symbol('gamma'))
-        .alias('incentive_fraction', sympy.Symbol('delta'))
-        .alias('contact_cost', sympy.Symbol('f')),
-        Cost(),
-    )
 
     def __init__(
         self,
@@ -193,7 +199,7 @@ class B2BoostClassifier(CSBoostClassifier):
         incentive_fraction: float = 0.05,
         contact_cost: float = 15,
     ) -> None:
-        super().__init__(estimator=estimator, loss=self._LOSS)
+        super().__init__(estimator=estimator, loss=_b2b_churn_metric())
         self.clv = clv
         self.incentive_fraction = incentive_fraction
         self.contact_cost = contact_cost

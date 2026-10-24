@@ -9,11 +9,8 @@ from sklearn.datasets import make_classification
 from sklearn.tree import DecisionTreeClassifier
 
 from empulse.models import CSBaggingClassifier, CSForestClassifier, CSTreeClassifier
-from empulse.models._base.ensemble_weighting import (
-    accumulate_weighted_prediction,
-    goodness_weights,
-    subset_loss_params,
-)
+from empulse.models._base.cost_sensitive import subset_loss_params
+from empulse.models._base.ensemble_weighting import accumulate_weighted_prediction, goodness_weights
 
 
 @pytest.mark.parametrize('criterion', ['cost', 'gini', 'entropy'])

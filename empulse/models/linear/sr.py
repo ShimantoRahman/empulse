@@ -13,7 +13,7 @@ from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstra
 from ...metrics import BaseMetric, Capability, MaxProfit
 from .._base import CostSensitiveClassifier, MetricStrategyFactory
 from .._base.cost_scale import decision_cost_scale
-from .._base.ensemble_weighting import subset_loss_params
+from .._base.cost_sensitive import subset_loss_params
 from ._symbolic import ParetoPoint, Program, ProgramSpace, SearchSettings, evolve, get_function
 
 

@@ -16,6 +16,40 @@ from ...metrics import BaseMetric, Capability, Cost, MetricStrategy
 from ...metrics.metric.prebuilt_metrics import make_generic_metric
 
 
+def subset_loss_params(loss_params: dict[str, Any], index: Any, n_samples: int) -> dict[str, Any]:
+    """
+    Subset every instance-dependent (array-valued) entry of *loss_params* by *index*.
+
+    Mirrors how ``y`` and ``y_score`` are subset to some of the rows (an ensemble member's out-of-bag
+    rows, or the rows a symbolic regression program is scored on) before being passed to the loss: an
+    array-valued parameter of length *n_samples* describes one value per training sample and must be
+    subset the same way, or the metric would evaluate it against the wrong rows (and, for a length
+    that no longer matches the subset, raise a shape-mismatch error). Class-dependent
+    (scalar) parameters, and arrays not aligned with the full training set, pass through unchanged.
+
+    Parameters
+    ----------
+    loss_params : dict
+        Keyword arguments that will be passed to the loss/metric.
+    index : ndarray of int or bool
+        The row selector (indices or boolean mask) to apply.
+    n_samples : int
+        The number of samples in the full training set (``y.shape[0]`` at fit time).
+
+    Returns
+    -------
+    subset : dict
+        *loss_params* with every length-``n_samples`` array entry subset by *index*.
+    """
+    subset: dict[str, Any] = {}
+    for key, value in loss_params.items():
+        if isinstance(value, np.ndarray) and value.ndim >= 1 and value.shape[0] == n_samples:
+            subset[key] = value[index]
+        else:
+            subset[key] = value
+    return subset
+
+
 class MetricStrategyFactory(Protocol):
     """A factory for creating MetricStrategy instances."""
 

@@ -183,23 +183,6 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
             return _all_costs_zero({name: params[name] for name in self._cost_names})
         return bool(self.loss._missing_parameters(params.keys()))
 
-    def _should_use_fitted_decision(
-        self,
-        tp_cost: FloatArrayLike | float | Parameter,
-        tn_cost: FloatArrayLike | float | Parameter,
-        fn_cost: FloatArrayLike | float | Parameter,
-        fp_cost: FloatArrayLike | float | Parameter,
-        loss_params: dict[str, Any],
-    ) -> bool:
-        """
-        Check if the decision attribute (threshold/rate) fitted during training should be used.
-
-        Returns True when no new cost information is provided at predict time,
-        meaning the caller wants to use whatever decision was learned during fit.
-        """
-        costs = (tp_cost, tn_cost, fn_cost, fp_cost)
-        return all(cost is Parameter.UNCHANGED for cost in costs) and not loss_params
-
     def _unfitted_estimator(self) -> tuple[str, Any]:
         """Return the routing name and an unfitted copy of the estimator to fit."""
         return 'estimator', clone(self.estimator)
@@ -452,7 +435,8 @@ class CSDecisionRuleClassifier(MetaEstimatorMixin, CostSensitiveClassifier):  # 
         Without a ``loss``, a cost not passed to ``predict`` keeps the value it had in ``fit``: its average
         over the samples, for an instance-dependent cost.
         """
-        if self._should_use_fitted_decision(tp_cost, tn_cost, fn_cost, fp_cost, loss_params):
+        # Without new costs at predict time, apply the decision learned in fit.
+        if not loss_params and all(cost is Parameter.UNCHANGED for cost in (tp_cost, tn_cost, fn_cost, fp_cost)):
             check_is_fitted(self)
             decision = getattr(self, 'decision_', None)
             if decision is None:

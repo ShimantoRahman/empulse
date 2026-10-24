@@ -18,8 +18,8 @@ from ..._common._sklearn_compat import Tags, validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric
 from .._base.cost_scale import decision_cost_scale
-from .._base.cost_sensitive import CostSensitiveClassifier
-from .._base.ensemble_weighting import goodness_weights, subset_loss_params
+from .._base.cost_sensitive import CostSensitiveClassifier, subset_loss_params
+from .._base.ensemble_weighting import goodness_weights
 from ._cstree import CostTree, cost_records
 from ._cstree._grow import (
     TREE_PARAM_CONSTRAINTS,
