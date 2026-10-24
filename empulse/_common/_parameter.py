@@ -1,12 +1,11 @@
 from enum import Enum
-from typing import Self
 
 
 class Parameter(Enum):
-    """Used to know if parameters have been set."""
+    """
+    Default of a cost argument the caller did not pass, told apart from any value it could pass.
+
+    It supports no arithmetic, so an unset cost that leaks into a calculation fails at once.
+    """
 
     UNCHANGED = 'unchanged'
-
-    # Negating an unset cost argument returns the sentinel instead of raising.
-    def __neg__(self) -> Self:
-        return self
