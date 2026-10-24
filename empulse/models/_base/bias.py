@@ -4,11 +4,11 @@ from typing import Any, ClassVar, Self
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
-from sklearn.base import BaseEstimator, ClassifierMixin, _fit_context, clone
+from sklearn.base import BaseEstimator, ClassifierMixin, MetaEstimatorMixin, _fit_context, clone
 from sklearn.utils._param_validation import HasMethods, StrOptions
-from sklearn.utils.validation import check_is_fitted
+from sklearn.utils.validation import check_is_fitted, column_or_1d, indexable
 
-from ..._common._sklearn_compat import Tags, type_of_target, validate_data
+from ..._common._sklearn_compat import Tags, get_tags, type_of_target
 from ..._common._strategies import Strategy
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 
@@ -18,16 +18,19 @@ from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstra
 AnyStrategyFn = Callable[[NDArray[Any], NDArray[Any]], Any]
 
 
-class BaseBiasMitigationClassifier(ABC, ClassifierMixin, BaseEstimator):  # type: ignore[misc]
+class BaseBiasMitigationClassifier(ABC, MetaEstimatorMixin, ClassifierMixin, BaseEstimator):  # type: ignore[misc]
     """Shared fit/predict scaffolding for the fairness meta-estimator classifiers.
 
     :class:`~empulse.models.BiasRelabelingClassifier`, :class:`~empulse.models.BiasResamplingClassifier`,
     and :class:`~empulse.models.BiasReweighingClassifier` differ only in how they mitigate bias against
     ``sensitive_feature`` once one is supplied. Subclasses implement :meth:`_fit_mitigated`.
+
+    ``X`` goes to the wrapped estimator as given, so that estimator can be a pipeline that encodes
+    strings, imputes missing values or selects columns by name.
     """
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {
-        'estimator': [HasMethods(['fit', 'predict_proba']), None],
+        'estimator': [HasMethods(['fit', 'predict_proba'])],
         'strategy': [callable, StrOptions({'statistical parity', 'demographic parity'}), None],
         'transform_feature': [callable, None],
     }
@@ -55,6 +58,10 @@ class BaseBiasMitigationClassifier(ABC, ClassifierMixin, BaseEstimator):  # type
         tags = super().__sklearn_tags__()
         tags.classifier_tags.multi_class = False
         tags.classifier_tags.poor_score = True
+        # X goes to the wrapped estimator as given, so it decides what X may contain.
+        estimator_tags = get_tags(self.estimator)
+        tags.input_tags.sparse = estimator_tags.input_tags.sparse
+        tags.input_tags.allow_nan = estimator_tags.input_tags.allow_nan
         return tags
 
     @abstractmethod
@@ -86,7 +93,8 @@ class BaseBiasMitigationClassifier(ABC, ClassifierMixin, BaseEstimator):  # type
             raise TypeError(
                 f'{type(self).__name__}.fit() does not take {", ".join(reserved)}: it passes its own to the estimator.'
             )
-        X, y = validate_data(self, X, y)
+        X, y = indexable(X, y)
+        y = column_or_1d(y, warn=True)
         y_type = type_of_target(y, input_name='y', raise_unknown=True)
         if y_type != 'binary':
             raise ValueError(
@@ -98,15 +106,20 @@ class BaseBiasMitigationClassifier(ABC, ClassifierMixin, BaseEstimator):  # type
         if sensitive_feature is None:
             self.estimator_ = clone(self.estimator)
             self.estimator_.fit(X, y, **fit_params)
-            return self
-        sensitive_feature = np.asarray(sensitive_feature)
-        if len(sensitive_feature) != len(y):
-            raise ValueError(
-                f'sensitive_feature must have the same length as y, got {len(sensitive_feature)} and {len(y)}.'
-            )
+        else:
+            sensitive_feature = np.asarray(sensitive_feature)
+            if len(sensitive_feature) != len(y):
+                raise ValueError(
+                    f'sensitive_feature must have the same length as y, got {len(sensitive_feature)} and {len(y)}.'
+                )
+            self.estimator_ = self._fit_mitigated(X, y, sensitive_feature, **fit_params)
 
-        self.estimator_ = self._fit_mitigated(X, y, sensitive_feature, **fit_params)
-
+        # The wrapped estimator checked X, so it knows its features; a previous fit's must not outlive this one.
+        for attribute in ('n_features_in_', 'feature_names_in_'):
+            if hasattr(self.estimator_, attribute):
+                setattr(self, attribute, getattr(self.estimator_, attribute))
+            elif attribute in vars(self):
+                delattr(self, attribute)
         return self
 
     def predict_proba(self, X: FloatArrayLike) -> FloatNDArray:
@@ -124,7 +137,6 @@ class BaseBiasMitigationClassifier(ABC, ClassifierMixin, BaseEstimator):  # type
             Predicted class probabilities.
         """
         check_is_fitted(self)
-        X = validate_data(self, X, reset=False)
         y_proba: FloatNDArray = self.estimator_.predict_proba(X)
         return y_proba
 

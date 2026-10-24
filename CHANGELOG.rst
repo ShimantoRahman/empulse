@@ -235,6 +235,15 @@ Models
   accept missing values in ``X``, which XGBoost, LightGBM and CatBoost all handle, and say so in their
   ``allow_nan`` tag. :class:`~empulse.models.CSThresholdClassifier` and
   :class:`~empulse.models.CSRateClassifier` around them take missing values too.
+- |Enhancement| :class:`~empulse.models.BiasRelabelingClassifier`,
+  :class:`~empulse.models.BiasResamplingClassifier` and :class:`~empulse.models.BiasReweighingClassifier`
+  pass ``X`` to their estimator as given, as the threshold wrappers do, so it can be a
+  :class:`~sklearn.pipeline.Pipeline` that encodes strings, imputes missing values or selects columns
+  by name. They converted ``X`` to a dense numeric array first, which rejected strings, missing values
+  and sparse matrices, and dropped the column names. :class:`~empulse.models.BiasReweighingClassifier`
+  passes its weights to a pipeline's last step, or, with metadata routing enabled, to the steps that
+  request them. ``estimator=None``, which the parameter check accepted but could not be fit, is
+  rejected by it.
 - |Fix| :class:`~empulse.models.RobustCSClassifier` only reports in its ``allow_nan`` tag that it
   accepts missing values when its ``outlier_estimator`` does too, since that is fit on ``X`` as well.
   The default :class:`~sklearn.linear_model.HuberRegressor` does not.

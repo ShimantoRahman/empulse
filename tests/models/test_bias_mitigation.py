@@ -295,3 +295,97 @@ def test_single_group_reweighing_warning_points_at_the_callers_fit():
         BiasReweighingClassifier(LogisticRegression()).fit(X, y, sensitive_feature=np.zeros(len(y), dtype=int))
 
     assert record[0].filename == __file__
+
+
+@pytest.mark.parametrize('classifier', CLASSIFIERS)
+@pytest.mark.parametrize('with_sensitive_feature', [True, False], ids=['mitigated', 'unmitigated'])
+def test_x_is_left_to_a_wrapped_pipeline(classifier, with_sensitive_feature):
+    """A pipeline that imputes and encodes by column name gets X as given: a DataFrame with strings and NaN."""
+    pd = pytest.importorskip('pandas')
+    from sklearn.compose import make_column_transformer
+    from sklearn.impute import SimpleImputer
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import OneHotEncoder
+
+    rng = np.random.default_rng(0)
+    X = pd.DataFrame({'income': rng.normal(size=200), 'region': rng.choice(['north', 'south'], 200)})
+    X.loc[::9, 'income'] = np.nan
+    y = rng.integers(0, 2, 200)
+    pipeline = make_pipeline(
+        make_column_transformer((SimpleImputer(), ['income']), (OneHotEncoder(), ['region'])), LogisticRegression()
+    )
+    sensitive_feature = rng.integers(0, 2, 200) if with_sensitive_feature else None
+
+    model = classifier(pipeline).fit(X, y, sensitive_feature=sensitive_feature)
+
+    assert model.predict_proba(X).shape == (200, 2)
+    assert list(model.feature_names_in_) == ['income', 'region']
+    assert model.n_features_in_ == 2
+
+
+class TestReweighingAPipeline:
+    """A pipeline takes sample weights as its last step's, or routed with metadata routing."""
+
+    @staticmethod
+    def data():
+        rng = np.random.default_rng(1)
+        X = rng.normal(size=(300, 3))
+        y = (X[:, 0] + rng.normal(size=300) > 0).astype(int)
+        sensitive_feature = (rng.uniform(size=300) < 0.3 + 0.4 * y).astype(int)
+        return X, y, sensitive_feature
+
+    def test_the_last_step_gets_the_weights(self):
+        from sklearn.pipeline import make_pipeline
+        from sklearn.preprocessing import StandardScaler
+
+        X, y, sensitive_feature = self.data()
+        model = BiasReweighingClassifier(make_pipeline(StandardScaler(), LogisticRegression()))
+        model.fit(X, y, sensitive_feature=sensitive_feature)
+        reference = make_pipeline(StandardScaler(), LogisticRegression()).fit(
+            X, y, logisticregression__sample_weight=_independent_sample_weights(y, sensitive_feature)
+        )
+        np.testing.assert_allclose(model.predict_proba(X), reference.predict_proba(X))
+
+    def test_a_nested_pipeline_passes_them_on(self):
+        from sklearn.pipeline import make_pipeline
+        from sklearn.preprocessing import StandardScaler
+
+        X, y, sensitive_feature = self.data()
+        nested = make_pipeline(StandardScaler(), make_pipeline(StandardScaler(), LogisticRegression()))
+        flat = make_pipeline(StandardScaler(), LogisticRegression())
+        model = BiasReweighingClassifier(nested).fit(X, y, sensitive_feature=sensitive_feature)
+        reference = BiasReweighingClassifier(flat).fit(X, y, sensitive_feature=sensitive_feature)
+        np.testing.assert_allclose(model.predict_proba(X), reference.predict_proba(X))
+
+    def test_with_metadata_routing_they_are_routed(self):
+        from sklearn import config_context
+        from sklearn.pipeline import make_pipeline
+        from sklearn.preprocessing import StandardScaler
+
+        X, y, sensitive_feature = self.data()
+        with config_context(enable_metadata_routing=True):
+            pipeline = make_pipeline(
+                StandardScaler().set_fit_request(sample_weight=False),
+                LogisticRegression().set_fit_request(sample_weight=True),
+            )
+            model = BiasReweighingClassifier(pipeline).fit(X, y, sensitive_feature=sensitive_feature)
+        reference = BiasReweighingClassifier(make_pipeline(StandardScaler(), LogisticRegression()))
+        reference.fit(X, y, sensitive_feature=sensitive_feature)
+        np.testing.assert_allclose(model.predict_proba(X), reference.predict_proba(X))
+
+    def test_the_last_steps_own_weights_are_refused(self):
+        from sklearn.pipeline import make_pipeline
+        from sklearn.preprocessing import StandardScaler
+
+        X, y, sensitive_feature = self.data()
+        model = BiasReweighingClassifier(make_pipeline(StandardScaler(), LogisticRegression()))
+        with pytest.raises(TypeError, match='logisticregression__sample_weight'):
+            model.fit(X, y, sensitive_feature=sensitive_feature, logisticregression__sample_weight=np.ones(300))
+
+
+@pytest.mark.parametrize('classifier', CLASSIFIERS)
+def test_an_estimator_is_required(classifier):
+    """None was accepted by the parameter check and then failed to clone."""
+    X, y = np.zeros((4, 1)), np.array([0, 1, 0, 1])
+    with pytest.raises(ValueError, match="'estimator' parameter"):
+        classifier(None).fit(X, y)

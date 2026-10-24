@@ -5,6 +5,7 @@ import numpy as np
 from numpy.random import RandomState
 from numpy.typing import NDArray
 from sklearn.base import clone
+from sklearn.utils import _safe_indexing
 from sklearn.utils.validation import _check_method_params
 
 from ..._common._bias_sampling import resample_indices
@@ -175,7 +176,7 @@ class BiasResamplingClassifier(BaseBiasMitigationClassifier):
             random_state=self.random_state,
         )
         fit_params = _check_method_params(X, params=fit_params, indices=indices)
-        X, y = X[indices], y[indices]
+        X, y = _safe_indexing(X, indices), y[indices]
         estimator_ = clone(self.estimator)
         estimator_.fit(X, y, **fit_params)
         return estimator_
