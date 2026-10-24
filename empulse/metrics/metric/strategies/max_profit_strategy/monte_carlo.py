@@ -6,8 +6,10 @@ import sympy
 from sympy.stats import pspace
 
 from ....._types import FloatNDArray
+from ..._distributions import frozen_distribution, spec_for
 from ..._symbolic import _subs_by_name
 from .common import (
+    _build_rate_function,
     _distribution_parameter_symbols,
     _evaluate_sampled_integrands,
     _HullScoreFunction,
@@ -15,7 +17,6 @@ from .common import (
     _SampledIntegrand,
     extract_distribution_parameters,
 )
-from .quasi_monte_carlo import _scipy_distribution, _sympy_dist_to_scipy
 
 
 def _control_variates(
@@ -32,9 +33,9 @@ def _control_variates(
     """
     controls: list[FloatNDArray] = []
     for random_symbol, samples in zip(random_symbols, param_grid, strict=True):
-        if type(pspace(random_symbol).distribution) not in _sympy_dist_to_scipy:
+        if spec_for(random_symbol) is None:
             continue
-        distribution = _scipy_distribution(_subs_by_name(random_symbol, distribution_parameters))
+        distribution = frozen_distribution(_subs_by_name(random_symbol, distribution_parameters))
         with np.errstate(all='ignore'):
             mean, variance = float(distribution.mean()), float(distribution.var())
         if np.isfinite(mean) and np.isfinite(variance):
@@ -57,19 +58,17 @@ class MaxProfitScoreMonteCarlo(_HullScoreFunction):
     def __init__(
         self,
         profit_function: sympy.Expr,
-        rate_function: sympy.Expr | None,
         random_symbols: Iterable[sympy.Symbol],
         deterministic_symbols: Iterable[sympy.Symbol],
         n_mc_samples: int,
         rng: np.random.Generator,
     ) -> None:
         self.profit_function = profit_function
-        self.rate_function = rate_function
         self.random_symbols = random_symbols
         self.deterministic_symbols = deterministic_symbols
         self.n_mc_samples = n_mc_samples
         self._profit_integrand = _SampledIntegrand(profit_function, random_symbols)
-        self._rate_integrand = _SampledIntegrand(rate_function, random_symbols) if rate_function is not None else None
+        self._rate_integrand = _SampledIntegrand(_build_rate_function(), random_symbols)
         self._lower_chain_gate = _LowerChainGate(profit_function, list(random_symbols))
 
         # Every grid is drawn from this seed, so the samples for a set of distribution parameters do not
@@ -129,10 +128,31 @@ class MaxProfitScoreMonteCarlo(_HullScoreFunction):
         kwargs: dict[str, Any],
     ) -> float:
         """Compute the maximum profit from the ROC convex hull and the positive class prior."""
+        return self._evaluate(true_positive_rates, false_positive_rates, positive_class_prior, kwargs, rate=False)
+
+    def _rate_hull(
+        self,
+        true_positive_rates: FloatNDArray,
+        false_positive_rates: FloatNDArray,
+        positive_class_prior: float,
+        kwargs: dict[str, Any],
+    ) -> float:
+        """Compute the optimal rate from the ROC convex hull and the positive class prior, on the same samples."""
+        return self._evaluate(true_positive_rates, false_positive_rates, positive_class_prior, kwargs, rate=True)
+
+    def _evaluate(
+        self,
+        true_positive_rates: FloatNDArray,
+        false_positive_rates: FloatNDArray,
+        positive_class_prior: float,
+        kwargs: dict[str, Any],
+        *,
+        rate: bool,
+    ) -> float:
         param_grid, controls, parameters = self._grid(kwargs)
         return _evaluate_sampled_integrands(
             self._profit_integrand,
-            self._rate_integrand,
+            self._rate_integrand if rate else None,
             true_positive_rates,
             false_positive_rates,
             positive_class_prior,

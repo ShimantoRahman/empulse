@@ -173,6 +173,17 @@ class MetricStrategy(ABC):
             The computed metric score or loss.
         """
 
+    def _closed_form_expected_max_profit(
+        self, n_positives: int, n_negatives: int, **parameters: FloatNDArray | float
+    ) -> Any:
+        """
+        Return what compiled code needs to compute the expected maximum profit for these class counts.
+
+        ``None`` unless the strategy's score is an expected maximum profit that compiled code computes
+        in closed form (see :meth:`~empulse.metrics.MaxProfit._closed_form_expected_max_profit`).
+        """
+        return None
+
     def _prepare_count_score(self, **parameters: FloatNDArray | float) -> CountScoreFn | None:
         """
         Prepare :meth:`score` for samples grouped by score, or return ``None`` if it needs every sample.

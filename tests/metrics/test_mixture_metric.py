@@ -299,7 +299,7 @@ def test_mixture_evaluate_costs_replace_stochastic_with_stochastic_component(cre
 # They use an all-deterministic 2-component mixture (gamma fixed to 0 and 1), not the full
 # 3-component EMPCS mixture with its Uniform(0, 1)-distributed component. MaxProfit's
 # gradient_boost_objective/logit_objective only support deterministic metrics and stochastic
-# metrics whose distribution derives from BasePositiveDistribution (Beta, Gamma, Pareto, etc.).
+# metrics with closed-form partial moments of a positive variable (Beta, Gamma, Pareto, etc.).
 # Uniform is not one of them, so metric_stoch._gradient_boost_objective(...)/._logit_objective(...)
 # raise NotImplementedError regardless of MixtureMetric; see
 # test_full_mixture_gradient_training_not_yet_supported below.
@@ -427,7 +427,7 @@ def test_logit_gradient_steps_matches_direct_call():
 
 def test_full_mixture_gradient_training_not_yet_supported(credit_scoring_metrics, y_true_and_prediction):
     """MaxProfit's gradient_boost_objective/logit_objective only support deterministic metrics and
-    stochastic metrics built on a BasePositiveDistribution (Beta, Gamma, Pareto, ...).
+    stochastic metrics with closed-form partial moments of a positive variable (Beta, Gamma, Pareto, ...).
 
     Uniform is not one of those, so the EMPCS mixture's third (Uniform) component cannot be used for
     gradient-based training. MixtureMetric propagates that NotImplementedError rather than silently

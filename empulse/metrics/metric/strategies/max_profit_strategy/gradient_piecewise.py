@@ -14,7 +14,7 @@ from .common import (
     extract_distribution_parameters,
 )
 from .envelope import Partition, PolynomialEnvelope, partition_support
-from .piecewise import BasePositiveDistribution, _resolve_support
+from .piecewise import ClosedFormMaxProfitScorePiecewise, _resolve_support
 
 # The hull state cached between gradient steps: (bounds, seg_tprs, seg_fprs, M).
 _HullCache = tuple[FloatNDArray, FloatNDArray, FloatNDArray, int]
@@ -67,7 +67,7 @@ class _PiecewiseDerivativeState:
     pi1: float
 
     def _init_piecewise_state(
-        self, score_function: BasePositiveDistribution, parameters: dict[str, FloatNDArray | float]
+        self, score_function: ClosedFormMaxProfitScorePiecewise, parameters: dict[str, FloatNDArray | float]
     ) -> None:
         self.score_function = score_function
 
@@ -145,7 +145,7 @@ class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective, _PiecewiseDe
     def __init__(
         self,
         *,
-        score_function: BasePositiveDistribution,
+        score_function: ClosedFormMaxProfitScorePiecewise,
         features: FloatNDArray,
         y_true: FloatNDArray,
         C: float,
@@ -204,9 +204,10 @@ class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective, _PiecewiseDe
     ) -> float:
         """Sum the piecewise EMP objective value across all segments and polynomial terms."""
         total_value = 0.0
-        for k in range(len(self.score_function.coefficient_eqs)):
-            k_mom, cdf_diffs = self.score_function._get_kth_integration_components(bounds, k, self.dist_params)
-            R_kM = float(k_mom) * np.asarray(cdf_diffs)  # ruff: ignore[non-lowercase-variable-in-function]
+        n_powers = len(self.score_function.coefficient_eqs)
+        moments = self.score_function._partial_moments(bounds, n_powers, self.dist_params)
+        for k in range(n_powers):
+            R_kM = moments[k]  # ruff: ignore[non-lowercase-variable-in-function]
             if not np.any(R_kM):
                 continue
 
@@ -241,9 +242,10 @@ class MaxProfitLogitGradientPiecewise(_BaseMaxProfitLogitObjective, _PiecewiseDe
         grad_F1_M = (alpha / self.n_neg) * ((dsig_neg * sd_neg[:, None]).T @ self.X_neg)  # ruff: ignore[non-lowercase-variable-in-function]
 
         total_gradient: Float64Array = np.zeros(w.shape, dtype=np.float64)
-        for k in range(len(self.score_function.coefficient_eqs)):
-            k_mom, cdf_diffs = self.score_function._get_kth_integration_components(bounds, k, self.dist_params)
-            R_kM = float(k_mom) * np.asarray(cdf_diffs)  # ruff: ignore[non-lowercase-variable-in-function]
+        n_powers = len(self.score_function.coefficient_eqs)
+        moments = self.score_function._partial_moments(bounds, n_powers, self.dist_params)
+        for k in range(n_powers):
+            R_kM = moments[k]  # ruff: ignore[non-lowercase-variable-in-function]
             if not np.any(R_kM):
                 continue
 
@@ -424,7 +426,7 @@ class MaxProfitBoostGradientPiecewise(_PiecewiseDerivativeState):
     def __init__(
         self,
         *,
-        score_function: BasePositiveDistribution,
+        score_function: ClosedFormMaxProfitScorePiecewise,
         y_true: FloatNDArray,
         parameters: dict[str, FloatNDArray | float],
     ) -> None:
@@ -471,9 +473,10 @@ class MaxProfitBoostGradientPiecewise(_PiecewiseDerivativeState):
         weight_F0_M = np.zeros(M)  # ruff: ignore[non-lowercase-variable-in-function]
         weight_F1_M = np.zeros(M)  # ruff: ignore[non-lowercase-variable-in-function]
 
-        for k in range(len(self.score_function.coefficient_eqs)):
-            k_mom, cdf_diffs = self.score_function._get_kth_integration_components(bounds, k, self.dist_params)
-            R_kM = float(k_mom) * np.asarray(cdf_diffs)  # ruff: ignore[non-lowercase-variable-in-function]
+        n_powers = len(self.score_function.coefficient_eqs)
+        moments = self.score_function._partial_moments(bounds, n_powers, self.dist_params)
+        for k in range(n_powers):
+            R_kM = moments[k]  # ruff: ignore[non-lowercase-variable-in-function]
 
             if not np.any(R_kM):
                 continue

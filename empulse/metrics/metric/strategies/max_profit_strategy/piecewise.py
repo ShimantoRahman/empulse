@@ -1,22 +1,20 @@
 import warnings
 from collections.abc import Callable, Iterable, Sequence
 from itertools import pairwise
-from typing import Any, ClassVar, NamedTuple, Self
+from typing import Any, NamedTuple, Self
 
 import numpy as np
-import scipy.special as sp
-import scipy.stats as st
 import sympy
 from sympy.stats import pspace
 
 from ....._types import FloatNDArray, IntNDArray
-from ...._cy_max_profit import Distribution, expected_max_profit, expected_max_profit_from_counts
-from ..._compile import CountScoreFn, MetricFn, RateFn, _safe_lambdify, _safe_run_lambda
+from ...._cy_max_profit import Distribution, expected_max_profit, expected_max_profit_from_counts, partial_moments
+from ..._compile import CountScoreFn, MetricFn, _safe_lambdify, _safe_run_lambda
+from ..._distributions import spec_for
 from ..._parameter_domain import _check_parameters
 from ..._symbolic import _subs_by_name
 from ._anchoring import Anchor, DensityOf, anchored_quad, warn_if_inaccurate
-from ._distributions import ADAPTERS, adapter_for
-from .common import _convex_hull, _distribution_parameter_symbols, _HullScoreFunction, _LowerChainGate
+from .common import _build_rate_function, _distribution_parameter_symbols, _HullScoreFunction, _LowerChainGate
 from .envelope import (
     CallableEnvelope,
     Partition,
@@ -46,20 +44,12 @@ def _is_polynomial_in(expression: sympy.Expr, symbol: sympy.Symbol) -> bool:
     return True
 
 
-def _lookup_by_distribution_type(table: dict[type, Any], distribution: Any) -> Any | None:
-    """Look *distribution* up in *table*, by exact type first, then by ``isinstance``.
-
-    The ``isinstance`` fallback matches a subclass of a registered distribution that
-    ``sympy.stats`` does not register in the table verbatim -- the same thing a plain
-    ``isinstance(distribution, X)`` chain would do, which this replaces at every call site.
-    """
-    match = table.get(type(distribution))
-    if match is not None:
-        return match
-    for distribution_type, candidate in table.items():
-        if isinstance(distribution, distribution_type):
-            return candidate
-    return None
+def _closed_form_of(random_symbol: sympy.Symbol) -> str | None:
+    """Return the distribution's name in the compiled partial moments, or ``None`` if they lack it."""
+    spec = spec_for(random_symbol)
+    if spec is None or spec.closed_form is None or partial_moments is None:
+        return None
+    return spec.closed_form
 
 
 def _build_max_profit_score_piecewise(
@@ -67,28 +57,12 @@ def _build_max_profit_score_piecewise(
     random_symbol: sympy.Symbol,
     deterministic_symbols: Iterable[sympy.Symbol],
 ) -> MetricFn:
-    if not _is_polynomial_in(profit_function, random_symbol):
-        # Without the a_k decomposition there are no closed-form partial moments, so each region is
+    closed_form = _closed_form_of(random_symbol)
+    if closed_form is None or not _is_polynomial_in(profit_function, random_symbol):
+        # Without the a_k decomposition, or the distribution's partial moments, each region is
         # integrated numerically. The regions are found the same way in both cases.
         return MaxProfitScorePiecewise(profit_function, random_symbol, deterministic_symbols)
-
-    distribution = pspace(random_symbol).distribution
-    score_class = _lookup_by_distribution_type(_SCORE_CLASSES, distribution) or MaxProfitScorePiecewise
-    return score_class(profit_function, random_symbol, deterministic_symbols)
-
-
-def _build_max_profit_rate_piecewise(
-    profit_function: sympy.Expr,
-    rate_function: sympy.Expr,
-    random_symbol: sympy.Symbol,
-    deterministic_symbols: Iterable[sympy.Symbol],
-) -> RateFn:
-    adapter = adapter_for(random_symbol)
-    if adapter is None:
-        return MaxProfitRatePiecewise(profit_function, rate_function, random_symbol, deterministic_symbols)
-    return ExactMaxProfitRatePiecewise(
-        profit_function, rate_function, random_symbol, deterministic_symbols, adapter.scipy_dist, adapter.params
-    )
+    return ClosedFormMaxProfitScorePiecewise(profit_function, random_symbol, deterministic_symbols, closed_form)
 
 
 class _PreparedIntegrand:
@@ -392,6 +366,19 @@ class _PiecewiseBase:
         self._lower_chain_gate = _LowerChainGate(profit_function, [random_symbol])
         self._density = DensityOf(random_symbol)
 
+        # The rate on each region weighted by the region's probability: the compiled partial moment of
+        # power zero, or SciPy's CDF. A distribution without either has the rate integrated numerically.
+        self.rate_eq = _build_rate_function()
+        self.rate_fn = _safe_lambdify(self.rate_eq)
+        self._spec = spec_for(random_symbol)
+        closed_form = _closed_form_of(random_symbol)
+        self._rate_distribution = None if closed_form is None else int(getattr(Distribution, closed_form))
+        self._prepared_rate = (
+            _PreparedIntegrand(self.rate_eq, self._density.log_expression, random_symbol)
+            if self._spec is None
+            else None
+        )
+
         # Resolved once because naming a sympy symbol means printing it, which costs more than
         # scoring a small hull.
         self._distribution_parameter_names = tuple(symbol.name for symbol in self.dist_params)
@@ -514,91 +501,37 @@ class _PiecewiseBase:
         self._support_cache = (key, support)
         return support
 
-
-class MaxProfitRatePiecewise(_PiecewiseBase):
-    """
-    Compute the maximum profit rate for a single stochastic variable using piecewise integration.
-
-    The support is split into the regions where a single ROC convex-hull vertex maximises profit,
-    and the rate is integrated numerically over each one.
-    """
-
-    def __init__(
+    def _rate_hull(
         self,
-        profit_function: sympy.Expr,
-        rate_function: sympy.Expr,
-        random_symbol: sympy.Symbol,
-        deterministic_symbols: Iterable[sympy.Symbol],
-    ) -> None:
-        self.deterministic_symbols = deterministic_symbols
-        self._init_common(profit_function, random_symbol)
-        self._prepared = _PreparedIntegrand(rate_function, self._density.log_expression, random_symbol)
+        true_positive_rates: FloatNDArray,
+        false_positive_rates: FloatNDArray,
+        positive_class_prior: float,
+        kwargs: dict[str, Any],
+    ) -> float:
+        """
+        Compute the optimal rate from the ROC convex hull and the positive class prior.
 
-    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
-        """Compute the optimal rate."""
-        _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
-
-        positive_class_prior = float(np.mean(y_true))
+        The rate does not depend on the stochastic variable, only on which vertex is optimal, so the
+        expected rate is the rate on each region weighted by the probability of that region, whatever
+        the shape of the profit function.
+        """
         negative_class_prior = 1 - positive_class_prior
-        true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score, full=self._needs_lower_hull(kwargs))
-
         distribution_parameters = self._resolve_distribution_parameters(kwargs)
-        anchor = self._anchor(distribution_parameters)
-
+        # Only a profit that is not a polynomial needs the anchor to search for its crossings, and only
+        # a numeric integration needs it to integrate.
+        needs_anchor = self.poly_eqs is None or self._prepared_rate is not None
+        anchor = self._anchor(distribution_parameters) if needs_anchor else None
         partition = self._partition(
             true_positive_rates, false_positive_rates, positive_class_prior, kwargs, distribution_parameters, anchor
         )
-
-        return self._prepared.integrate_regions(
-            partition.bounds,
-            partition.tprs,
-            partition.fprs,
-            {**kwargs, **distribution_parameters, 'pi_0': positive_class_prior, 'pi_1': negative_class_prior},
-            anchor,
-        )
-
-
-class ExactMaxProfitRatePiecewise(_PiecewiseBase):
-    """
-    Compute the optimal rate exactly for a single stochastic variable using piecewise integration.
-
-    The rate itself does not depend on the stochastic variable -- only on which vertex is optimal --
-    so the expected rate is the rate on each region weighted by the probability of that region. That
-    is a difference of the distribution's own CDF, whatever the shape of the profit function.
-    """
-
-    def __init__(
-        self,
-        profit_function: sympy.Expr,
-        rate_function: sympy.Expr,
-        random_symbol: sympy.Symbol,
-        deterministic_symbols: Iterable[sympy.Symbol],
-        cdf_function: st.rv_continuous,
-        sympy_to_scipy_params_fn: Callable[..., dict[str, float]],
-    ) -> None:
-        self.cdf_function = cdf_function
-        self.sympy_to_scipy_params_fn = sympy_to_scipy_params_fn
-        self.deterministic_symbols = deterministic_symbols
-        self._init_common(profit_function, random_symbol)
-
-        self.rate_eq = rate_function
-        self.rate_fn = _safe_lambdify(self.rate_eq)
-
-    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
-        """Compute the maximum profit rate."""
-        _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
-
-        positive_class_prior = float(np.mean(y_true))
-        negative_class_prior = 1 - positive_class_prior
-        true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score, full=self._needs_lower_hull(kwargs))
-
-        distribution_parameters = self._resolve_distribution_parameters(kwargs)
-        # Only a profit that is not a polynomial needs the anchor, to search for its crossings.
-        anchor = None if self.poly_eqs is not None else self._anchor(distribution_parameters)
-
-        partition = self._partition(
-            true_positive_rates, false_positive_rates, positive_class_prior, kwargs, distribution_parameters, anchor
-        )
+        if self._prepared_rate is not None:
+            return self._prepared_rate.integrate_regions(
+                partition.bounds,
+                partition.tprs,
+                partition.fprs,
+                {**kwargs, **distribution_parameters, 'pi_0': positive_class_prior, 'pi_1': negative_class_prior},
+                anchor,
+            )
 
         rate = _safe_run_lambda(
             self.rate_fn,
@@ -609,27 +542,20 @@ class ExactMaxProfitRatePiecewise(_PiecewiseBase):
             F_1=np.array(partition.fprs),
             **kwargs,
         )
-
-        return self._integrate(
-            bounds=[float(bound) for bound in partition.bounds],
-            rate=rate,
-            distribution_parameters=distribution_parameters,
-        )
-
-    def _integrate(
-        self,
-        bounds: list[float],
-        rate: FloatNDArray,
-        distribution_parameters: dict[str, Any],
-    ) -> float:
-        """Integrate distribution-specific piecewise math."""
-        cdf_diff = np.diff(
-            self.cdf_function.cdf(
-                bounds, **self.sympy_to_scipy_params_fn(*self._distribution_values(distribution_parameters))
-            )
-        )
-        optimal_rate = (rate * cdf_diff).sum()
-        return float(optimal_rate)
+        bounds = [float(bound) for bound in partition.bounds]
+        values = self._distribution_values(distribution_parameters)
+        if self._rate_distribution is not None:
+            probabilities = partial_moments(  # type: ignore[misc]
+                np.ascontiguousarray(bounds, dtype=np.float64),
+                1,
+                *self._support(distribution_parameters),
+                self._rate_distribution,
+                np.asarray(values, dtype=np.float64),
+            )[0]
+        else:
+            assert self._spec is not None
+            probabilities = np.diff(self._spec.freeze(values).cdf(bounds))
+        return float((rate * probabilities).sum())
 
 
 class MaxProfitScorePiecewise(_PiecewiseBase, _HullScoreFunction):
@@ -676,25 +602,31 @@ class MaxProfitScorePiecewise(_PiecewiseBase, _HullScoreFunction):
         )
 
 
-class BaseMaxProfitScorePiecewise(_PiecewiseBase, _HullScoreFunction):
+#: The closed forms whose stochastic variable is strictly positive. The analytic gradients of the logit
+#: and boosting objectives are derived for these.
+_POSITIVE_CLOSED_FORMS = frozenset({'GAMMA', 'PARETO', 'EXPONENTIAL', 'CHI_SQUARED', 'LOG_NORMAL', 'BETA', 'WEIBULL'})
+
+
+class ClosedFormMaxProfitScorePiecewise(_PiecewiseBase, _HullScoreFunction):
     """
-    Base class to compute the maximum profit for a single stochastic variable using piecewise integration.
+    Compute the maximum profit for a single stochastic variable with closed-form partial moments.
 
     The support is split into the regions where a single ROC convex-hull vertex maximises profit.
     On each region the profit is a polynomial in the stochastic variable, so every term integrates
-    to a coefficient times a closed-form partial moment that the subclass supplies.
+    to a coefficient times a partial moment of the distribution, which
+    :func:`~empulse.metrics._cy_max_profit.partial_moments` computes in closed form.
 
-    Subclasses that name their distribution in ``_compiled_distribution`` are scored by the compiled
-    :func:`~empulse.metrics._cy_max_profit.expected_max_profit` instead, for profits up to degree two
-    in the stochastic variable; their ``_integrate`` remains the reference it is tested against.
+    A profit of degree at most two, whose region edges have closed-form roots, is scored entirely by
+    the compiled :func:`~empulse.metrics._cy_max_profit.expected_max_profit`. Any other is
+    partitioned here and integrated with the same compiled partial moments.
     """
 
-    #: The name of the distribution in :class:`~empulse.metrics._cy_max_profit.Distribution`, if the
-    #: compiled score covers it.
-    _compiled_distribution: ClassVar[str | None] = None
-
     def __init__(
-        self, profit_function: sympy.Expr, random_symbol: sympy.Symbol, deterministic_symbols: Iterable[sympy.Symbol]
+        self,
+        profit_function: sympy.Expr,
+        random_symbol: sympy.Symbol,
+        deterministic_symbols: Iterable[sympy.Symbol],
+        closed_form: str,
     ) -> None:
         self.deterministic_symbols = deterministic_symbols
         self._init_common(profit_function, random_symbol)
@@ -707,12 +639,12 @@ class BaseMaxProfitScorePiecewise(_PiecewiseBase, _HullScoreFunction):
         # Narrowed from Optional: the check above proves the decomposition exists.
         self.coefficient_eqs: list[sympy.Expr] = self.poly_eqs
         self.coefficient_fns: list[Callable[..., Any]] = self.poly_fns
-
-        self._compiled: tuple[_AffineCoefficients, int] | None = None
-        if expected_max_profit is not None and self._compiled_distribution is not None and len(self.poly_eqs) <= 3:
-            affine = _AffineCoefficients.from_coefficients(self.poly_eqs)
-            if affine is not None:
-                self._compiled = (affine, int(getattr(Distribution, self._compiled_distribution)))
+        #: The name of the distribution in :class:`~empulse.metrics._cy_max_profit.Distribution`.
+        self.closed_form = closed_form
+        self._distribution = int(getattr(Distribution, closed_form))
+        self._compiled = _AffineCoefficients.from_coefficients(self.poly_eqs) if len(self.poly_eqs) <= 3 else None
+        if closed_form in _POSITIVE_CLOSED_FORMS:
+            self.gradient = 'piecewise'
 
     def _score_hull(
         self,
@@ -727,8 +659,7 @@ class BaseMaxProfitScorePiecewise(_PiecewiseBase, _HullScoreFunction):
         distribution_parameters = self._resolve_distribution_parameters(kwargs)
 
         if self._compiled is not None:
-            affine, distribution = self._compiled
-            constant, tpr_slope, fpr_slope = affine(positive_class_prior, negative_class_prior, kwargs)
+            constant, tpr_slope, fpr_slope = self._compiled(positive_class_prior, negative_class_prior, kwargs)
             return float(
                 expected_max_profit(  # type: ignore[misc]
                     np.asarray(true_positive_rates, dtype=np.float64),
@@ -737,7 +668,7 @@ class BaseMaxProfitScorePiecewise(_PiecewiseBase, _HullScoreFunction):
                     tpr_slope,
                     fpr_slope,
                     *self._support(distribution_parameters),
-                    distribution,
+                    self._distribution,
                     np.asarray(self._distribution_values(distribution_parameters), dtype=np.float64),
                 )
             )
@@ -774,11 +705,12 @@ class BaseMaxProfitScorePiecewise(_PiecewiseBase, _HullScoreFunction):
         and the profit's coefficients are reused for as long as the class prior stays the same (as
         it does for every tree a ProfTree evaluates), so a call is a single compiled function call.
         """
-        if self._compiled is None or expected_max_profit_from_counts is None or self._needs_lower_hull(dict(kwargs)):
+        if self._compiled is None or self._needs_lower_hull(dict(kwargs)):
             # The compiled score builds the upper hull only.
             return super()._count_scorer(**kwargs)
         _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
-        affine, distribution, parameters, lower_bound, upper_bound, distribution_values = self._resolve_compiled(kwargs)
+        affine, parameters, lower_bound, upper_bound, distribution_values = self._resolve_compiled(kwargs)
+        distribution = self._distribution
         last_parts: tuple[int, int, FloatNDArray] | None = None
 
         def coefficient_parts(n_positives: int, n_negatives: int) -> FloatNDArray:
@@ -792,7 +724,7 @@ class BaseMaxProfitScorePiecewise(_PiecewiseBase, _HullScoreFunction):
             return parts
 
         def score(y_score: FloatNDArray, n_positive: IntNDArray, n_negative: IntNDArray) -> float:
-            return expected_max_profit_from_counts(  # type: ignore[no-any-return]
+            return expected_max_profit_from_counts(  # type: ignore[no-any-return,misc]
                 np.asarray(y_score, dtype=np.float64),
                 np.asarray(n_positive, dtype=np.int64),
                 np.asarray(n_negative, dtype=np.int64),
@@ -812,31 +744,42 @@ class BaseMaxProfitScorePiecewise(_PiecewiseBase, _HullScoreFunction):
         For a caller that scores many groupings of the same samples in compiled code, such as the
         trees of a ProfTree population, whose leaves always hold every training sample.
         """
-        if self._compiled is None or expected_max_profit_from_counts is None or self._needs_lower_hull(dict(kwargs)):
+        if self._compiled is None or self._needs_lower_hull(dict(kwargs)):
             # The compiled score builds the upper hull only.
             return None
         _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
-        affine, distribution, parameters, lower_bound, upper_bound, distribution_values = self._resolve_compiled(kwargs)
+        affine, parameters, lower_bound, upper_bound, distribution_values = self._resolve_compiled(kwargs)
         positive_class_prior = n_positives / (n_positives + n_negatives)
         return ClosedFormExpectedMaxProfit(
             np.ascontiguousarray(affine(positive_class_prior, 1 - positive_class_prior, parameters)),
             lower_bound,
             upper_bound,
-            distribution,
+            self._distribution,
             distribution_values,
         )
 
     def _resolve_compiled(
         self, kwargs: dict[str, Any]
-    ) -> tuple['_AffineCoefficients', int, dict[str, Any], float, float, FloatNDArray]:
+    ) -> tuple['_AffineCoefficients', dict[str, Any], float, float, FloatNDArray]:
         """Resolve the parts of the compiled score that depend only on the parameters."""
         assert self._compiled is not None
-        affine, distribution = self._compiled
         parameters = dict(kwargs)
         distribution_parameters = self._resolve_distribution_parameters(parameters)
         lower_bound, upper_bound = self._support(distribution_parameters)
         distribution_values = np.asarray(self._distribution_values(distribution_parameters), dtype=np.float64)
-        return affine, distribution, parameters, lower_bound, upper_bound, distribution_values
+        return self._compiled, parameters, lower_bound, upper_bound, distribution_values
+
+    def _partial_moments(
+        self, bounds: Sequence[float] | FloatNDArray, n_powers: int, distribution_parameters: dict[str, Any]
+    ) -> FloatNDArray:
+        """Return the integral of ``x**k`` times the density over each region, at ``[k, region]``."""
+        return partial_moments(  # type: ignore[no-any-return,misc]
+            np.ascontiguousarray(bounds, dtype=np.float64),
+            n_powers,
+            *self._support(distribution_parameters),
+            self._distribution,
+            np.asarray(self._distribution_values(distribution_parameters), dtype=np.float64),
+        )
 
     def _integrate(
         self,
@@ -844,389 +787,12 @@ class BaseMaxProfitScorePiecewise(_PiecewiseBase, _HullScoreFunction):
         coefficients: list[FloatNDArray],
         distribution_parameters: dict[str, Any],
     ) -> float:
-        """Integrate distribution-specific piecewise math."""
-        raise NotImplementedError('Subclasses must implement the `_integrate` method.')
-
-
-class MaxProfitScorePiecewiseUniform(BaseMaxProfitScorePiecewise):
-    """Compute the maximum profit for a single uniform distributed variable using piecewise polynomial integration."""
-
-    _compiled_distribution = 'UNIFORM'
-
-    def _integrate(
-        self,
-        bounds: list[float],
-        coefficients: list[np.ndarray],
-        distribution_parameters: dict[str, Any],
-    ) -> float:
-
-        lower_bounds = np.asarray(bounds[:-1])
-        upper_bounds = np.asarray(bounds[1:])
-
-        # The regions cover the support, so their outer bounds are its ends.
-        min_val = float(bounds[0])
-        max_val = float(bounds[-1])
-
-        # The density is constant: 1 / (beta - alpha).
-        pdf_val = 1.0 / (max_val - min_val)
-
+        """Integrate the profit, with these coefficients of each power on each region, over the regions."""
+        moments = self._partial_moments(bounds, len(coefficients), distribution_parameters)
         total_score = 0.0
-
         for k, a_k in enumerate(coefficients):
+            # A power the profit does not have contributes nothing, also where its moment is not finite.
             if np.all(np.asarray(a_k) == 0.0):
                 continue
-
-            term_val = (a_k * pdf_val / (k + 1.0)) * (upper_bounds ** (k + 1) - lower_bounds ** (k + 1))
-
-            total_score += term_val.sum()
-
+            total_score += (a_k * moments[k]).sum()
         return float(total_score)
-
-
-def _safe_pow_phi(x: np.ndarray, exp: int, phi: float | np.ndarray) -> np.ndarray:
-    """Compute x^exp * phi(x), treating inf^exp * 0 as 0."""
-    with warnings.catch_warnings():
-        warnings.simplefilter('ignore', RuntimeWarning)
-        result = (x**exp) * phi
-    # Where phi is 0 (x is infinite), the product is 0, not NaN.
-    result[np.asarray(phi) == 0] = 0.0
-    return result
-
-
-class MaxProfitScorePiecewiseNormal(BaseMaxProfitScorePiecewise):
-    """Compute the maximum profit for a single normal distributed variable using piecewise polynomial integration."""
-
-    _compiled_distribution = 'NORMAL'
-
-    def _integrate(
-        self,
-        bounds: list[float],
-        coefficients: list[np.ndarray],
-        distribution_parameters: dict[str, Any],
-    ) -> float:
-        dist_params_list = self._distribution_values(distribution_parameters)
-        mu = float(dist_params_list[0])
-        sigma = float(dist_params_list[1])
-
-        lower_bounds = np.asarray(bounds[:-1])
-        upper_bounds = np.asarray(bounds[1:])
-
-        z_lower = (lower_bounds - mu) / sigma
-        z_upper = (upper_bounds - mu) / sigma
-
-        phi_lower = st.norm.pdf(z_lower)
-        phi_upper = st.norm.pdf(z_upper)
-
-        # r[k] is the integral of x**k times the density over each segment.
-        r = []
-
-        # R_0 is the CDF difference.
-        r0 = st.norm.cdf(z_upper) - st.norm.cdf(z_lower)
-        r.append(r0)
-
-        max_degree = len(coefficients) - 1
-
-        if max_degree >= 1:
-            # R_1: mu * R_0 - sigma * (phi(z_d) - phi(z_c))
-            e0 = phi_upper - phi_lower
-            r1 = mu * r0 - sigma * e0
-            r.append(r1)
-
-        # R_k for k >= 2 follows from a recurrence.
-        for k in range(2, max_degree + 1):
-            r_k_minus_1 = _safe_pow_phi(upper_bounds, k - 1, phi_upper) - _safe_pow_phi(lower_bounds, k - 1, phi_lower)
-            r_k = mu * r[-1] + (k - 1.0) * (sigma**2) * r[-2] - sigma * r_k_minus_1
-            r.append(r_k)
-
-        total_score = 0.0
-
-        for k, a_k in enumerate(coefficients):
-            if np.all(np.asarray(a_k) == 0.0):
-                continue
-            total_score += (a_k * r[k]).sum()
-
-        return float(total_score)
-
-
-class BasePositiveDistribution(BaseMaxProfitScorePiecewise):
-    """
-    Intermediate base class for continuous, strictly positive distributions.
-
-    Leverages the k-th order size-biased distribution property for polynomials:
-    integral(x^k * h(x)) = E[x^k] * shifted_cdf_k_diff.
-    """
-
-    def _integrate(
-        self,
-        bounds: list[float],
-        coefficients: list[FloatNDArray],
-        distribution_parameters: dict[str, Any],
-    ) -> float:
-        total_score = 0.0
-
-        for k, a_k in enumerate(coefficients):
-            kth_moment, shifted_cdf_k_diff = self._get_kth_integration_components(bounds, k, distribution_parameters)
-            total_score += (a_k * kth_moment * shifted_cdf_k_diff).sum()
-
-        return float(total_score)
-
-    def _get_kth_integration_components(
-        self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
-    ) -> tuple[Any, np.ndarray]:
-        """Return (kth_moment, shifted_cdf_k_diff) for a specific degree k."""
-        raise NotImplementedError('Subclasses must implement `_get_kth_integration_components`.')
-
-
-class MaxProfitScorePiecewiseGamma(BasePositiveDistribution):
-    """Compute the maximum profit for a single gamma distributed variable using piecewise integration."""
-
-    _compiled_distribution = 'GAMMA'
-
-    def _get_kth_integration_components(
-        self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
-    ) -> tuple[Any, np.ndarray]:
-        dist_params_list = self._distribution_values(distribution_parameters)
-        alpha = float(dist_params_list[0])
-        lambda_rate = float(dist_params_list[1])
-
-        shifted_cdf_k_diff = np.diff(st.gamma.cdf(bounds, a=alpha + k, scale=lambda_rate))
-        kth_moment = 1.0 if k == 0 else (lambda_rate**k) * sp.poch(alpha, k)
-
-        return kth_moment, shifted_cdf_k_diff
-
-
-class MaxProfitScorePiecewisePareto(BasePositiveDistribution):
-    """Compute the maximum profit for a single Pareto distributed variable using piecewise integration."""
-
-    _compiled_distribution = 'PARETO'
-
-    def _get_kth_integration_components(
-        self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
-    ) -> tuple[Any, np.ndarray]:
-        dist_params_list = self._distribution_values(distribution_parameters)
-        x_m = float(dist_params_list[0])  # Scale
-        alpha = float(dist_params_list[1])  # Shape
-
-        # The k-th moment exists only if alpha > k.
-        if alpha <= k:
-            raise ValueError(
-                f'The Pareto shape parameter (alpha={alpha}) must be strictly greater than degree k={k} '
-                f'for the moment to exist.'
-            )
-
-        # H(x; x_m, alpha - k)
-        shifted_cdf_k_diff = np.diff(st.pareto.cdf(bounds, b=alpha - k, scale=x_m))
-        # E[x^k] = (alpha * x_m^k) / (alpha - k)
-        kth_moment = 1.0 if k == 0 else (alpha * (x_m**k)) / (alpha - float(k))
-
-        return kth_moment, shifted_cdf_k_diff
-
-
-class MaxProfitScorePiecewiseTriangular(BaseMaxProfitScorePiecewise):
-    """Compute the maximum profit for a single triangular distributed variable using piecewise integration."""
-
-    _compiled_distribution = 'TRIANGULAR'
-
-    def _integrate(
-        self,
-        bounds: list[float],
-        coefficients: list[np.ndarray],
-        distribution_parameters: dict[str, Any],
-    ) -> float:
-        dist_params_list = self._distribution_values(distribution_parameters)
-
-        a = float(dist_params_list[0])
-        b = float(dist_params_list[1])
-        m = float(dist_params_list[2])
-
-        loc = a
-        scale = b - a
-        c_shape = (m - a) / scale
-
-        bounds_arr = np.clip(np.asarray(bounds), a, b)
-
-        mask1 = bounds_arr <= m
-        mask2 = bounds_arr > m
-
-        total_score = 0.0
-
-        for k, a_k in enumerate(coefficients):
-            if np.all(np.asarray(a_k) == 0.0):
-                continue
-
-            if k == 0:
-                # k = 0 is just the standard CDF difference
-                expected_diff = np.diff(st.triang.cdf(bounds_arr, c=c_shape, loc=loc, scale=scale))
-                total_score += (a_k * expected_diff).sum()
-                continue
-
-            # For k >= 1, use the exact polynomial integral A_k(x)
-            a_x = np.zeros_like(bounds_arr)
-
-            # Bounds in the first segment, [a, m].
-            if np.any(mask1) and m > a:
-                x1 = bounds_arr[mask1]
-                a_x[mask1] = (2.0 / ((b - a) * (m - a))) * (
-                    (x1 ** (k + 2)) / (k + 2.0)
-                    - (a * x1 ** (k + 1)) / (k + 1.0)
-                    + (a ** (k + 2)) / ((k + 1.0) * (k + 2.0))
-                )
-
-            # Bounds in the second segment, (m, b].
-            if np.any(mask2) and b > m:
-                x2 = bounds_arr[mask2]
-
-                # A_k(m) is the integral up to the mode.
-                a_m = 0.0
-                if m > a:
-                    a_m = (2.0 / ((b - a) * (m - a))) * (
-                        (m ** (k + 2)) / (k + 2.0)
-                        - (a * m ** (k + 1)) / (k + 1.0)
-                        + (a ** (k + 2)) / ((k + 1.0) * (k + 2.0))
-                    )
-
-                a_x[mask2] = a_m + (2.0 / ((b - a) * (b - m))) * (
-                    b * (x2 ** (k + 1) - m ** (k + 1)) / (k + 1.0) - (x2 ** (k + 2) - m ** (k + 2)) / (k + 2.0)
-                )
-
-            # The expected value integral between bounds d and c is A_k(d) - A_k(c)
-            expected_diff = np.diff(a_x)
-            total_score += (a_k * expected_diff).sum()
-
-        return float(total_score)
-
-
-class MaxProfitScorePiecewiseExponential(BasePositiveDistribution):
-    """Compute the maximum profit for a single exponential distributed variable using piecewise integration."""
-
-    _compiled_distribution = 'EXPONENTIAL'
-
-    def _get_kth_integration_components(
-        self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
-    ) -> tuple[Any, np.ndarray]:
-        dist_params_list = self._distribution_values(distribution_parameters)
-        lambda_rate = float(dist_params_list[0])
-        scale = 1.0 / lambda_rate
-
-        if k == 0:
-            shifted_cdf_k_diff = np.diff(st.expon.cdf(bounds, scale=scale))
-            kth_moment = 1.0
-        else:
-            # Shifted CDF: H_k*(x) evaluates to a Gamma CDF with shape = 1 + k
-            shifted_cdf_k_diff = np.diff(st.gamma.cdf(bounds, a=1.0 + k, scale=scale))
-            # E[x^k] = k! / lambda^k
-            kth_moment = sp.gamma(1.0 + k) * (scale**k)
-
-        return kth_moment, shifted_cdf_k_diff
-
-
-class MaxProfitScorePiecewiseChi2(BasePositiveDistribution):
-    """Compute the maximum profit for a single chi-squared distributed variable using piecewise integration."""
-
-    _compiled_distribution = 'CHI_SQUARED'
-
-    def _get_kth_integration_components(
-        self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
-    ) -> tuple[Any, np.ndarray]:
-        dist_params_list = self._distribution_values(distribution_parameters)
-        df = float(dist_params_list[0])
-
-        # Shifted CDF: adding 2*k to degrees of freedom
-        shifted_cdf_k_diff = np.diff(st.chi2.cdf(bounds, df=df + 2.0 * k))
-
-        kth_moment = 1.0 if k == 0 else (2.0**k) * sp.poch(df / 2.0, k)
-
-        return kth_moment, shifted_cdf_k_diff
-
-
-class MaxProfitScorePiecewiseLogNormal(BasePositiveDistribution):
-    """Compute the maximum profit for a single log normal distributed variable using piecewise integration."""
-
-    _compiled_distribution = 'LOG_NORMAL'
-
-    def _get_kth_integration_components(
-        self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
-    ) -> tuple[Any, np.ndarray]:
-        dist_params_list = self._distribution_values(distribution_parameters)
-        mu = float(dist_params_list[0])
-        sigma = float(dist_params_list[1])
-
-        # Shifted CDF: scale shifts to exp(mu + k * sigma^2)
-        shifted_scale = np.exp(mu + k * sigma**2)
-        shifted_cdf_k_diff = np.diff(st.lognorm.cdf(bounds, s=sigma, scale=shifted_scale))
-
-        kth_moment = 1.0 if k == 0 else np.exp(k * mu + (k**2 * sigma**2) / 2.0)
-
-        return kth_moment, shifted_cdf_k_diff
-
-
-class MaxProfitScorePiecewiseBeta(BasePositiveDistribution):
-    """Compute the maximum profit for a single beta distributed variable using piecewise integration."""
-
-    _compiled_distribution = 'BETA'
-
-    def _get_kth_integration_components(
-        self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
-    ) -> tuple[Any, np.ndarray]:
-        dist_params_list = self._distribution_values(distribution_parameters)
-        alpha = float(dist_params_list[0])
-        beta = float(dist_params_list[1])
-
-        # Shifted CDF: shape alpha becomes alpha + k
-        shifted_cdf_k_diff = np.diff(sp.betainc(alpha + k, beta, bounds))
-
-        # E[x^k] = Beta(alpha + k, beta) / Beta(alpha, beta), as rising factorials, which unlike the
-        # gamma functions do not overflow for large shapes.
-        kth_moment = 1.0 if k == 0 else float(sp.poch(alpha, k) / sp.poch(alpha + beta, k))
-
-        return kth_moment, shifted_cdf_k_diff
-
-
-class MaxProfitScorePiecewiseWeibull(BasePositiveDistribution):
-    """Compute the maximum profit for a single weibull distributed variable using piecewise polynomial integration."""
-
-    _compiled_distribution = 'WEIBULL'
-
-    def _get_kth_integration_components(
-        self, bounds: list[float] | FloatNDArray, k: int, distribution_parameters: dict[str, Any]
-    ) -> tuple[Any, np.ndarray]:
-        dist_params_list = self._distribution_values(distribution_parameters)
-        lambda_scale = float(dist_params_list[0])
-        k_shape = float(dist_params_list[1])
-        bounds_arr = np.asarray(bounds)
-
-        if k == 0:
-            shifted_cdf_k_diff = np.diff(st.weibull_min.cdf(bounds_arr, c=k_shape, scale=lambda_scale))
-            kth_moment = 1.0
-        else:
-            # u = (x / lambda)^k_shape
-            u_bounds = (bounds_arr / lambda_scale) ** k_shape
-            gamma_shape = 1.0 + (float(k) / k_shape)
-
-            # Shifted CDF uses regularized incomplete gamma trick
-            shifted_cdf_k_diff = np.diff(st.gamma.cdf(u_bounds, a=gamma_shape))
-
-            # E[x^k] = lambda^k * Gamma(1 + k / k_shape)
-            kth_moment = (lambda_scale**k) * sp.gamma(gamma_shape)
-
-        return kth_moment, shifted_cdf_k_diff
-
-
-#: The score-side counterpart of `_distributions.ADAPTERS`, keyed by the same sympy.stats distribution
-#: types. It lives here because `_distributions.py` importing these classes would make the two
-#: modules import each other.
-_SCORE_CLASSES: dict[type, type[BaseMaxProfitScorePiecewise]] = {
-    sympy.stats.crv_types.UniformDistribution: MaxProfitScorePiecewiseUniform,
-    sympy.stats.crv_types.BetaDistribution: MaxProfitScorePiecewiseBeta,
-    sympy.stats.crv_types.NormalDistribution: MaxProfitScorePiecewiseNormal,
-    sympy.stats.crv_types.LogNormalDistribution: MaxProfitScorePiecewiseLogNormal,
-    sympy.stats.crv_types.GammaDistribution: MaxProfitScorePiecewiseGamma,
-    sympy.stats.crv_types.ExponentialDistribution: MaxProfitScorePiecewiseExponential,
-    sympy.stats.crv_types.ChiSquaredDistribution: MaxProfitScorePiecewiseChi2,
-    sympy.stats.crv_types.WeibullDistribution: MaxProfitScorePiecewiseWeibull,
-    sympy.stats.crv_types.ParetoDistribution: MaxProfitScorePiecewisePareto,
-    sympy.stats.crv_types.TriangularDistribution: MaxProfitScorePiecewiseTriangular,
-}
-assert _SCORE_CLASSES.keys() == ADAPTERS.keys(), (
-    '_SCORE_CLASSES and _distributions.ADAPTERS must cover exactly the same distributions'
-)

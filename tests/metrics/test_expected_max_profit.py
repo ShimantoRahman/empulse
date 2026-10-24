@@ -202,3 +202,62 @@ def _call(**overrides):
 def test_expected_max_profit_rejects_invalid_input(overrides, message):
     with pytest.raises(ValueError, match=message):
         _call(**overrides)
+
+
+PARTIAL_MOMENT_CASES = [
+    ('UNIFORM', [0.2, 1.4], (0.2, 1.4)),
+    ('NORMAL', [0.4, 0.3], (-np.inf, np.inf)),
+    ('GAMMA', [2.0, 0.3], (0.0, np.inf)),
+    ('PARETO', [0.1, 7.0], (0.1, np.inf)),
+    ('TRIANGULAR', [0.1, 1.5, 0.4], (0.1, 1.5)),
+    ('EXPONENTIAL', [2.0], (0.0, np.inf)),
+    ('CHI_SQUARED', [3.0], (0.0, np.inf)),
+    ('LOG_NORMAL', [-1.0, 0.5], (0.0, np.inf)),
+    ('BETA', [6.0, 14.0], (0.0, 1.0)),
+    ('WEIBULL', [0.5, 1.5], (0.0, np.inf)),
+]
+
+
+@pytest.mark.parametrize(
+    ('closed_form', 'parameters', 'support'), PARTIAL_MOMENT_CASES, ids=[c[0] for c in PARTIAL_MOMENT_CASES]
+)
+def test_partial_moments_match_the_reference_closed_forms(closed_form, parameters, support):
+    """The compiled partial moments are the one implementation: they match an independent SciPy one, to any power."""
+    from empulse.metrics._cy_max_profit import partial_moments
+
+    from ._closed_form_oracle import reference_partial_moments
+
+    lower, upper = support
+    inner_lower = lower if np.isfinite(lower) else -0.5
+    inner_upper = upper if np.isfinite(upper) else 3.0
+    bounds = np.r_[lower, np.linspace(inner_lower, inner_upper, 7)[1:-1], upper]
+    compiled = partial_moments(bounds, 6, lower, upper, getattr(Distribution, closed_form), np.array(parameters))
+    np.testing.assert_allclose(
+        compiled, reference_partial_moments(closed_form, parameters, bounds, 6), rtol=1e-12, atol=1e-300
+    )
+
+
+@pytest.mark.parametrize(
+    ('closed_form', 'parameters', 'support'), PARTIAL_MOMENT_CASES, ids=[c[0] for c in PARTIAL_MOMENT_CASES]
+)
+def test_partial_moments_over_the_support_are_the_moments(closed_form, parameters, support):
+    """Over the whole support, the partial moments of powers 0 to 3 are the distribution's moments."""
+    from empulse.metrics._cy_max_profit import partial_moments
+    from empulse.metrics.metric._distributions import DISTRIBUTIONS
+
+    spec = next(spec for spec in DISTRIBUTIONS.values() if spec.closed_form == closed_form)
+    frozen = spec.freeze(parameters)
+    lower, upper = support
+    compiled = partial_moments(
+        np.array([lower, upper]), 4, lower, upper, getattr(Distribution, closed_form), np.array(parameters)
+    )
+    np.testing.assert_allclose(compiled[:, 0], [frozen.moment(k) for k in range(4)], rtol=1e-10)
+
+
+def test_partial_moments_reject_invalid_input():
+    from empulse.metrics._cy_max_profit import partial_moments
+
+    with pytest.raises(ValueError, match='at least one region'):
+        partial_moments(np.array([0.0]), 2, 0.0, 1.0, Distribution.UNIFORM, np.array([0.0, 1.0]))
+    with pytest.raises(ValueError, match='strictly greater than degree k=2'):
+        partial_moments(np.array([1.0, np.inf]), 3, 1.0, np.inf, Distribution.PARETO, np.array([1.0, 2.0]))

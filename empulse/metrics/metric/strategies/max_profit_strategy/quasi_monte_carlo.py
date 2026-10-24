@@ -1,15 +1,16 @@
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Iterable, Sequence
 from typing import Any
 
 import numpy as np
-import scipy
 import sympy
 from scipy.stats.qmc import Sobol
 from sympy.stats import pspace
 
 from ....._types import FloatNDArray
+from ..._distributions import FrozenDistribution, frozen_distribution
 from ..._symbolic import _subs_by_name
 from .common import (
+    _build_rate_function,
     _distribution_parameter_symbols,
     _evaluate_sampled_integrands,
     _HullScoreFunction,
@@ -17,115 +18,6 @@ from .common import (
     _SampledIntegrand,
     extract_distribution_parameters,
 )
-
-FrozenScipyDist = (
-    scipy.stats._distn_infrastructure.rv_continuous_frozen | scipy.stats._distn_infrastructure.rv_discrete_frozen
-)
-
-_sympy_dist_to_scipy: dict[
-    sympy.stats.crv_types.SingleContinuousDistribution | sympy.stats.drv_types.SingleDiscreteDistribution,
-    scipy.stats.rv_continuous | scipy.stats.rv_discrete,
-] = {
-    sympy.stats.crv_types.ArcsinDistribution: scipy.stats.arcsine,
-    sympy.stats.crv_types.BetaDistribution: scipy.stats.beta,
-    sympy.stats.crv_types.BetaPrimeDistribution: scipy.stats.betaprime,
-    sympy.stats.crv_types.ChiDistribution: scipy.stats.chi,
-    sympy.stats.crv_types.ChiSquaredDistribution: scipy.stats.chi2,
-    # Erlang is built on GammaDistribution, so it needs no entry of its own.
-    sympy.stats.crv_types.ExGaussianDistribution: scipy.stats.exponnorm,
-    sympy.stats.crv_types.ExponentialDistribution: scipy.stats.expon,
-    sympy.stats.crv_types.FDistributionDistribution: scipy.stats.f,
-    sympy.stats.crv_types.GammaDistribution: scipy.stats.gamma,
-    sympy.stats.crv_types.GammaInverseDistribution: scipy.stats.invgamma,
-    sympy.stats.crv_types.LaplaceDistribution: scipy.stats.laplace,
-    sympy.stats.crv_types.LogisticDistribution: scipy.stats.logistic,
-    sympy.stats.crv_types.LogNormalDistribution: scipy.stats.lognorm,
-    sympy.stats.crv_types.LomaxDistribution: scipy.stats.lomax,
-    sympy.stats.crv_types.MaxwellDistribution: scipy.stats.maxwell,
-    sympy.stats.crv_types.MoyalDistribution: scipy.stats.moyal,
-    sympy.stats.crv_types.NakagamiDistribution: scipy.stats.nakagami,
-    sympy.stats.crv_types.NormalDistribution: scipy.stats.norm,
-    sympy.stats.crv_types.ParetoDistribution: scipy.stats.pareto,
-    sympy.stats.crv_types.PowerFunctionDistribution: scipy.stats.powerlaw,
-    sympy.stats.crv_types.StudentTDistribution: scipy.stats.t,
-    sympy.stats.crv_types.TrapezoidalDistribution: scipy.stats.trapezoid,
-    sympy.stats.crv_types.TriangularDistribution: scipy.stats.triang,
-    sympy.stats.crv_types.UniformDistribution: scipy.stats.uniform,
-    sympy.stats.crv_types.GaussianInverseDistribution: scipy.stats.invgauss,
-    sympy.stats.crv_types.BoundedParetoDistribution: scipy.stats.truncpareto,
-    sympy.stats.crv_types.DagumDistribution: scipy.stats.mielke,
-    sympy.stats.crv_types.ExponentialPowerDistribution: scipy.stats.gennorm,
-    sympy.stats.crv_types.FrechetDistribution: scipy.stats.invweibull,
-    sympy.stats.crv_types.GompertzDistribution: scipy.stats.gompertz,
-    sympy.stats.crv_types.LogLogisticDistribution: scipy.stats.fisk,
-    sympy.stats.crv_types.RaisedCosineDistribution: scipy.stats.cosine,
-    sympy.stats.crv_types.RayleighDistribution: scipy.stats.rayleigh,
-    sympy.stats.crv_types.ReciprocalDistribution: scipy.stats.loguniform,
-    sympy.stats.crv_types.WeibullDistribution: scipy.stats.weibull_min,
-    sympy.stats.crv_types.WignerSemicircleDistribution: scipy.stats.semicircular,
-}
-
-_sympy_dist_to_scipy_params: dict[
-    sympy.stats.crv_types.SingleContinuousDistribution | sympy.stats.drv_types.SingleDiscreteDistribution,
-    Callable[..., dict[str, float]],
-] = {
-    # Arcsin and PowerFunction are bounded on [a, b], while SciPy's `scale` is the *width* of the
-    # support, so passing b straight through would stretch it to [a, a + b].
-    sympy.stats.crv_types.ArcsinDistribution: lambda a, b: {'loc': a, 'scale': b - a},
-    sympy.stats.crv_types.PowerFunctionDistribution: lambda alpha, a, b: {'a': alpha, 'loc': a, 'scale': b - a},
-    sympy.stats.crv_types.ExponentialDistribution: lambda rate: {'loc': 0, 'scale': 1 / rate},
-    sympy.stats.crv_types.GammaDistribution: lambda k, theta: {'a': k, 'scale': theta},
-    sympy.stats.crv_types.GammaInverseDistribution: lambda a, b: {'a': a, 'scale': b},
-    sympy.stats.crv_types.FDistributionDistribution: lambda d1, d2: {'dfn': d1, 'dfd': d2},
-    sympy.stats.crv_types.LomaxDistribution: lambda alpha, lamb: {'c': alpha, 'scale': lamb},
-    sympy.stats.crv_types.LogNormalDistribution: lambda mu, sigma: {'s': sigma, 'scale': np.exp(mu)},
-    sympy.stats.crv_types.ParetoDistribution: lambda a, b: {'b': b, 'scale': a},
-    sympy.stats.crv_types.MaxwellDistribution: lambda a: {'loc': 0, 'scale': a},
-    sympy.stats.crv_types.NakagamiDistribution: lambda mu, omega: {'nu': mu, 'scale': np.sqrt(omega)},
-    sympy.stats.crv_types.TrapezoidalDistribution: lambda a, b, c, d: {
-        'loc': a,
-        'scale': d - a,
-        'c': (b - a) / (d - a),
-        'd': (c - a) / (d - a),
-    },
-    sympy.stats.crv_types.TriangularDistribution: lambda a, b, c: {'loc': a, 'scale': b - a, 'c': (c - a) / (b - a)},
-    sympy.stats.crv_types.UniformDistribution: lambda a, b: {'loc': a, 'scale': b - a},
-    sympy.stats.crv_types.GaussianInverseDistribution: lambda mu, lamb: {'mu': mu / lamb, 'scale': lamb},
-    sympy.stats.crv_types.ExGaussianDistribution: lambda mean, std, rate: {
-        'loc': mean,
-        'scale': std,
-        'K': 1 / (std * rate),
-    },
-    sympy.stats.crv_types.BoundedParetoDistribution: lambda alpha, left, right: {
-        'b': alpha,
-        'c': right / left,
-        'scale': left,
-    },
-    sympy.stats.crv_types.DagumDistribution: lambda p, a, b: {'k': a * p, 's': a, 'scale': b},
-    sympy.stats.crv_types.ExponentialPowerDistribution: lambda mu, alpha, beta: {
-        'beta': beta,
-        'loc': mu,
-        'scale': alpha,
-    },
-    sympy.stats.crv_types.FrechetDistribution: lambda a, s, m: {'c': a, 'loc': m, 'scale': s},
-    sympy.stats.crv_types.GompertzDistribution: lambda b, eta: {'c': eta, 'scale': 1 / b},
-    sympy.stats.crv_types.LogLogisticDistribution: lambda alpha, beta: {'c': beta, 'scale': alpha},
-    sympy.stats.crv_types.RaisedCosineDistribution: lambda mu, s: {'loc': mu, 'scale': s / np.pi},
-    sympy.stats.crv_types.RayleighDistribution: lambda sigma: {'loc': 0, 'scale': sigma},
-    sympy.stats.crv_types.ReciprocalDistribution: lambda a, b: {'a': a, 'b': b},
-    sympy.stats.crv_types.WeibullDistribution: lambda alpha, beta: {'c': beta, 'scale': alpha},
-    sympy.stats.crv_types.WignerSemicircleDistribution: lambda radius: {'loc': 0, 'scale': radius},
-}
-
-
-def _scipy_distribution(random_var: sympy.Expr) -> FrozenScipyDist:
-    """Freeze the SciPy distribution matching *random_var*, whose parameters must all be numeric."""
-    sympy_distribution = pspace(random_var).distribution
-    scipy_distribution = _sympy_dist_to_scipy[type(sympy_distribution)]
-    sympy_dist_params = [float(arg) for arg in sympy_distribution.args]
-    if type(sympy_distribution) in _sympy_dist_to_scipy_params:
-        return scipy_distribution(**_sympy_dist_to_scipy_params[type(sympy_distribution)](*sympy_dist_params))
-    return scipy_distribution(*sympy_dist_params)
 
 
 class MaxProfitScoreQuasiMonteCarlo(_HullScoreFunction):
@@ -139,19 +31,17 @@ class MaxProfitScoreQuasiMonteCarlo(_HullScoreFunction):
     def __init__(
         self,
         profit_function: sympy.Expr,
-        rate_function: sympy.Expr | None,
         random_symbols: Sequence[sympy.Symbol],
         deterministic_symbols: Iterable[sympy.Symbol],
         n_mc_samples: int,
         rng: np.random.Generator,
     ) -> None:
         self.profit_function = profit_function
-        self.rate_function = rate_function
         self.random_symbols = random_symbols
         self.deterministic_symbols = deterministic_symbols
         self.n_mc_samples = n_mc_samples
         self._profit_integrand = _SampledIntegrand(profit_function, random_symbols)
-        self._rate_integrand = _SampledIntegrand(rate_function, random_symbols) if rate_function is not None else None
+        self._rate_integrand = _SampledIntegrand(_build_rate_function(), random_symbols)
         self._lower_chain_gate = _LowerChainGate(profit_function, random_symbols)
 
         distributions_args = [pspace(random_symbol).distribution.args for random_symbol in random_symbols]
@@ -161,8 +51,8 @@ class MaxProfitScoreQuasiMonteCarlo(_HullScoreFunction):
         if not any(arg.free_symbols for arg in self.distribution_args):
             # With fixed distribution parameters, the grid can be computed up front.
             self.param_grid_needs_recompute = False
-            self.scipy_distributions: list[FrozenScipyDist] | None = [
-                _scipy_distribution(random_var) for random_var in random_symbols
+            self.scipy_distributions: list[FrozenDistribution] | None = [
+                frozen_distribution(random_var) for random_var in random_symbols
             ]
             self.param_grid = [dist.ppf(self.sobol_samples[:, i]) for i, dist in enumerate(self.scipy_distributions)]
         else:
@@ -187,10 +77,31 @@ class MaxProfitScoreQuasiMonteCarlo(_HullScoreFunction):
         kwargs: dict[str, Any],
     ) -> float:
         """Compute the maximum profit from the ROC convex hull and the positive class prior."""
+        return self._evaluate(true_positive_rates, false_positive_rates, positive_class_prior, kwargs, rate=False)
+
+    def _rate_hull(
+        self,
+        true_positive_rates: FloatNDArray,
+        false_positive_rates: FloatNDArray,
+        positive_class_prior: float,
+        kwargs: dict[str, Any],
+    ) -> float:
+        """Compute the optimal rate from the ROC convex hull and the positive class prior, on the same samples."""
+        return self._evaluate(true_positive_rates, false_positive_rates, positive_class_prior, kwargs, rate=True)
+
+    def _evaluate(
+        self,
+        true_positive_rates: FloatNDArray,
+        false_positive_rates: FloatNDArray,
+        positive_class_prior: float,
+        kwargs: dict[str, Any],
+        *,
+        rate: bool,
+    ) -> float:
         param_grid, parameters = self._grid(kwargs)
         return _evaluate_sampled_integrands(
             self._profit_integrand,
-            self._rate_integrand,
+            self._rate_integrand if rate else None,
             true_positive_rates,
             false_positive_rates,
             positive_class_prior,
@@ -210,7 +121,7 @@ class MaxProfitScoreQuasiMonteCarlo(_HullScoreFunction):
                 param_grid = cached[1]
             else:
                 scipy_distributions = [
-                    _scipy_distribution(_subs_by_name(random_var, distribution_parameters))
+                    frozen_distribution(_subs_by_name(random_var, distribution_parameters))
                     for random_var in self.random_symbols
                 ]
                 param_grid = [dist.ppf(self.sobol_samples[:, i]) for i, dist in enumerate(scipy_distributions)]

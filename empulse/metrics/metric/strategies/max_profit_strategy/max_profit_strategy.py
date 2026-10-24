@@ -1,6 +1,6 @@
 import warnings
 from collections.abc import Iterable, Sequence
-from typing import Any, ClassVar, Literal, Protocol, Self, cast
+from typing import Any, ClassVar, Literal, Self, cast
 
 import numpy as np
 import sympy
@@ -11,8 +11,9 @@ from sympy.stats.rv import is_random
 from ....._common._objective import ElasticNetPenalty, RankingLogitValueObjective
 from ....._types import FloatNDArray, IntNDArray
 from ....common import classification_threshold
-from ..._compile import CountScoreFn, MetricFn, RateFn, _safe_lambdify, _safe_run_lambda
+from ..._compile import CountScoreFn, _safe_lambdify, _safe_run_lambda
 from ..._direction import Direction
+from ..._distributions import spec_for
 from ..._parameter_domain import _check_parameters
 from ..._stochastic import expectation_over_random_vars
 from ..._symbolic import _is_affine_in, _latex
@@ -20,32 +21,21 @@ from ...capabilities import Capability
 from .._class_terms import ClassTerms
 from .._training_signal import warn_if_no_training_signal
 from ..metric_strategy import MetricStrategy
-from .common import _HullScoreFunction
+from .common import _ScoreFunction
 from .deterministic import (
     MaxProfitBoostGradientDeterministic,
     MaxProfitLogitGradientDeterministic,
-    MaxProfitRateDeterministic,
     MaxProfitScoreDeterministic,
 )
 from .gradient_piecewise import MaxProfitBoostGradientPiecewise, MaxProfitLogitGradientPiecewise
 from .monte_carlo import MaxProfitScoreMonteCarlo
 from .piecewise import (
-    BaseMaxProfitScorePiecewise,
-    BasePositiveDistribution,
     ClosedFormExpectedMaxProfit,
-    _build_max_profit_rate_piecewise,
+    ClosedFormMaxProfitScorePiecewise,
     _build_max_profit_score_piecewise,
 )
 from .quadrature import MaxProfitScoreQuad
-from .quasi_monte_carlo import MaxProfitScoreQuasiMonteCarlo, _sympy_dist_to_scipy
-
-
-class _ScoreFunction(Protocol):
-    """Score function protocol that exposes deterministic_symbols."""
-
-    deterministic_symbols: Iterable[sympy.Symbol]
-
-    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float: ...
+from .quasi_monte_carlo import MaxProfitScoreQuasiMonteCarlo
 
 
 def _portable_generator(rng: np.random.Generator) -> Any:
@@ -291,14 +281,15 @@ class MaxProfit(ClassTerms, MetricStrategy):
         The set of :class:`~empulse.metrics.Capability` members this strategy supports.
 
         ``LOGIT_OBJECTIVE`` and ``BOOST_OBJECTIVE`` are only present once :meth:`build` has run
-        and picked a deterministic or ``BasePositiveDistribution`` stochastic score function --
-        the same condition :meth:`logit_objective` and :meth:`gradient_boost_objective` check
-        before raising ``NotImplementedError``. Before :meth:`build`, or for any other stochastic
-        distribution, neither is present.
+        and picked a score function with an analytic gradient -- one without stochastic variables, or
+        one with closed-form partial moments of a positive variable -- the same condition
+        :meth:`logit_objective` and :meth:`gradient_boost_objective` check before raising
+        ``NotImplementedError``. Before :meth:`build`, or for any other stochastic distribution,
+        neither is present.
         """
         caps = super().capabilities
-        score_function = getattr(self, '_score_function', None)
-        if isinstance(score_function, MaxProfitScoreDeterministic | BasePositiveDistribution):
+        score_function: _ScoreFunction | None = getattr(self, '_score_function', None)
+        if score_function is not None and score_function.gradient is not None:
             return caps | {Capability.LOGIT_OBJECTIVE, Capability.BOOST_OBJECTIVE}
         return caps - {Capability.LOGIT_OBJECTIVE, Capability.BOOST_OBJECTIVE}
 
@@ -310,7 +301,6 @@ class MaxProfit(ClassTerms, MetricStrategy):
         fn_cost: sympy.Expr,
     ) -> Self:
         """Build the metric strategy."""
-        # Build the profit function once and share it between the score and rate builders.
         profit_function = _build_profit_function(
             tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
         )
@@ -318,15 +308,6 @@ class MaxProfit(ClassTerms, MetricStrategy):
 
         class_terms = (tp_benefit, tn_benefit, fp_cost, fn_cost)
         self._score_function = _build_max_profit_score(
-            profit_function=profit_function,
-            random_symbols=random_symbols,
-            deterministic_symbols=deterministic_symbols,
-            integration_method=self.integration_method,
-            n_mc_samples=self.n_mc_samples,
-            rng=self._rng,
-            class_terms=class_terms,
-        )
-        self._optimal_rate: RateFn = _build_max_profit_optimal_rate(
             profit_function=profit_function,
             random_symbols=random_symbols,
             deterministic_symbols=deterministic_symbols,
@@ -358,7 +339,7 @@ class MaxProfit(ClassTerms, MetricStrategy):
             cache[array_names] = _is_affine_in(class_terms, array_names)
         if cache[array_names]:
             return _aggregate_instance_parameters(parameters)
-        if isinstance(self._score_function, MaxProfitScoreDeterministic):
+        if self._score_function.evaluates_per_sample:
             return parameters
         warnings.warn(
             f'The instance-dependent parameters {sorted(array_names)} enter a stochastic cost or benefit '
@@ -383,15 +364,16 @@ class MaxProfit(ClassTerms, MetricStrategy):
         self, y_true: FloatNDArray, **parameters: FloatNDArray | float
     ) -> MaxProfitBoostGradientDeterministic:
         """Build the deterministic boosting objective from already-aggregated (scalar) parameters."""
-        if not isinstance(self._score_function, MaxProfitScoreDeterministic):
+        if self._score_function.gradient != 'deterministic':
             raise NotImplementedError(
                 'gradient_boost_objective is only supported for deterministic MaxProfit metrics. '
                 'The metric must not contain any stochastic variables.'
             )
+        score_function = cast('MaxProfitScoreDeterministic', self._score_function)
 
         f0, f1 = sympy.symbols('F_0 F_1')
         try:
-            profit_poly = sympy.Poly(sympy.expand(self._score_function.profit_function), f0, f1)
+            profit_poly = sympy.Poly(sympy.expand(score_function.profit_function), f0, f1)
         except sympy.polys.polyerrors.PolynomialError as exc:
             raise NotImplementedError(
                 'gradient_boost_objective currently supports profit functions linear in F_0 and F_1 only.'
@@ -401,12 +383,12 @@ class MaxProfit(ClassTerms, MetricStrategy):
                 'gradient_boost_objective currently supports profit functions linear in F_0 and F_1 only.'
             )
 
-        _check_parameters(self._score_function.deterministic_symbols, parameters)
+        _check_parameters(score_function.deterministic_symbols, parameters)
         tp_val, tn_val, fp_val, fn_val = self._evaluate_class_costs(parameters)
 
         return MaxProfitBoostGradientDeterministic(
-            profit_function=self._score_function.profit_function,
-            deterministic_symbols=self._score_function.deterministic_symbols,
+            profit_function=score_function.profit_function,
+            deterministic_symbols=score_function.deterministic_symbols,
             y_true=np.asarray(y_true),
             tp_benefit=tp_val,
             tn_benefit=tn_val,
@@ -452,8 +434,6 @@ class MaxProfit(ClassTerms, MetricStrategy):
         Supported with stochastic variables, whose score depends on the samples only through the ROC
         convex hull and the class prior, both of which follow from the groups' counts.
         """
-        if not isinstance(self._score_function, _HullScoreFunction):
-            return None
         return self._score_function._count_scorer(**self._scoring_parameters(parameters))
 
     def _closed_form_expected_max_profit(
@@ -466,9 +446,9 @@ class MaxProfit(ClassTerms, MetricStrategy):
         code computes in closed form. The expected maximum profit is the score of :class:`MaxProfit`
         and the negated score of :class:`MinCost`.
         """
-        if not isinstance(self._score_function, BaseMaxProfitScorePiecewise):
-            return None
-        return self._score_function._closed_form(n_positives, n_negatives, **self._scoring_parameters(parameters))
+        return self._score_function._closed_form(  # type: ignore[no-any-return]
+            n_positives, n_negatives, **self._scoring_parameters(parameters)
+        )
 
     def optimal_threshold(
         self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
@@ -504,7 +484,12 @@ class MaxProfit(ClassTerms, MetricStrategy):
         optimal_threshold : float
             The optimal classification threshold.
         """
-        rate = self.optimal_rate(y_true, y_score, **parameters)
+        scoring_parameters = self._scoring_parameters(parameters)
+        # Without stochastic variables the scan that finds the rate finds its threshold too.
+        threshold = self._score_function.threshold(y_true, y_score, **scoring_parameters)
+        if threshold is not None:
+            return threshold
+        rate = self._score_function.rate(y_true, y_score, **scoring_parameters)
         return classification_threshold(y_true, y_score, rate)
 
     def optimal_rate(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
@@ -535,7 +520,7 @@ class MaxProfit(ClassTerms, MetricStrategy):
         optimal_rate : float
             The optimal predicted positive rate.
         """
-        return self._optimal_rate(y_true, y_score, **self._scoring_parameters(parameters))
+        return self._score_function.rate(y_true, y_score, **self._scoring_parameters(parameters))
 
     def logit_objective(
         self,
@@ -589,18 +574,19 @@ class MaxProfit(ClassTerms, MetricStrategy):
         Raises
         ------
         NotImplementedError
-            If the metric is neither purely deterministic nor a
-            ``BasePositiveDistribution`` stochastic variant.
+            If the metric is neither deterministic nor has a single positive stochastic variable with
+            closed-form partial moments.
         """
         _check_parameters(self._score_function.deterministic_symbols, parameters)
         agg_params = _aggregate_instance_parameters(dict(parameters))
 
-        if isinstance(self._score_function, MaxProfitScoreDeterministic):
+        if self._score_function.gradient == 'deterministic':
+            score_function = cast('MaxProfitScoreDeterministic', self._score_function)
             tp_val, tn_val, fp_val, fn_val = self._evaluate_class_costs(agg_params)
 
             return MaxProfitLogitGradientDeterministic(
-                profit_function=self._score_function.profit_function,
-                deterministic_symbols=self._score_function.deterministic_symbols,
+                profit_function=score_function.profit_function,
+                deterministic_symbols=score_function.deterministic_symbols,
                 features=features,
                 y_true=y_true,
                 C=C,
@@ -615,14 +601,14 @@ class MaxProfit(ClassTerms, MetricStrategy):
                 parameters=agg_params,
             )
 
-        elif isinstance(self._score_function, BasePositiveDistribution):
+        elif self._score_function.gradient == 'piecewise':
             # The stochastic route integrates over a random variable, so there is no closed-form
             # gradient magnitude. Substituting each random variable by its mean gives the same
             # scale the deterministic route would use, which keeps `C` comparable between the two.
             objective_scale = self._stochastic_objective_scale(y_true, agg_params)
 
             return MaxProfitLogitGradientPiecewise(
-                score_function=self._score_function,
+                score_function=cast('ClosedFormMaxProfitScorePiecewise', self._score_function),
                 features=features,
                 y_true=y_true,
                 C=C,
@@ -634,8 +620,8 @@ class MaxProfit(ClassTerms, MetricStrategy):
             )
         else:
             raise NotImplementedError(
-                'logit_objective is currently only supported for Deterministic and '
-                'BasePositiveDistribution stochastic metrics.'
+                'logit_objective is currently only supported for deterministic metrics and for '
+                'metrics with a single positive stochastic variable with closed-form partial moments.'
             )
 
     def _stochastic_objective_scale(self, y_true: FloatNDArray, parameters: dict[str, FloatNDArray | float]) -> float:
@@ -694,23 +680,15 @@ class MaxProfit(ClassTerms, MetricStrategy):
         # Reduced as `score` reduces them, so that the objective is the score.
         scoring_params = self._scoring_parameters(dict(parameters))
         y_true = np.asarray(y_true).reshape(-1)
-        if isinstance(self._score_function, MaxProfitScoreDeterministic):
-            _check_parameters(self._score_function.deterministic_symbols, scoring_params)
-            class_values = self._score_function._class_values(scoring_params) or self._evaluate_class_costs(
-                _aggregate_instance_parameters(scoring_params)
-            )
-            objective_scale = _max_profit_objective_scale(y_true, *class_values)
+        if self._score_function.gradient == 'deterministic':
+            deterministic = cast('MaxProfitScoreDeterministic', self._score_function)
+            _check_parameters(deterministic.deterministic_symbols, scoring_params)
+            objective_scale = _max_profit_objective_scale(y_true, *deterministic._class_values(scoring_params))
         else:
             objective_scale = self._stochastic_objective_scale(y_true, scoring_params)
 
         labels: IntNDArray = y_true.astype(np.intp)
-        score_function = self._score_function
-        if hasattr(score_function, '_sample_scorer'):
-            score = score_function._sample_scorer(labels, **scoring_params)
-        else:
-
-            def score(y_score: FloatNDArray) -> float:
-                return float(score_function(labels, y_score, **scoring_params))
+        score = self._score_function._sample_scorer(labels, **scoring_params)
 
         return RankingLogitValueObjective(
             score=score,
@@ -746,16 +724,16 @@ class MaxProfit(ClassTerms, MetricStrategy):
         if cached is not None and cached[0] == signature:
             objective = cached[1]
         else:
-            if isinstance(self._score_function, MaxProfitScoreDeterministic):
+            if self._score_function.gradient == 'deterministic':
                 objective = self._prepare_boost_deterministic_objective(y_true_arr, **agg_params)
 
-            elif isinstance(self._score_function, BasePositiveDistribution):
+            elif self._score_function.gradient == 'piecewise':
                 objective = self._prepare_boost_piecewise_objective(y_true_arr, **agg_params)
 
             else:
                 raise NotImplementedError(
-                    'gradient_boost_objective is currently only supported for Deterministic '
-                    'and BasePositiveDistribution stochastic metrics.'
+                    'gradient_boost_objective is currently only supported for deterministic metrics and for '
+                    'metrics with a single positive stochastic variable with closed-form partial moments.'
                 )
 
             self._boost_cache = (signature, objective)
@@ -893,7 +871,6 @@ def _build_max_profit_score(
     else:
         max_profit_score = _build_max_profit_stochastic(
             profit_function,
-            None,
             random_symbols,
             deterministic_symbols,
             integration_method=integration_method,
@@ -901,27 +878,6 @@ def _build_max_profit_score(
             rng=rng,
         )
     return max_profit_score
-
-
-def _build_max_profit_optimal_rate(
-    profit_function: sympy.Expr,
-    random_symbols: list[sympy.Symbol],
-    deterministic_symbols: list[sympy.Symbol],
-    integration_method: str,
-    n_mc_samples: int,
-    rng: np.random.Generator,
-    class_terms: tuple[sympy.Expr, sympy.Expr, sympy.Expr, sympy.Expr],
-) -> RateFn:
-    n_random = len(random_symbols)
-
-    rate_function = _build_rate_function()
-    if n_random == 0:
-        optimal_rate: MetricFn = MaxProfitRateDeterministic(profit_function, deterministic_symbols, class_terms)
-    else:
-        optimal_rate = _build_max_profit_stochastic(
-            profit_function, rate_function, random_symbols, deterministic_symbols, integration_method, n_mc_samples, rng
-        )
-    return optimal_rate
 
 
 def _identify_symbols(
@@ -976,18 +932,12 @@ def _build_cost_function(
     return cost_function
 
 
-def _build_rate_function() -> sympy.Expr:
-    pos_prior, neg_prior, tpr, fpr = sympy.symbols('pi_0 pi_1 F_0 F_1')
-    return pos_prior * tpr + neg_prior * fpr
-
-
 def _support_all_distributions(random_symbols: Iterable[sympy.Symbol]) -> bool:
-    return all(pspace(r).distribution.__class__ in _sympy_dist_to_scipy for r in random_symbols)
+    return all(spec_for(r) is not None for r in random_symbols)
 
 
 def _build_max_profit_stochastic(
     profit_function: sympy.Expr,
-    rate_function: sympy.Expr | None,
     random_symbols: Sequence[sympy.Symbol],
     deterministic_symbols: Iterable[sympy.Symbol],
     integration_method: str,
@@ -997,8 +947,7 @@ def _build_max_profit_stochastic(
     """
     Compute the maximum profit for one or more stochastic variables.
 
-    Builds a score function when *rate_function* is ``None``, or an optimal-rate function
-    otherwise. Every integration backend is shared between the two modes.
+    The score function computes the optimal rate too, on the same samples or regions.
 
     With a single stochastic variable the piecewise path is always preferred, whatever the shape of
     the profit function: splitting the support at the points where the optimal operating point
@@ -1014,35 +963,26 @@ def _build_max_profit_stochastic(
         # Every other method integrates a density: only sampling handles a probability mass function.
         if integration_method == 'quasi-monte-carlo' and _support_all_distributions(random_symbols):
             return MaxProfitScoreQuasiMonteCarlo(
-                profit_function, rate_function, random_symbols, deterministic_symbols, n_mc_samples, rng
+                profit_function, random_symbols, deterministic_symbols, n_mc_samples, rng
             )
         if integration_method in {'auto', 'monte-carlo'}:
-            return MaxProfitScoreMonteCarlo(
-                profit_function, rate_function, random_symbols, deterministic_symbols, n_mc_samples, rng
-            )
+            return MaxProfitScoreMonteCarlo(profit_function, random_symbols, deterministic_symbols, n_mc_samples, rng)
         raise ValueError(
             f'The stochastic variable(s) {", ".join(discrete)} are discrete, which '
             f"integration_method={integration_method!r} does not support. Use 'monte-carlo' or 'auto'."
         )
     if integration_method == 'quasi-monte-carlo' and not _support_all_distributions(random_symbols):
         unsupported = sorted({
-            type(pspace(symbol).distribution).__name__
-            for symbol in random_symbols
-            if type(pspace(symbol).distribution) not in _sympy_dist_to_scipy
+            type(pspace(symbol).distribution).__name__ for symbol in random_symbols if spec_for(symbol) is None
         })
         raise ValueError(
             f"integration_method='quasi-monte-carlo' needs a quantile function for every distribution, which "
             f"{', '.join(unsupported)} lacks. Use 'auto', 'quad' or 'monte-carlo' instead."
         )
     if integration_method == 'auto' and n_random == 1:
-        if rate_function is None:
-            return cast(
-                '_ScoreFunction',
-                _build_max_profit_score_piecewise(profit_function, random_symbols[0], deterministic_symbols),
-            )
         return cast(
             '_ScoreFunction',
-            _build_max_profit_rate_piecewise(profit_function, rate_function, random_symbols[0], deterministic_symbols),
+            _build_max_profit_score_piecewise(profit_function, random_symbols[0], deterministic_symbols),
         )
 
     if integration_method == 'auto':
@@ -1052,25 +992,19 @@ def _build_max_profit_stochastic(
             # subdivides hard to do so: two variables already cost ~19k evaluations and three cost
             # ~650k, against a fixed sampling budget here for the same accuracy to ~1e-6.
             return MaxProfitScoreQuasiMonteCarlo(
-                profit_function, rate_function, random_symbols, deterministic_symbols, n_mc_samples, rng
+                profit_function, random_symbols, deterministic_symbols, n_mc_samples, rng
             )
         if n_random <= 2:
             # No quantile function to sample from, but few enough variables for quadrature to
             # stay tractable, and it is more accurate than plain Monte Carlo.
-            return MaxProfitScoreQuad(profit_function, rate_function, random_symbols, deterministic_symbols)
-        return MaxProfitScoreMonteCarlo(
-            profit_function, rate_function, random_symbols, deterministic_symbols, n_mc_samples, rng
-        )
+            return MaxProfitScoreQuad(profit_function, random_symbols, deterministic_symbols)
+        return MaxProfitScoreMonteCarlo(profit_function, random_symbols, deterministic_symbols, n_mc_samples, rng)
     elif integration_method == 'quad':
-        return MaxProfitScoreQuad(profit_function, rate_function, random_symbols, deterministic_symbols)
+        return MaxProfitScoreQuad(profit_function, random_symbols, deterministic_symbols)
     elif integration_method == 'monte-carlo':
-        return MaxProfitScoreMonteCarlo(
-            profit_function, rate_function, random_symbols, deterministic_symbols, n_mc_samples, rng
-        )
+        return MaxProfitScoreMonteCarlo(profit_function, random_symbols, deterministic_symbols, n_mc_samples, rng)
     elif integration_method == 'quasi-monte-carlo':
-        return MaxProfitScoreQuasiMonteCarlo(
-            profit_function, rate_function, random_symbols, deterministic_symbols, n_mc_samples, rng
-        )
+        return MaxProfitScoreQuasiMonteCarlo(profit_function, random_symbols, deterministic_symbols, n_mc_samples, rng)
     else:
         raise ValueError(f'Integration method {integration_method} is not supported')
 

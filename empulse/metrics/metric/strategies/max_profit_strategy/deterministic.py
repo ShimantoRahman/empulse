@@ -10,7 +10,7 @@ from ....common import _classification_threshold
 from ..._compile import _safe_lambdify, _safe_run_lambda
 from ..._confusion import _compute_confusion_matrix
 from ..._parameter_domain import _check_parameters
-from .common import _BaseMaxProfitLogitObjective, _smooth_step_derivatives
+from .common import _BaseMaxProfitLogitObjective, _ScoreFunction, _smooth_step_derivatives
 
 
 def _calculate_profits_deterministic(
@@ -50,16 +50,16 @@ def _calculate_profits_deterministic(
     return profits, tprs, fprs, pi0, pi1
 
 
-class _BaseMaxProfitDeterministic:
-    """Shared setup for MaxProfit's fully-deterministic (no stochastic variable) score/rate.
-
-    Subclasses differ only in which of the two results of the maximization they report:
-    :class:`MaxProfitScoreDeterministic` the highest profit, :class:`MaxProfitRateDeterministic` the
-    predicted-positive rate that reaches it.
+class MaxProfitScoreDeterministic(_ScoreFunction):
+    """MaxProfit without stochastic variables: the highest profit, and the rate that reaches it.
 
     The maximization runs over the four class terms the profit is built from, in the compiled
     :func:`~empulse.metrics._cy_convex_hull.max_profit_scan`.
     """
+
+    gradient = 'deterministic'
+    # The class terms are evaluated per sample and then averaged.
+    evaluates_per_sample = True
 
     def __init__(
         self,
@@ -73,9 +73,19 @@ class _BaseMaxProfitDeterministic:
         self._class_term_fns = tuple(_safe_lambdify(term) for term in class_terms)
 
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
-        """Compute the cost loss."""
+        """Compute the maximum profit."""
         _check_parameters((*self.deterministic_symbols,), kwargs)
-        return self._maximize(y_true, y_score, kwargs)
+        return self._maximize(y_true, y_score, kwargs)[0]
+
+    def rate(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
+        """Compute the predicted positive rate at which the profit is maximal."""
+        _check_parameters((*self.deterministic_symbols,), kwargs)
+        return self._maximize(y_true, y_score, kwargs)[1]
+
+    def threshold(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
+        """Return the score threshold that reaches the maximal profit, as the scan finds it."""
+        _check_parameters((*self.deterministic_symbols,), kwargs)
+        return self._maximize(y_true, y_score, kwargs)[2]
 
     def _sample_scorer(self, y_true: IntNDArray, **kwargs: Any) -> Callable[[FloatNDArray], float]:
         """
@@ -89,17 +99,20 @@ class _BaseMaxProfitDeterministic:
         labels = np.ascontiguousarray(y_true, dtype=np.int32).reshape(-1)
 
         def scan_score(y_score: FloatNDArray) -> float:
-            return self._pick(max_profit_scan(labels, np.asarray(y_score, dtype=np.float64), *class_values))
+            return float(max_profit_scan(labels, np.asarray(y_score, dtype=np.float64), *class_values)[0])
 
         return scan_score
 
-    def _maximize(self, y_true: IntNDArray, y_score: FloatNDArray, kwargs: dict[str, Any]) -> float:
-        result = max_profit_scan(
+    def _maximize(
+        self, y_true: IntNDArray, y_score: FloatNDArray, kwargs: dict[str, Any]
+    ) -> tuple[float, float, float]:
+        """Return the maximum profit, the rate that reaches it and the threshold that does."""
+        profit, rate, threshold = max_profit_scan(
             np.asarray(y_true, dtype=np.int32).reshape(-1),
             np.asarray(y_score, dtype=np.float64).reshape(-1),
             *self._class_values(kwargs),
         )
-        return self._pick(result)
+        return float(profit), float(rate), float(threshold)
 
     def _class_values(self, kwargs: dict[str, Any]) -> tuple[float, float, float, float]:
         """
@@ -113,24 +126,6 @@ class _BaseMaxProfitDeterministic:
             for function, term in zip(self._class_term_fns, self.class_terms, strict=True)
         ]
         return values[0], values[1], values[2], values[3]
-
-    def _pick(self, result: tuple[float, float, float]) -> float:
-        """Choose this score's number from the (profit, rate, threshold) of the compiled maximization."""
-        raise NotImplementedError
-
-
-class MaxProfitScoreDeterministic(_BaseMaxProfitDeterministic):
-    """Compute the maximum profit for all deterministic variables."""
-
-    def _pick(self, result: tuple[float, float, float]) -> float:
-        return result[0]
-
-
-class MaxProfitRateDeterministic(_BaseMaxProfitDeterministic):
-    """Compute the maximum profit for all deterministic variables."""
-
-    def _pick(self, result: tuple[float, float, float]) -> float:
-        return result[1]
 
 
 class MaxProfitBoostGradientDeterministic:

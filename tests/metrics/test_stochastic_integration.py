@@ -29,9 +29,11 @@ from empulse.metrics import (
     MaxProfit,
     Metric,
 )
+from empulse.metrics.metric._distributions import DISTRIBUTIONS, frozen_distribution, spec_for
 from empulse.metrics.metric._symbolic import _subs_by_name
 from empulse.metrics.metric.strategies.max_profit_strategy import common
 from empulse.metrics.metric.strategies.max_profit_strategy.common import (
+    _build_rate_function,
     _control_variate_mean,
     _convex_hull,
     _evaluate_sampled_integrands,
@@ -39,7 +41,6 @@ from empulse.metrics.metric.strategies.max_profit_strategy.common import (
 )
 from empulse.metrics.metric.strategies.max_profit_strategy.max_profit_strategy import (
     _build_profit_function,
-    _build_rate_function,
     _support_all_distributions,
 )
 from empulse.metrics.metric.strategies.max_profit_strategy.monte_carlo import _control_variates
@@ -48,24 +49,18 @@ from empulse.metrics.metric.strategies.max_profit_strategy.quadrature import (
     _Hull,
     compute_integral_multiple_quad,
 )
-from empulse.metrics.metric.strategies.max_profit_strategy.quasi_monte_carlo import (
-    MaxProfitScoreQuasiMonteCarlo,
-    _scipy_distribution,
-    _sympy_dist_to_scipy,
-    _sympy_dist_to_scipy_params,
-)
+from empulse.metrics.metric.strategies.max_profit_strategy.quasi_monte_carlo import MaxProfitScoreQuasiMonteCarlo
 
 from ._helpers import brute_force_emp
 
 # --- Distributions -----------------------------------------------------------------------------------
 
 
-class TestDistributionAdapters:
-    """`_distributions.ADAPTERS`/`adapter_for` replace two 11-branch isinstance chains in
-    piecewise.py (score and rate) with one table -- these round-trip every registered
-    distribution through `adapter_for` and confirm the score-side table agrees with it."""
+class TestDistributionTable:
+    """One table, `_distributions.DISTRIBUTIONS`, says how every method treats a distribution."""
 
-    _FACTORIES: ClassVar[dict[type, Callable[[], Any]]] = {
+    #: The distributions with closed-form partial moments, each with its name in the compiled code.
+    _CLOSED_FORMS: ClassVar[dict[type, Callable[[], Any]]] = {
         sympy.stats.crv_types.UniformDistribution: lambda: sympy.stats.Uniform('x', 0, 1),
         sympy.stats.crv_types.BetaDistribution: lambda: sympy.stats.Beta('x', 2, 3),
         sympy.stats.crv_types.NormalDistribution: lambda: sympy.stats.Normal('x', 0, 1),
@@ -78,26 +73,28 @@ class TestDistributionAdapters:
         sympy.stats.crv_types.TriangularDistribution: lambda: sympy.stats.Triangular('x', 0, 1, 0.5),
     }
 
-    def test_every_adapter_round_trips(self):
-        from empulse.metrics.metric.strategies.max_profit_strategy._distributions import ADAPTERS, adapter_for
+    def test_the_closed_forms_are_these_distributions(self):
+        closed_forms = {distribution for distribution, spec in DISTRIBUTIONS.items() if spec.closed_form is not None}
+        assert closed_forms == set(self._CLOSED_FORMS)
+        for distribution_type, factory in self._CLOSED_FORMS.items():
+            assert spec_for(factory()) is DISTRIBUTIONS[distribution_type], distribution_type
 
-        assert set(self._FACTORIES) == set(ADAPTERS), 'test factory table is out of sync with ADAPTERS'
-        for distribution_type, factory in self._FACTORIES.items():
-            random_symbol = factory()
-            found = adapter_for(random_symbol)
-            assert found is ADAPTERS[distribution_type], distribution_type
+    def test_every_closed_form_is_compiled(self):
+        from empulse.metrics._cy_max_profit import Distribution
 
-    def test_unregistered_distribution_returns_none(self):
-        from empulse.metrics.metric.strategies.max_profit_strategy._distributions import adapter_for
+        for spec in DISTRIBUTIONS.values():
+            if spec.closed_form is not None:
+                assert hasattr(Distribution, spec.closed_form), spec.closed_form
 
-        random_symbol = sympy.stats.StudentT('x', 5)  # not in ADAPTERS
-        assert adapter_for(random_symbol) is None
+    def test_a_distribution_without_an_entry_has_no_spec(self):
+        assert spec_for(sympy.stats.Kumaraswamy('x', 2, 3)) is None
 
-    def test_score_classes_and_adapters_cover_the_same_distributions(self):
-        from empulse.metrics.metric.strategies.max_profit_strategy._distributions import ADAPTERS
-        from empulse.metrics.metric.strategies.max_profit_strategy.piecewise import _SCORE_CLASSES
+    def test_a_subclass_of_a_distribution_takes_its_spec(self):
+        class Shifted(sympy.stats.crv_types.GammaDistribution):
+            pass
 
-        assert _SCORE_CLASSES.keys() == ADAPTERS.keys()
+        random_symbol = sympy.stats.crv_types.rv('x', Shifted, (2, 3))
+        assert spec_for(random_symbol) is DISTRIBUTIONS[sympy.stats.crv_types.GammaDistribution]
 
 
 # Each entry pairs the SymPy distribution with the SciPy one it should map to, plus a frozen
@@ -146,8 +143,7 @@ class TestNewlyQmcCapableDistributions:
         distribution = sympy.stats.pspace(random_variable).distribution
         parameters = [float(argument) for argument in distribution.args]
 
-        scipy_distribution = _sympy_dist_to_scipy[type(distribution)]
-        frozen = scipy_distribution(**_sympy_dist_to_scipy_params[type(distribution)](*parameters))
+        frozen = DISTRIBUTIONS[type(distribution)].freeze(parameters)
 
         variable = sympy.Symbol('t')
         sympy_density = sympy.lambdify(variable, sympy.stats.density(random_variable).pdf(variable), 'numpy')
@@ -304,7 +300,7 @@ QMC_DISTRIBUTION_FACTORIES: dict[type, Callable[[], Any]] = {
 
 
 def test_qmc_distribution_table_covers_every_registered_distribution():
-    assert set(QMC_DISTRIBUTION_FACTORIES) == set(_sympy_dist_to_scipy)
+    assert set(QMC_DISTRIBUTION_FACTORIES) == set(DISTRIBUTIONS)
 
 
 @pytest.mark.parametrize(
@@ -317,7 +313,7 @@ def test_qmc_scipy_distribution_matches_sympy_density(factory):
     Arcsin(2, 5) must be sampled on [2, 5], not [2, 7].
     """
     random_variable = factory()
-    frozen = _scipy_distribution(random_variable)
+    frozen = frozen_distribution(random_variable)
 
     variable = sympy.Symbol('t', real=True)
     sympy_density = sympy.lambdify(
@@ -598,7 +594,7 @@ class TestMonteCarloControlVariates:
         controls = _control_variates([random_variable], [samples], {})
         assert len(controls) == int(qualifies)
         if qualifies:
-            expected_mean = _scipy_distribution(random_variable).mean()
+            expected_mean = frozen_distribution(random_variable).mean()
             np.testing.assert_allclose(controls[0], samples - expected_mean)
 
     def test_distribution_parameters_are_filled_in(self):
@@ -759,7 +755,8 @@ def test_sympy_distributions_max_profit(sympy_dist_map, shape):
     y_proba = [0.9, 0.1, 0.8, 0.2, 0.7]
 
     default = Metric(cost_matrix, MaxProfit())
-    qmc = Metric(cost_matrix, MaxProfit(integration_method='quasi-monte-carlo', n_mc_samples_exp=9, random_state=12))
+    # Enough samples for a rate that is a tail probability of half a percent, as for Maxwell.
+    qmc = Metric(cost_matrix, MaxProfit(integration_method='quasi-monte-carlo', n_mc_samples_exp=12, random_state=12))
     checks = {
         'score': (default(y_true, y_proba, **parameters), qmc(y_true, y_proba, **parameters)),
         'rate': (default.optimal_rate(y_true, y_proba, **parameters), qmc.optimal_rate(y_true, y_proba, **parameters)),

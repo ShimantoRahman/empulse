@@ -9,15 +9,18 @@ profit integrates the upper envelope of these curves against the density of ``x`
 split into the regions on which a single vertex is on top, and on each region every power of ``x``
 integrates to a closed-form partial moment of the distribution.
 
-This is the compiled counterpart of ``partition_support`` with a ``PolynomialEnvelope`` followed by
-a ``BaseMaxProfitScorePiecewise._integrate`` in ``strategies/max_profit_strategy``, and follows them
-step by step, so that both give the same regions and the same score. It covers polynomials up to
-degree two, whose crossings have closed-form roots; the Python code handles the rest.
+The partition is the compiled counterpart of ``partition_support`` with a ``PolynomialEnvelope`` in
+``strategies/max_profit_strategy``, and follows it step by step, so that both give the same regions.
+It covers polynomials up to degree two, whose crossings have closed-form roots. The partial moments
+(:func:`partial_moments`) are the one implementation of the closed forms, for any degree: the Python
+partition, the exact optimal rate and the analytic gradients use them as well.
 """
 
 from libc.math cimport copysign, exp, expm1, isfinite, isnan, log, pow, sqrt
 from libcpp.algorithm cimport sort
 from libcpp.vector cimport vector
+
+import numpy as np
 from scipy.special.cython_special cimport betainc, chdtr, gamma, gammainc, ndtr, poch
 
 from .._cy_convex_hull.convex_hull cimport Group, Point, _add_groups_to_hull
@@ -238,11 +241,12 @@ cdef inline double _triangular_cdf(double x, double c, double loc, double scale)
     return _standard_cdf_bounds(y, 0.0, 1.0, inside)
 
 
-# --- The integrals over the regions -----------------------------------------------------------
+# --- The partial moments over the regions -----------------------------------------------------
 
 
-# The integrators take the coefficients of every region as one array, a[k * n_regions + r] being
-# the coefficient of x**k on region r, with n_regions = bounds.size() - 1.
+# The partial moments of every region are one array, moments[k * n_regions + r] being the integral of
+# x**k times the density over region r, with n_regions = bounds.size() - 1. A profit with
+# coefficients a[k * n_regions + r] in the same layout integrates to the sum of their products.
 
 
 cdef inline bint _all_zero(const double* values, Py_ssize_t n_values) noexcept nogil:
@@ -253,19 +257,14 @@ cdef inline bint _all_zero(const double* values, Py_ssize_t n_values) noexcept n
     return True
 
 
-cdef double _integrate_uniform(
-    const double* a, Py_ssize_t n_powers, const vector[double]& bounds, double lower, double upper
+cdef void _uniform_moments(
+    Py_ssize_t n_powers, const vector[double]& bounds, double lower, double upper, double* moments
 ) noexcept nogil:
-    cdef double pdf = 1.0 / (upper - lower), total = 0.0, term
+    cdef double pdf = 1.0 / (upper - lower)
     cdef Py_ssize_t n_regions = <Py_ssize_t>bounds.size() - 1, k, r
     for k in range(n_powers):
-        if _all_zero(&a[k * n_regions], n_regions):
-            continue
-        term = 0.0
         for r in range(n_regions):
-            term += (a[k * n_regions + r] * pdf / (k + 1.0)) * (pow(bounds[r + 1], k + 1) - pow(bounds[r], k + 1))
-        total += term
-    return total
+            moments[k * n_regions + r] = (pdf / (k + 1.0)) * (pow(bounds[r + 1], k + 1) - pow(bounds[r], k + 1))
 
 
 cdef inline double _normal_pdf(double z) noexcept nogil:
@@ -277,18 +276,14 @@ cdef inline double _pow_times_pdf(double x, int power, double pdf) noexcept nogi
     return 0.0 if pdf == 0.0 else pow(x, power) * pdf
 
 
-cdef double _integrate_normal(
-    const double* a, Py_ssize_t n_powers, const vector[double]& bounds, double mu, double sigma
+cdef void _normal_moments(
+    Py_ssize_t n_powers, const vector[double]& bounds, double mu, double sigma, double* moments
 ) noexcept nogil:
-    """Partial moments by the recurrence R_k = mu R_(k-1) + (k-1) sigma**2 R_(k-2) - sigma [x**(k-1) phi(z)]."""
+    """By the recurrence R_k = mu R_(k-1) + (k-1) sigma**2 R_(k-2) - sigma [x**(k-1) phi(z)]."""
     cdef Py_ssize_t n_regions = <Py_ssize_t>bounds.size() - 1, k, r
-    cdef vector[double] scratch  # the pdf at each bound, then moments[k * n_regions + r]
-    cdef double* pdf_at
-    cdef double* moments
-    cdef double total = 0.0, term, z_lower, z_upper
-    scratch.resize(n_regions + 1 + n_powers * n_regions)
-    pdf_at = scratch.data()
-    moments = pdf_at + n_regions + 1
+    cdef vector[double] pdf_at
+    cdef double z_lower, z_upper
+    pdf_at.resize(n_regions + 1)
     for r in range(n_regions + 1):
         pdf_at[r] = _normal_pdf((bounds[r] - mu) / sigma)
     for r in range(n_regions):
@@ -305,14 +300,6 @@ cdef double _integrate_normal(
                     _pow_times_pdf(bounds[r + 1], k - 1, pdf_at[r + 1]) - _pow_times_pdf(bounds[r], k - 1, pdf_at[r])
                 )
             )
-    for k in range(n_powers):
-        if _all_zero(&a[k * n_regions], n_regions):
-            continue
-        term = 0.0
-        for r in range(n_regions):
-            term += a[k * n_regions + r] * moments[k * n_regions + r]
-        total += term
-    return total
 
 
 cdef double _triangular_antiderivative(double x, int k, double a, double b, double m) noexcept nogil:
@@ -335,33 +322,28 @@ cdef double _triangular_antiderivative(double x, int k, double a, double b, doub
     return 0.0
 
 
-cdef double _integrate_triangular(
-    const double* coefficients, Py_ssize_t n_powers, const vector[double]& bounds, double a, double b, double m
+cdef void _triangular_moments(
+    Py_ssize_t n_powers, const vector[double]& bounds, double a, double b, double m, double* moments
 ) noexcept nogil:
     cdef Py_ssize_t n_regions = <Py_ssize_t>bounds.size() - 1, k, r
     cdef vector[double] clipped
-    cdef double total = 0.0, term, scale = b - a
+    cdef double scale = b - a
     clipped.resize(n_regions + 1)
     for r in range(n_regions + 1):
         # np.clip: NaN stays NaN
         clipped[r] = bounds[r] if isnan(bounds[r]) else min(max(bounds[r], a), b)
     for k in range(n_powers):
-        if _all_zero(&coefficients[k * n_regions], n_regions):
-            continue
-        term = 0.0
         for r in range(n_regions):
             if k == 0:
-                term += coefficients[k * n_regions + r] * (
+                moments[r] = (
                     _triangular_cdf(clipped[r + 1], (m - a) / scale, a, scale)
                     - _triangular_cdf(clipped[r], (m - a) / scale, a, scale)
                 )
             else:
-                term += coefficients[k * n_regions + r] * (
+                moments[k * n_regions + r] = (
                     _triangular_antiderivative(clipped[r + 1], k, a, b, m)
                     - _triangular_antiderivative(clipped[r], k, a, b, m)
                 )
-        total += term
-    return total
 
 
 cdef double _size_biased_cdf(Distribution distribution, const double* p, int k, double x) noexcept nogil:
@@ -410,20 +392,67 @@ cdef double _moment(Distribution distribution, const double* p, int k) noexcept 
     return poch(p[0], k) / poch(p[0] + p[1], k)
 
 
-cdef double _integrate_positive(
-    Distribution distribution, const double* a, Py_ssize_t n_powers, const vector[double]& bounds, const double* p
+cdef void _positive_moments(
+    Distribution distribution, Py_ssize_t n_powers, const vector[double]& bounds, const double* p, double* moments
 ) noexcept nogil:
     cdef Py_ssize_t n_regions = <Py_ssize_t>bounds.size() - 1, k, r
     cdef vector[double] cdf_at
-    cdef double total = 0.0, term, moment
+    cdef double moment
     cdf_at.resize(n_regions + 1)
     for k in range(n_powers):
         moment = _moment(distribution, p, k)
         for r in range(n_regions + 1):
             cdf_at[r] = _size_biased_cdf(distribution, p, k, bounds[r])
+        for r in range(n_regions):
+            moments[k * n_regions + r] = moment * (cdf_at[r + 1] - cdf_at[r])
+
+
+cdef void _partial_moments(
+    Distribution distribution,
+    Py_ssize_t n_powers,
+    const vector[double]& bounds,
+    double lower_bound,
+    double upper_bound,
+    const double* p,
+    double* moments,
+) noexcept nogil:
+    """Fill ``moments[k * n_regions + r]`` with the integral of x**k times the density over region r."""
+    if distribution == UNIFORM:
+        _uniform_moments(n_powers, bounds, lower_bound, upper_bound, moments)
+    elif distribution == NORMAL:
+        _normal_moments(n_powers, bounds, p[0], p[1], moments)
+    elif distribution == TRIANGULAR:
+        _triangular_moments(n_powers, bounds, p[0], p[1], p[2], moments)
+    else:
+        _positive_moments(distribution, n_powers, bounds, p, moments)
+
+
+cdef double _integrate(
+    Distribution distribution,
+    const double* a,
+    Py_ssize_t n_powers,
+    const vector[double]& bounds,
+    double lower_bound,
+    double upper_bound,
+    const double* p,
+    double* moments,
+) noexcept nogil:
+    """
+    The integral of the profit with coefficients ``a``, laid out as the moments, over the regions.
+
+    ``moments`` is scratch space for the partial moments, of the same size as ``a``: the caller
+    allocates it with the coefficients, which saves an allocation on a path called once per tree.
+    """
+    cdef Py_ssize_t n_regions = <Py_ssize_t>bounds.size() - 1, k, r
+    cdef double total = 0.0, term
+    _partial_moments(distribution, n_powers, bounds, lower_bound, upper_bound, p, moments)
+    for k in range(n_powers):
+        # A power the profit does not have contributes nothing, also where its moment is not finite.
+        if _all_zero(&a[k * n_regions], n_regions):
+            continue
         term = 0.0
         for r in range(n_regions):
-            term += a[k * n_regions + r] * moment * (cdf_at[r + 1] - cdf_at[r])
+            term += a[k * n_regions + r] * moments[k * n_regions + r]
         total += term
     return total
 
@@ -481,7 +510,8 @@ cdef double _expected_max_profit(
     cdef vector[double] coefficients  # coefficients[m * n_powers + k]: of x**k at vertex m
     cdef vector[double] bounds
     cdef vector[Py_ssize_t] vertices
-    cdef vector[double] a  # a[k * n_regions + r]: the coefficient of x**k on region r
+    # a[k * n_regions + r]: the coefficient of x**k on region r, followed by the partial moments' scratch space.
+    cdef vector[double] a
     cdef Py_ssize_t m, k, r, n_regions
 
     coefficients.resize(n_vertices * n_powers)
@@ -492,18 +522,14 @@ cdef double _expected_max_profit(
             )
     _partition(coefficients, n_vertices, n_powers, lower_bound, upper_bound, bounds, vertices)
     n_regions = <Py_ssize_t>vertices.size()
-    a.resize(n_powers * n_regions)
+    a.resize(2 * n_powers * n_regions)
     for k in range(n_powers):
         for r in range(n_regions):
             a[k * n_regions + r] = coefficients[vertices[r] * n_powers + k]
 
-    if distribution == UNIFORM:
-        return _integrate_uniform(a.data(), n_powers, bounds, lower_bound, upper_bound)
-    if distribution == NORMAL:
-        return _integrate_normal(a.data(), n_powers, bounds, p[0], p[1])
-    if distribution == TRIANGULAR:
-        return _integrate_triangular(a.data(), n_powers, bounds, p[0], p[1], p[2])
-    return _integrate_positive(distribution, a.data(), n_powers, bounds, p)
+    return _integrate(
+        distribution, a.data(), n_powers, bounds, lower_bound, upper_bound, p, a.data() + n_powers * n_regions
+    )
 
 
 def expected_max_profit(
@@ -572,6 +598,50 @@ def expected_max_profit(
             &distribution_parameters[0],
         )
     return total
+
+
+def partial_moments(
+    const double[::1] bounds,
+    Py_ssize_t n_powers,
+    double lower_bound,
+    double upper_bound,
+    Distribution distribution,
+    const double[::1] distribution_parameters,
+):
+    """
+    Return the partial moments of the distribution over the regions between consecutive bounds.
+
+    Parameters
+    ----------
+    bounds : 1D np.ndarray, shape=(n_regions + 1,)
+        The edges of the regions, ascending, within the support.
+
+    n_powers : int
+        The number of powers of the stochastic variable, from 0, to return the moments of.
+
+    lower_bound, upper_bound, distribution, distribution_parameters
+        As for :func:`expected_max_profit`.
+
+    Returns
+    -------
+    np.ndarray, shape=(n_powers, n_regions)
+        The integral of ``x**k`` times the density over region ``r``, at ``[k, r]``.
+    """
+    cdef Py_ssize_t n_regions = bounds.shape[0] - 1, r
+    if n_regions < 1 or n_powers < 1:
+        raise ValueError(f'Partial moments need at least one region and one power, got {n_regions} and {n_powers}.')
+    _check_profit_and_distribution(n_powers, distribution, distribution_parameters)
+    moments = np.empty((n_powers, n_regions), dtype=np.float64)
+    cdef double[:, ::1] out = moments
+    cdef vector[double] edges
+    edges.resize(n_regions + 1)
+    for r in range(n_regions + 1):
+        edges[r] = bounds[r]
+    with nogil:
+        _partial_moments(
+            distribution, n_powers, edges, lower_bound, upper_bound, &distribution_parameters[0], &out[0, 0]
+        )
+    return moments
 
 
 def expected_max_profit_from_counts(

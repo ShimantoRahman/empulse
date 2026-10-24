@@ -13,6 +13,7 @@ from ..._compile import _safe_lambdify
 from ..._symbolic import _subs_by_name
 from ._anchoring import Anchor, DensityOf, anchored_nquad, anchored_quad, warn_if_inaccurate
 from .common import (
+    _build_rate_function,
     _distribution_parameter_symbols,
     _HullScoreFunction,
     extract_distribution_parameters,
@@ -121,12 +122,11 @@ class MaxProfitScoreQuad(_HullScoreFunction):
     def __init__(
         self,
         profit_function: sympy.Expr,
-        rate_function: sympy.Expr | None,
         random_symbols: Sequence[sympy.Symbol],
         deterministic_symbols: Iterable[sympy.Symbol],
     ) -> None:
         self.profit_function = profit_function
-        self.rate_function = rate_function
+        rate_function = _build_rate_function()
         self.random_symbols = random_symbols
         self.deterministic_symbols = deterministic_symbols
 
@@ -153,11 +153,7 @@ class MaxProfitScoreQuad(_HullScoreFunction):
         profit_coefficients = [
             coefficient.xreplace(to_placeholder) for coefficient in _roc_coefficients(profit_function)
         ]
-        rate_coefficients = (
-            [coefficient.xreplace(to_placeholder) for coefficient in _roc_coefficients(rate_function)]
-            if rate_function is not None
-            else []
-        )
+        rate_coefficients = [coefficient.xreplace(to_placeholder) for coefficient in _roc_coefficients(rate_function)]
         expressions = (joint_density, *profit_coefficients, *rate_coefficients)
         # The class priors, the deterministic variables and the distribution parameters.
         parameters = sorted(
@@ -171,11 +167,7 @@ class MaxProfitScoreQuad(_HullScoreFunction):
         self._profit = tuple(
             _safe_lambdify(coefficient, arguments, dummify=True) for coefficient in profit_coefficients
         )
-        self._rate = (
-            tuple(_safe_lambdify(coefficient, arguments, dummify=True) for coefficient in rate_coefficients)
-            if rate_function is not None
-            else None
-        )
+        self._rate = tuple(_safe_lambdify(coefficient, arguments, dummify=True) for coefficient in rate_coefficients)
 
     def _score_hull(
         self,
@@ -185,6 +177,27 @@ class MaxProfitScoreQuad(_HullScoreFunction):
         kwargs: dict[str, Any],
     ) -> float:
         """Compute the maximum profit from the ROC convex hull and the positive class prior."""
+        return self._integrate_hull(true_positive_rates, false_positive_rates, positive_class_prior, kwargs, rate=False)
+
+    def _rate_hull(
+        self,
+        true_positive_rates: FloatNDArray,
+        false_positive_rates: FloatNDArray,
+        positive_class_prior: float,
+        kwargs: dict[str, Any],
+    ) -> float:
+        """Compute the optimal rate from the ROC convex hull and the positive class prior."""
+        return self._integrate_hull(true_positive_rates, false_positive_rates, positive_class_prior, kwargs, rate=True)
+
+    def _integrate_hull(
+        self,
+        true_positive_rates: FloatNDArray,
+        false_positive_rates: FloatNDArray,
+        positive_class_prior: float,
+        kwargs: dict[str, Any],
+        *,
+        rate: bool,
+    ) -> float:
         # certain distributions determine the bounds of the integral (e.g., uniform)
         # for those distributions we have to fill in the parameters of the distribution
         distribution_parameters, kwargs = extract_distribution_parameters(kwargs, self.distribution_args)
@@ -215,17 +228,17 @@ class MaxProfitScoreQuad(_HullScoreFunction):
             return np.exp(log_density_fn(*arguments))
 
         profit_constant, profit_tpr_coefficient, profit_fpr_coefficient = (function.func for function in self._profit)
-        rate = tuple(function.func for function in self._rate) if self._rate is not None else None
+        rate_parts = tuple(function.func for function in self._rate) if rate else None
 
         def integrand(*random_values: float) -> float:
             arguments = (*fixed_arguments, *random_values)
             tpr_coefficient = profit_tpr_coefficient(*arguments)
             fpr_coefficient = profit_fpr_coefficient(*arguments)
             best = best_vertex(tpr_coefficient, fpr_coefficient)
-            if rate is None:  # compute maximum profit
+            if rate_parts is None:  # compute maximum profit
                 value = profit_constant(*arguments) + tpr_coefficient * tprs[best] + fpr_coefficient * fprs[best]
             else:  # compute optimal rate
-                rate_constant, rate_tpr_coefficient, rate_fpr_coefficient = rate
+                rate_constant, rate_tpr_coefficient, rate_fpr_coefficient = rate_parts
                 value = (
                     rate_constant(*arguments)
                     + rate_tpr_coefficient(*arguments) * tprs[best]

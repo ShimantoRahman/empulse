@@ -194,6 +194,21 @@ Metrics
   ``Capability.PRECOMPUTED_BOOST_OBJECTIVE not in strategy.capabilities`` instead.
 - |API| Metrics, strategies and training objectives pickled with 0.13 or earlier are no longer
   supported. Build or fit them again with this release before pickling them.
+- |Efficiency| :class:`~empulse.metrics.MaxProfit` computes the closed-form partial moments of its
+  ten supported distributions in compiled code for a profit of any degree. A profit of degree three
+  or more is scored up to a third faster, the analytic gradients that
+  :class:`~empulse.models.ProfLogitClassifier` and :class:`~empulse.models.CSBoostClassifier` train
+  with are 10 to 20% faster, and the optimal rate up to 15% faster. ``optimal_threshold`` of a
+  metric without stochastic variables takes the threshold from the scan that finds the optimal rate,
+  instead of sorting the scores again, which makes it up to twice as fast.
+- |Enhancement| The optimal rate of a :class:`~empulse.metrics.MaxProfit` metric with one stochastic
+  variable, integrated piecewise as ``integration_method='auto'`` does, is exact, from the
+  distribution's CDF, for every distribution that ``'quasi-monte-carlo'`` supports, such as
+  ``Laplace`` and ``Logistic``, instead of only the ten with closed-form partial moments. It is two
+  to three times as fast for those.
+- |Fix| The optimal rate of a :class:`~empulse.metrics.MaxProfit` metric integrated by
+  ``'monte-carlo'`` or ``'quasi-monte-carlo'`` is computed on the same samples as its score, so the
+  two describe the same operating point. They were drawn separately.
 - |Fix| Documentation: the formula of :func:`~empulse.metrics.max_profit_score` weighs the false
   positive cost by the negative class prior and defines its symbols. :class:`~empulse.metrics.MaxProfit`
   describes how instance-dependent parameters are averaged, that ``optimal_threshold`` returns one

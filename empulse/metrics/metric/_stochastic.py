@@ -18,25 +18,8 @@ import numpy as np
 import sympy
 import sympy.stats.crv_types
 
+from ._distributions import spec_for
 from ._symbolic import _subs_by_name
-
-# Closed-form means of the distributions whose expectation `sympy.stats.E` cannot compute.
-_FIXED_MEANS: dict[
-    type[sympy.stats.crv_types.SingleContinuousDistribution],
-    Callable[[tuple[sympy.Expr, ...]], sympy.Expr],
-] = {
-    sympy.stats.crv_types.ArcsinDistribution: lambda params: (params[0] + params[1]) / 2,
-    sympy.stats.crv_types.BetaPrimeDistribution: lambda params: params[0] / (params[1] - 1),
-    sympy.stats.crv_types.StudentTDistribution: lambda params: 0,
-    sympy.stats.crv_types.FDistributionDistribution: lambda params: params[1] / (params[1] - 2),
-    sympy.stats.crv_types.GammaInverseDistribution: lambda params: params[1] / (params[0] - 1),
-    sympy.stats.crv_types.LogNormalDistribution: lambda params: sympy.exp(params[0] + params[1] ** 2 / 2),
-    sympy.stats.crv_types.LomaxDistribution: lambda params: params[1] / (params[0] - 1),
-    sympy.stats.crv_types.ParetoDistribution: lambda params: (params[1] * params[0]) / (params[1] - 1),
-    sympy.stats.crv_types.PowerFunctionDistribution: (
-        lambda params: params[1] + params[0] * (params[2] - params[1]) / (params[0] + 1)
-    ),
-}
 
 
 def _distribution_mean(symbol: sympy.Expr) -> sympy.Expr:
@@ -44,8 +27,10 @@ def _distribution_mean(symbol: sympy.Expr) -> sympy.Expr:
     dist = symbol.pspace.distribution
     dist_type = type(dist)
 
-    if dist_type in _FIXED_MEANS:
-        return _FIXED_MEANS[dist_type](dist.args)
+    # Some distributions have a mean `sympy.stats.E` cannot compute.
+    spec = spec_for(symbol)
+    if spec is not None and spec.mean is not None:
+        return spec.mean(dist.args)
 
     try:
         mean_expr = sympy.stats.E(symbol)

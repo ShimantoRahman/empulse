@@ -159,19 +159,82 @@ class _LowerChainGate:
         return bool(np.any((tpr_coefficient < 0) & (fpr_coefficient > 0)))
 
 
-class _HullScoreFunction:
+class _ScoreFunction:
+    """
+    What :class:`~empulse.metrics.MaxProfit` asks of the object it scores with, one per integration method.
+
+    Calling it gives the expected maximum profit. The hooks below tell what else the method can do,
+    so that :class:`~empulse.metrics.MaxProfit` asks instead of checking which kind of object it has:
+    a hook returns ``None`` where the method has no faster path, and the attributes default to the
+    method supporting neither an analytic gradient nor per-sample parameters.
+    """
+
+    deterministic_symbols: Iterable[sympy.Symbol]
+
+    #: The analytic gradient of the logit and boosting objectives that this score has: one for a
+    #: profit without stochastic variables, one for closed-form partial moments, or none.
+    gradient: Literal['deterministic', 'piecewise'] | None = None
+
+    #: Whether an instance-dependent parameter can be passed as an array, which the score evaluates
+    #: per sample. Without it, :class:`~empulse.metrics.MaxProfit` averages such parameters first.
+    evaluates_per_sample: bool = False
+
+    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
+        """Compute the expected maximum profit."""
+        raise NotImplementedError
+
+    def rate(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
+        """Compute the expected predicted positive rate at which the profit is maximal."""
+        raise NotImplementedError
+
+    def threshold(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float | None:
+        """Return the score threshold that reaches the maximal profit, or ``None`` to derive it from the rate."""
+        return None
+
+    def _sample_scorer(self, y_true: IntNDArray, **kwargs: Any) -> Callable[[FloatNDArray], float]:
+        """
+        Prepare the score of fixed labels, for parameter values fixed across many calls.
+
+        The returned function takes the scores and gives the same result as calling this score
+        function. A method that can check the parameters and convert the labels once overrides this.
+        """
+
+        def score(y_score: FloatNDArray) -> float:
+            return float(self(y_true, y_score, **kwargs))
+
+        return score
+
+    def _count_scorer(self, **kwargs: Any) -> CountScoreFn | None:
+        """Prepare the score of samples grouped by score, or ``None`` if the method needs every sample."""
+        return None
+
+    def _closed_form(self, n_positives: int, n_negatives: int, **kwargs: Any) -> Any | None:
+        """Return what compiled code needs to score these class counts, or ``None`` without it."""
+        return None
+
+
+class _HullScoreFunction(_ScoreFunction):
     """
     Mixin for score functions that see the samples only through their ROC convex hull and class prior.
 
-    Subclasses implement :meth:`_score_hull`. Since that is all they need, they can also score samples
-    grouped by score (:meth:`_count_scorer`), such as the leaves of a decision tree, without
-    expanding the groups back into samples.
+    Subclasses implement :meth:`_score_hull` and :meth:`_rate_hull`. Since that is all they need, they
+    can also score samples grouped by score (:meth:`_count_scorer`), such as the leaves of a decision
+    tree, without expanding the groups back into samples.
     """
 
     deterministic_symbols: Iterable[sympy.Symbol]
     dist_params: list[sympy.Symbol]
 
     def _score_hull(
+        self,
+        true_positive_rates: FloatNDArray,
+        false_positive_rates: FloatNDArray,
+        positive_class_prior: float,
+        kwargs: dict[str, Any],
+    ) -> float:
+        raise NotImplementedError
+
+    def _rate_hull(
         self,
         true_positive_rates: FloatNDArray,
         false_positive_rates: FloatNDArray,
@@ -191,10 +254,19 @@ class _HullScoreFunction:
 
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the maximum profit."""
+        return self._score_hull(*self._hull(y_true, y_score, kwargs), kwargs)
+
+    def rate(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
+        """Compute the expected predicted positive rate at which the profit is maximal."""
+        return self._rate_hull(*self._hull(y_true, y_score, kwargs), kwargs)
+
+    def _hull(
+        self, y_true: IntNDArray, y_score: FloatNDArray, kwargs: dict[str, Any]
+    ) -> tuple[FloatNDArray, FloatNDArray, float]:
+        """Check the parameters, and return the ROC convex hull and the positive class prior."""
         _check_parameters((*self.deterministic_symbols, *self.dist_params), kwargs)
-        positive_class_prior = float(np.mean(y_true))
         true_positive_rates, false_positive_rates = _convex_hull(y_true, y_score, full=self._needs_lower_hull(kwargs))
-        return self._score_hull(true_positive_rates, false_positive_rates, positive_class_prior, kwargs)
+        return true_positive_rates, false_positive_rates, float(np.mean(y_true))
 
     def _count_scorer(self, **kwargs: Any) -> CountScoreFn:
         """
@@ -236,6 +308,12 @@ class _HullScoreFunction:
             return self._score_hull(true_positive_rates, false_positive_rates, positive_class_prior, dict(kwargs))
 
         return score
+
+
+def _build_rate_function() -> sympy.Expr:
+    """Return the predicted positive rate at a ROC point, ``pi_0 F_0 + pi_1 F_1``."""
+    pos_prior, neg_prior, tpr, fpr = sympy.symbols('pi_0 pi_1 F_0 F_1')
+    return pos_prior * tpr + neg_prior * fpr
 
 
 def _distribution_parameter_symbols(distribution_args: Iterable[sympy.Expr]) -> list[sympy.Symbol]:

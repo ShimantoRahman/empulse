@@ -700,3 +700,21 @@ def test_value_objective_is_the_score_for_non_linear_instance_parameters(seeded_
     )
     y_score = 1 / (1 + np.exp(-(features @ weights)))
     assert -objective.data_loss(weights) == pytest.approx(metric(y_true, y_score, **parameters))
+
+
+def test_deterministic_threshold_is_the_one_its_rate_maps_to():
+    """Without stochastic variables the threshold comes from the scan, which must agree with mapping the rate."""
+    from empulse.metrics.common import classification_threshold
+
+    clv, d = sympy.symbols('clv d')
+    metric = Metric(CostMatrix().add_tp_benefit(clv - d).add_fp_cost(d), MaxProfit())
+    rng = np.random.default_rng(0)
+    for _ in range(300):
+        n = int(rng.integers(1, 60))
+        y_true = rng.integers(0, 2, n)
+        y_score = np.round(rng.random(n), int(rng.integers(0, 3)))  # ties
+        parameters = {'clv': float(rng.uniform(-5, 50)), 'd': float(rng.uniform(-5, 20))}
+        rate = metric.optimal_rate(y_true, y_score, **parameters)
+        assert metric.optimal_threshold(y_true, y_score, **parameters) == classification_threshold(
+            y_true, y_score, rate
+        )

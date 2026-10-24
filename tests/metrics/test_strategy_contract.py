@@ -57,21 +57,14 @@ from empulse.metrics.metric.strategies.cost_strategy import (
     CostOptimalRate,
     CostOptimalThreshold,
 )
-from empulse.metrics.metric.strategies.max_profit_strategy.deterministic import (
-    MaxProfitRateDeterministic,
-    MaxProfitScoreDeterministic,
-)
+from empulse.metrics.metric.strategies.max_profit_strategy.deterministic import MaxProfitScoreDeterministic
 from empulse.metrics.metric.strategies.max_profit_strategy.gradient_piecewise import (
     MaxProfitBoostGradientPiecewise,
     MaxProfitLogitGradientPiecewise,
 )
-from empulse.metrics.metric.strategies.max_profit_strategy.max_profit_strategy import (
-    _build_profit_function,
-    _build_rate_function,
-)
+from empulse.metrics.metric.strategies.max_profit_strategy.max_profit_strategy import _build_profit_function
 from empulse.metrics.metric.strategies.max_profit_strategy.piecewise import (
-    MaxProfitRatePiecewise,
-    _build_max_profit_rate_piecewise,
+    MaxProfitScorePiecewise,
     _build_max_profit_score_piecewise,
 )
 from empulse.metrics.metric.strategies.metric_strategy import _CAPABILITY_METHOD_NAMES, MetricStrategy
@@ -116,24 +109,13 @@ def _make_piecewise_score_function(random_var):
     return _build_max_profit_score_piecewise(profit_function, random_var, [contact_cost])
 
 
-def _make_piecewise_rate_function(random_var):
-    """Build a piecewise rate function for a given sympy random variable."""
+def _make_numeric_piecewise_score_function(random_var):
+    """Directly instantiate the numeric piecewise score, whose rate is integrated numerically without a SciPy CDF."""
     contact_cost = sympy.symbols('contact_cost')
     profit_function = _build_profit_function(
         tp_benefit=random_var, tn_benefit=sympy.Integer(0), fp_cost=contact_cost, fn_cost=sympy.Integer(0)
     )
-    rate_function = _build_rate_function()
-    return _build_max_profit_rate_piecewise(profit_function, rate_function, random_var, [contact_cost])
-
-
-def _make_max_profit_rate_piecewise():
-    """Directly instantiate MaxProfitRatePiecewise (bypasses the routing in _build_max_profit_rate_piecewise)."""
-    clv = sympy.stats.Gamma('clv', 2, 1)
-    contact_cost = sympy.symbols('contact_cost')
-    profit_function = _build_profit_function(
-        tp_benefit=clv, tn_benefit=sympy.Integer(0), fp_cost=contact_cost, fn_cost=sympy.Integer(0)
-    )
-    return MaxProfitRatePiecewise(profit_function, _build_rate_function(), clv, [contact_cost])
+    return MaxProfitScorePiecewise(profit_function, random_var, [contact_cost])
 
 
 _COST_EXPRS = sympy.symbols('tp tn fp fn', positive=True)
@@ -263,44 +245,43 @@ def test_picklable_lambda_multiple_pickle_cycles():
             lambda: MaxProfitScoreDeterministic(*_make_deterministic_profit_function()),
             id='MaxProfitScoreDeterministic',
         ),
-        pytest.param(
-            lambda: MaxProfitRateDeterministic(*_make_deterministic_profit_function()),
-            id='MaxProfitRateDeterministic',
-        ),
-        pytest.param(_make_gamma_score_function, id='MaxProfitScorePiecewiseGamma'),
+        pytest.param(_make_gamma_score_function, id='ClosedFormPiecewiseGamma'),
         pytest.param(
             lambda: _make_piecewise_score_function(sympy.stats.Pareto('clv', 1, 3)),
-            id='MaxProfitScorePiecewisePareto',
+            id='ClosedFormPiecewisePareto',
         ),
         pytest.param(
             lambda: _make_piecewise_score_function(sympy.stats.Triangular('clv', 0, 10, 5)),
-            id='MaxProfitScorePiecewiseTriangular',
+            id='ClosedFormPiecewiseTriangular',
         ),
         pytest.param(
             lambda: _make_piecewise_score_function(sympy.stats.Exponential('clv', 1)),
-            id='MaxProfitScorePiecewiseExponential',
+            id='ClosedFormPiecewiseExponential',
         ),
         pytest.param(
             lambda: _make_piecewise_score_function(sympy.stats.ChiSquared('clv', 4)),
-            id='MaxProfitScorePiecewiseChi2',
+            id='ClosedFormPiecewiseChi2',
         ),
         pytest.param(
             lambda: _make_piecewise_score_function(sympy.stats.LogNormal('clv', 0, 1)),
-            id='MaxProfitScorePiecewiseLogNormal',
+            id='ClosedFormPiecewiseLogNormal',
         ),
         pytest.param(
             lambda: _make_piecewise_score_function(sympy.stats.Beta('clv', 2, 5)),
-            id='MaxProfitScorePiecewiseBeta',
+            id='ClosedFormPiecewiseBeta',
         ),
         pytest.param(
             lambda: _make_piecewise_score_function(sympy.stats.Weibull('clv', 1, 2)),
-            id='MaxProfitScorePiecewiseWeibull',
+            id='ClosedFormPiecewiseWeibull',
         ),
         pytest.param(
-            lambda: _make_piecewise_rate_function(sympy.stats.Gamma('clv', 2, 1)),
-            id='ExactMaxProfitRatePiecewise',
+            lambda: _make_numeric_piecewise_score_function(sympy.stats.Laplace('clv', 2, 1)),
+            id='NumericPiecewiseWithCdf',
         ),
-        pytest.param(_make_max_profit_rate_piecewise, id='MaxProfitRatePiecewise'),
+        pytest.param(
+            lambda: _make_numeric_piecewise_score_function(sympy.stats.Kumaraswamy('clv', 2, 3)),
+            id='NumericPiecewiseWithoutCdf',
+        ),
     ],
 )
 def test_strategy_classes_are_picklable(instance_factory):
