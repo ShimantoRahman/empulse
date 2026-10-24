@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from collections.abc import Iterable
+from collections.abc import Collection, Iterable, Mapping
 from typing import Any, Literal
 
 from ..._types import FloatArrayLike, FloatNDArray
@@ -7,6 +7,21 @@ from ._compile import CountScoreFn
 from ._direction import Direction
 from .capabilities import Capability
 from .strategies import LogitObjective, MetricStrategy
+
+
+def _reject_sample_weight(parameters: Mapping[str, Any], accepted: Collection[str]) -> None:
+    """
+    Raise when *parameters* has a ``sample_weight`` that is not one of the *accepted* parameter names.
+
+    The costs of the cost matrix are what weigh each sample, so a separate weight would count the
+    weighting twice, or override the costs where they disagree. A cost matrix may still name one of its
+    own parameters ``sample_weight``.
+    """
+    if 'sample_weight' in parameters and 'sample_weight' not in accepted:
+        raise TypeError(
+            'Metrics do not take sample_weight: the costs of the cost matrix already weigh each sample. '
+            'Fold any extra weight into the costs instead, for example as an instance-dependent parameter.'
+        )
 
 
 class BaseMetric(ABC):

@@ -14,7 +14,7 @@ from ._compile import CountScoreFn, PicklableLambda, _safe_lambdify, _safe_run_l
 from ._direction import Direction
 from ._parameter_domain import _check_parameter_domains
 from ._stochastic import expectation_over_random_vars
-from .base_metric import BaseMetric
+from .base_metric import BaseMetric, _reject_sample_weight
 from .cost_matrix import (
     CostMatrix,
     _check_duplicate_symbol_names,
@@ -383,6 +383,7 @@ class Metric(BaseMetric):
             would make instance-dependent training measurably slower for no benefit: the values
             are fixed for the whole fit.
         """
+        _reject_sample_weight(kwargs, self._all_parameters)
         params: dict[str, FloatArrayLike | float] = {}
 
         # Resolve aliases to symbol names. Passing a symbol and one of its aliases, or two aliases of
@@ -402,10 +403,8 @@ class Metric(BaseMetric):
         for key, value in self._cost_matrix._defaults.items():
             params.setdefault(key, value)
 
-        # Warn about unknown parameters, which are likely typos. Strategy extras and scikit-learn's
-        # metadata-routing kwargs (e.g. sample_weight passed via fit()) are known.
-        sklearn_internal_params = frozenset({'sample_weight'})
-        known = self._all_parameters | self.strategy._extra_kwargs | sklearn_internal_params
+        # Warn about unknown parameters, which are likely typos. Strategy extras are known.
+        known = self._all_parameters | self.strategy._extra_kwargs
         extra_keys = set(params) - known
         if extra_keys:
             warnings.warn(

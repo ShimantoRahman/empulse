@@ -157,8 +157,8 @@ in a dedicated ``fit_params`` dict:
     model = CSBoostClassifier()
     model.fit(X, y, fp_cost=5, fn_cost=100, fit_params={'verbose': False})
 
-``sample_weight`` is the one exception: it is recognised and forwarded into the booster's own
-``fit``.
+``sample_weight`` is not accepted, there or by any metric: the costs of the cost matrix already
+weigh each sample, so fold any extra weight into the costs instead.
 
 Which models honour per-row costs
 =================================

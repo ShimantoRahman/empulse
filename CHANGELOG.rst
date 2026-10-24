@@ -4,6 +4,12 @@
 Metrics
 -------
 
+- |API| :class:`~empulse.metrics.Metric` and :class:`~empulse.metrics.MixtureMetric` raise a
+  ``TypeError`` when passed ``sample_weight``, for instance by a scorer that requests it through
+  metadata routing. They accepted it and ignored it, so a weighted cross-validation score was the
+  unweighted one. The costs of the cost matrix are what weigh each sample: fold any extra weight into
+  them, for example as an instance-dependent parameter. A cost-matrix parameter named
+  ``sample_weight`` is still accepted.
 - |Fix| :class:`~empulse.metrics.Savings`, :func:`~empulse.metrics.savings_score` and
   :func:`~empulse.metrics.expected_savings_score` rank models correctly when the baseline cost is
   negative, as it is for a matrix of benefits: savings are now divided by the magnitude of the

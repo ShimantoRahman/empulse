@@ -12,7 +12,7 @@ from ._compile import CountScoreFn, PicklableLambda, _safe_lambdify, _safe_run_l
 from ._direction import Direction
 from ._parameter_domain import _check_parameter_domains
 from ._symbolic import _sympify_term
-from .base_metric import BaseMetric
+from .base_metric import BaseMetric, _reject_sample_weight
 from .capabilities import Capability
 from .cost_matrix import CostMatrix, ParameterPredicate, _add_bounds, _check_bounds
 from .metric import Metric
@@ -127,9 +127,6 @@ class _CompiledWeight:
         if value.size != 1:
             raise ValueError(f'The MixtureMetric weight {self.weight!r} must be a single value, got {value.size}.')
         return float(value.reshape(-1)[0])
-
-
-_KNOWN_EXTRA_PARAMETERS = frozenset({'sample_weight'})
 
 
 def _extra_parameters(metric: BaseMetric) -> frozenset[str]:
@@ -283,6 +280,7 @@ class MixtureMetric(BaseMetric):
         are checked, and so are the weights: none may be negative, and together they must sum to 1.
         """
         resolved = {**self.defaults, **parameters}
+        _reject_sample_weight(resolved, self._accepted_parameter_names())
         if validate and (self._bounds or self._predicates):
             _check_parameter_domains((), resolved, self._bounds, self._predicates)
         self._warn_about_unknown_parameters(resolved)
@@ -481,13 +479,17 @@ class MixtureMetric(BaseMetric):
         """Names of the parameters the weights read, as far as they are known."""
         return set().union(*(weight.names or () for weight in self._weights))
 
+    def _accepted_parameter_names(self) -> set[str]:
+        """Return the keyword arguments the mixture accepts: its weights' and its components' parameters."""
+        accepted = set(self._weight_parameter_names)
+        for component in self.components:
+            accepted |= self._accepted_names(component)
+        return accepted
+
     def _warn_about_unknown_parameters(self, parameters: Mapping[str, Any]) -> None:
         if any(weight.names is None for weight in self._weights):
             return  # a callable weight may read any parameter
-        accepted = self._weight_parameter_names | _KNOWN_EXTRA_PARAMETERS
-        for component in self.components:
-            accepted |= self._accepted_names(component)
-        unknown = set(parameters) - accepted
+        unknown = set(parameters) - self._accepted_parameter_names()
         if unknown:
             warnings.warn(
                 f'Unknown parameters passed to metric: {sorted(unknown)}. These will be ignored.',
@@ -512,7 +514,7 @@ class MixtureMetric(BaseMetric):
 
         A fixed value takes priority over whichever spelling, symbol name or alias, the caller used.
         """
-        accepted = cls._accepted_names(component) | _KNOWN_EXTRA_PARAMETERS
+        accepted = cls._accepted_names(component)
         fixed = cls._fixed_names(component)
         own = {key: value for key, value in parameters.items() if key in accepted and key not in fixed}
         return {**own, **component.parameters}

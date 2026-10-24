@@ -408,6 +408,58 @@ def test_in_range_threshold_does_not_warn():
     assert 0.0 <= threshold <= 1.0
 
 
+# --- sample_weight: the cost matrix weighs each sample ------------------------------------
+
+
+@pytest.mark.parametrize('method', ['__call__', 'optimal_threshold', 'optimal_rate'])
+@pytest.mark.parametrize('strategy', [Cost, MaxProfit], ids=['cost', 'max_profit'])
+def test_metrics_reject_sample_weight(method, strategy):
+    """A sample weight would weigh the samples a second time, on top of their costs."""
+    metric = Metric(COST_MATRIX, strategy())
+
+    with pytest.raises(TypeError, match='Metrics do not take sample_weight'):
+        getattr(metric, method)(Y_TRUE, Y_SCORE, a=1.0, b=1.0, sample_weight=np.ones(5))
+
+
+def test_mixture_metric_rejects_sample_weight():
+    mixture = MixtureMetric([
+        MixtureComponent(0.5, Metric(COST_MATRIX, Cost()), {}),
+        MixtureComponent(0.5, Metric(CostMatrix().add_fp_cost('a').add_fn_cost('2 * b'), Cost()), {}),
+    ])
+
+    with pytest.raises(TypeError, match='Metrics do not take sample_weight'):
+        mixture(Y_TRUE, Y_SCORE, a=1.0, b=1.0, sample_weight=np.ones(5))
+
+
+def test_a_cost_matrix_parameter_named_sample_weight_is_accepted():
+    """The name is only reserved for scikit-learn's sample weights, not for a cost the matrix defines."""
+    metric = Metric(CostMatrix().add_fp_cost('sample_weight').add_fn_cost('b'), Cost())
+
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        score = metric(Y_TRUE, Y_SCORE, sample_weight=2.0, b=1.0)
+
+    assert score == pytest.approx(metric(Y_TRUE, Y_SCORE, sample_weight=np.full(5, 2.0), b=1.0))
+
+
+def test_a_scorer_requesting_sample_weight_raises():
+    """Routing sample weights to an empulse scorer is refused rather than silently ignored."""
+    from sklearn import config_context
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.metrics import make_scorer
+    from sklearn.model_selection import cross_validate
+
+    X = np.random.default_rng(0).normal(size=(40, 3))
+    y = np.tile([0, 1], 20)
+    metric = Metric(COST_MATRIX, Cost())
+    with config_context(enable_metadata_routing=True):
+        scorer = make_scorer(metric, response_method='predict_proba', a=1.0, b=1.0)
+        scorer.set_score_request(sample_weight=True)
+        estimator = LogisticRegression().set_fit_request(sample_weight=False)
+        with pytest.raises(TypeError, match='Metrics do not take sample_weight'):
+            cross_validate(estimator, X, y, scoring=scorer, params={'sample_weight': np.ones(40)}, error_score='raise')
+
+
 def test_symbol_used_only_in_the_threshold_numerator_is_still_required():
     """
     A symbol that cancels out of the denominator (fp_cost + tn_benefit + fn_cost + tp_benefit) but
