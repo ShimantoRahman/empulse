@@ -10,7 +10,7 @@ from sklearn.utils.validation import check_is_fitted
 
 from ..._common._sklearn_compat import validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
-from ...metrics import BaseMetric
+from ...metrics import BaseMetric, Capability
 from ...optimizers import Optimizer
 from .cost_sensitive import CostSensitiveClassifier
 
@@ -59,8 +59,22 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
 
     def _fit_estimator(self, X: FloatNDArray, y: IntNDArray, loss: BaseMetric, **loss_params: Any) -> Self:
         optimizer = self._resolve_optimizer()
-        # An optimizer that only compares losses gets an objective that computes the loss alone.
-        build_objective = loss._logit_objective if optimizer.requires_gradient else loss._logit_value_objective
+        requester = f'{type(self).__name__} with {type(optimizer).__name__}'
+        if optimizer.requires_gradient:
+            loss._require(
+                Capability.LOGIT_OBJECTIVE,
+                requester=requester,
+                hint=(
+                    'Use an optimizer that needs only the loss value, such as GeneticAlgorithmOptimizer.'
+                    if Capability.LOGIT_VALUE_OBJECTIVE in loss.capabilities
+                    else None
+                ),
+            )
+            build_objective = loss._logit_objective
+        else:
+            # An optimizer that only compares losses gets an objective that computes the loss alone.
+            loss._require(Capability.LOGIT_VALUE_OBJECTIVE, requester=requester)
+            build_objective = loss._logit_value_objective
         objective = build_objective(
             features=X,
             y_true=y,

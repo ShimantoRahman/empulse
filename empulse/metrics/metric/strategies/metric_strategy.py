@@ -18,6 +18,7 @@ _CAPABILITY_METHOD_NAMES: dict[Capability, str] = {
     Capability.OPTIMAL_THRESHOLD: 'optimal_threshold',
     Capability.OPTIMAL_RATE: 'optimal_rate',
     Capability.LOGIT_OBJECTIVE: 'logit_objective',
+    Capability.LOGIT_VALUE_OBJECTIVE: 'logit_value_objective',
     Capability.BOOST_OBJECTIVE: 'gradient_boost_objective',
     Capability.PRECOMPUTED_BOOST_OBJECTIVE: 'prepare_boost_objective',
 }
@@ -27,9 +28,10 @@ _CAPABILITY_METHOD_NAMES: dict[Capability, str] = {
 def _capabilities_from_overrides(cls: type['MetricStrategy']) -> frozenset[Capability]:
     """Infer capabilities from which optional `MetricStrategy` methods *cls* overrides.
 
-    A capability whose method is still the base class's own `raise NotImplementedError` body is
-    absent. A capability with no method of its own (see `_CAPABILITY_METHOD_NAMES`) is never
-    inferred this way.
+    A capability whose method is still the base class's own body is absent: `raise
+    NotImplementedError`, or for `logit_value_objective` a call of `logit_objective`, whose
+    capability then implies it (see `_with_implied`). A capability with no method of its own (see
+    `_CAPABILITY_METHOD_NAMES`) is never inferred this way.
 
     This is what lets a third-party `MetricStrategy` subclass that overrides e.g.
     `logit_objective` keep working unedited: the capability follows the override automatically,
@@ -40,6 +42,13 @@ def _capabilities_from_overrides(cls: type['MetricStrategy']) -> frozenset[Capab
         for capability, method_name in _CAPABILITY_METHOD_NAMES.items()
         if getattr(cls, method_name) is not getattr(MetricStrategy, method_name)
     )
+
+
+def _with_implied(capabilities: frozenset[Capability]) -> frozenset[Capability]:
+    """Add the capabilities that follow from *capabilities*: a gradient objective also has a value."""
+    if Capability.LOGIT_OBJECTIVE in capabilities:
+        return capabilities | {Capability.LOGIT_VALUE_OBJECTIVE}
+    return capabilities
 
 
 class MetricStrategy(ABC):
@@ -85,13 +94,18 @@ class MetricStrategy(ABC):
         The set of :class:`~empulse.metrics.Capability` members this strategy supports.
 
         Combines :attr:`_capabilities` with whatever :meth:`optimal_threshold`,
-        :meth:`optimal_rate`, :meth:`logit_objective`, :meth:`gradient_boost_objective` and
-        :meth:`prepare_boost_objective` this strategy overrides -- see
-        :func:`~empulse.metrics.metric.strategies.metric_strategy._capabilities_from_overrides`.
-        A caller should use this instead of ``isinstance(strategy, SomeConcreteStrategy)`` or
-        calling a method and catching ``NotImplementedError``.
+        :meth:`optimal_rate`, :meth:`logit_objective`, :meth:`logit_value_objective`,
+        :meth:`gradient_boost_objective` and :meth:`prepare_boost_objective` this strategy overrides
+        -- see :func:`~empulse.metrics.metric.strategies.metric_strategy._capabilities_from_overrides`.
+        ``LOGIT_OBJECTIVE`` implies ``LOGIT_VALUE_OBJECTIVE``, since :meth:`logit_value_objective`
+        returns :meth:`logit_objective` unless overridden. A subclass that removes ``LOGIT_OBJECTIVE``
+        in its own override of this property, as :class:`~empulse.metrics.MaxProfit` does for some
+        distributions, removes ``LOGIT_VALUE_OBJECTIVE`` too unless it overrides
+        :meth:`logit_value_objective`. A caller should use this instead of
+        ``isinstance(strategy, SomeConcreteStrategy)`` or calling a method and catching
+        ``NotImplementedError``.
         """
-        return self._capabilities | _capabilities_from_overrides(type(self))
+        return _with_implied(self._capabilities | _capabilities_from_overrides(type(self)))
 
     @property
     def _extra_kwargs(self) -> set[str]:

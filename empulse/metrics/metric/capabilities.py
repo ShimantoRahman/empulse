@@ -10,6 +10,8 @@ What a :class:`~empulse.metrics.MetricStrategy` supports, so callers can ask ins
 :meth:`~empulse.metrics.MetricStrategy.gradient_boost_objective` and
 :meth:`~empulse.metrics.MetricStrategy.prepare_boost_objective`) are concrete methods on the base
 class whose body is ``raise NotImplementedError``, so a strategy opts in simply by overriding one.
+:meth:`~empulse.metrics.MetricStrategy.logit_value_objective` is optional too, but its base body
+returns :meth:`~empulse.metrics.MetricStrategy.logit_objective`, so it works wherever that does.
 That leaves no way for a caller to *ask* what a given strategy (or a given instance of one, since
 :class:`~empulse.metrics.MaxProfit`'s support depends on the cost matrix it was built from) can do
 without either calling the method and catching ``NotImplementedError``, or checking
@@ -44,7 +46,13 @@ class Capability(Enum):
     OPTIMAL_RATE : Capability
         :meth:`~empulse.metrics.MetricStrategy.optimal_rate` is implemented.
     LOGIT_OBJECTIVE : Capability
-        :meth:`~empulse.metrics.MetricStrategy.logit_objective` is implemented.
+        :meth:`~empulse.metrics.MetricStrategy.logit_objective` is implemented: a logistic regression
+        can be trained on the metric by an optimizer that follows its gradient.
+    LOGIT_VALUE_OBJECTIVE : Capability
+        :meth:`~empulse.metrics.MetricStrategy.logit_value_objective` is implemented: a logistic
+        regression can be trained on the metric by an optimizer that only compares its values, such as
+        :class:`~empulse.optimizers.GeneticAlgorithmOptimizer`. Implied by ``LOGIT_OBJECTIVE``, whose
+        objective has a value too.
     BOOST_OBJECTIVE : Capability
         :meth:`~empulse.metrics.MetricStrategy.gradient_boost_objective` is implemented: the
         gradient and hessian can be recomputed directly from the metric on every boosting round.
@@ -88,6 +96,7 @@ class Capability(Enum):
     OPTIMAL_THRESHOLD = 'optimal_threshold'
     OPTIMAL_RATE = 'optimal_rate'
     LOGIT_OBJECTIVE = 'logit_objective'
+    LOGIT_VALUE_OBJECTIVE = 'logit_value_objective'
     BOOST_OBJECTIVE = 'boost_objective'
     PRECOMPUTED_BOOST_OBJECTIVE = 'precomputed_boost_objective'
     COST_ONLY_DECISION = 'cost_only_decision'

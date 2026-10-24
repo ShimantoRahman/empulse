@@ -24,6 +24,7 @@ from empulse.metrics import (
     Capability,
     Cost,
     CostMatrix,
+    Direction,
     EmpiricalMaxProfit,
     EmpiricalMinCost,
     LogCost,
@@ -50,7 +51,6 @@ from empulse.metrics import (
     mpcs_score,
 )
 from empulse.metrics.metric._compile import PicklableLambda
-from empulse.metrics import Direction
 from empulse.metrics.metric.strategies.cost_strategy import (
     CostBoostGradientConst,
     CostLoss,
@@ -370,6 +370,7 @@ class TestCapabilities:
                     Capability.OPTIMAL_THRESHOLD,
                     Capability.OPTIMAL_RATE,
                     Capability.LOGIT_OBJECTIVE,
+                    Capability.LOGIT_VALUE_OBJECTIVE,
                     Capability.PRECOMPUTED_BOOST_OBJECTIVE,
                 }),
                 id='Cost',
@@ -382,6 +383,7 @@ class TestCapabilities:
                     Capability.OPTIMAL_THRESHOLD,
                     Capability.OPTIMAL_RATE,
                     Capability.LOGIT_OBJECTIVE,
+                    Capability.LOGIT_VALUE_OBJECTIVE,
                     Capability.PRECOMPUTED_BOOST_OBJECTIVE,
                 }),
                 id='Profit',
@@ -394,6 +396,7 @@ class TestCapabilities:
                     Capability.OPTIMAL_THRESHOLD,
                     Capability.OPTIMAL_RATE,
                     Capability.LOGIT_OBJECTIVE,
+                    Capability.LOGIT_VALUE_OBJECTIVE,
                     Capability.PRECOMPUTED_BOOST_OBJECTIVE,
                 }),
                 id='Savings',
@@ -405,6 +408,7 @@ class TestCapabilities:
                     Capability.OPTIMAL_THRESHOLD,
                     Capability.OPTIMAL_RATE,
                     Capability.LOGIT_OBJECTIVE,
+                    Capability.LOGIT_VALUE_OBJECTIVE,
                     Capability.BOOST_OBJECTIVE,
                 }),
                 id='LogCost',
@@ -417,6 +421,7 @@ class TestCapabilities:
                     Capability.OPTIMAL_THRESHOLD,
                     Capability.OPTIMAL_RATE,
                     Capability.LOGIT_OBJECTIVE,
+                    Capability.LOGIT_VALUE_OBJECTIVE,
                     Capability.BOOST_OBJECTIVE,
                 }),
                 id='MaxProfit-deterministic',
@@ -429,21 +434,32 @@ class TestCapabilities:
                     Capability.OPTIMAL_THRESHOLD,
                     Capability.OPTIMAL_RATE,
                     Capability.LOGIT_OBJECTIVE,
+                    Capability.LOGIT_VALUE_OBJECTIVE,
                     Capability.BOOST_OBJECTIVE,
                 }),
                 id='MinCost-deterministic',
             ),
             pytest.param(
                 EmpiricalMaxProfit,
-                frozenset({Capability.RANKING, Capability.OPTIMAL_THRESHOLD, Capability.OPTIMAL_RATE}),
+                frozenset({
+                    Capability.RANKING,
+                    Capability.OPTIMAL_THRESHOLD,
+                    Capability.OPTIMAL_RATE,
+                    Capability.LOGIT_VALUE_OBJECTIVE,
+                }),
                 id='EmpiricalMaxProfit',
             ),
             pytest.param(
                 EmpiricalMinCost,
-                frozenset({Capability.RANKING, Capability.OPTIMAL_THRESHOLD, Capability.OPTIMAL_RATE}),
+                frozenset({
+                    Capability.RANKING,
+                    Capability.OPTIMAL_THRESHOLD,
+                    Capability.OPTIMAL_RATE,
+                    Capability.LOGIT_VALUE_OBJECTIVE,
+                }),
                 id='EmpiricalMinCost',
             ),
-            pytest.param(AUEPC, frozenset({Capability.RANKING}), id='AUEPC'),
+            pytest.param(AUEPC, frozenset({Capability.RANKING, Capability.LOGIT_VALUE_OBJECTIVE}), id='AUEPC'),
         ],
     )
     def test_bundled_strategy_capability_sets(self, strategy_factory, expected):
@@ -539,12 +555,15 @@ class TestCapabilities:
         drifting from the actual method names on `MetricStrategy`: if a capability's entry in
         `_CAPABILITY_METHOD_NAMES` is wrong or stale, this fails even though
         `test_bundled_strategy_capability_sets` above (built from the same source) would not.
+        The one exception is `LOGIT_VALUE_OBJECTIVE`, which `LOGIT_OBJECTIVE` also implies.
         """
         cost_matrix = CostMatrix().add_tp_benefit('a').add_fp_cost('b')
         metric = Metric(cost_matrix, strategy_factory())
         strategy = metric.strategy
         for capability, method_name in _CAPABILITY_METHOD_NAMES.items():
             overridden = getattr(type(strategy), method_name) is not getattr(MetricStrategy, method_name)
+            if capability is Capability.LOGIT_VALUE_OBJECTIVE:
+                overridden = overridden or Capability.LOGIT_OBJECTIVE in strategy.capabilities
             assert (capability in strategy.capabilities) is overridden, (
                 f'{strategy_factory.__name__}: {capability} in capabilities is {capability in strategy.capabilities}'
                 f', but {method_name} is {"" if overridden else "not "}overridden'

@@ -7,6 +7,11 @@ Metrics
 - |API| :class:`~empulse.metrics.Direction`, which a custom :class:`~empulse.metrics.MetricStrategy`
   passes to its constructor and every metric reports as ``direction``, is exported from
   :mod:`empulse.metrics`. It could only be imported from a private module.
+- |Feature| ``Capability.LOGIT_VALUE_OBJECTIVE`` states that a strategy can train a logistic
+  regression with an optimizer that only compares losses, such as
+  :class:`~empulse.optimizers.GeneticAlgorithmOptimizer`. Every strategy with
+  ``Capability.LOGIT_OBJECTIVE`` has it, and so do :class:`~empulse.metrics.EmpiricalMaxProfit`,
+  :class:`~empulse.metrics.EmpiricalMinCost` and :class:`~empulse.metrics.AUEPC`.
 - |Fix| A :class:`~empulse.metrics.MixtureMetric` of :class:`~empulse.metrics.Savings` components
   decides and trains on the weighted sum of their savings. Each savings divides its component's cost by
   the cost of its baseline, but the mixture combined the costs with the mixture weights alone, so the
@@ -223,6 +228,11 @@ Metrics
 Models
 ------
 
+- |API| :class:`~empulse.models.CSLogitClassifier` and :class:`~empulse.models.ProfLogitClassifier`
+  raise a ``ValueError`` before fitting when their optimizer needs a gradient the loss has no
+  objective for, such as :class:`~empulse.optimizers.LBFGSBOptimizer` with an
+  :class:`~empulse.metrics.EmpiricalMaxProfit` metric, and the message names an optimizer that works.
+  They raised a ``NotImplementedError`` from inside the fit.
 - |Fix| :class:`~empulse.models.CSTreeClassifier` and :class:`~empulse.models.CSForestClassifier`
   accept a ``class_weight`` dict keyed by the class labels, as documented. It was looked up by the
   0/1 encoding of the labels, so ``{'no': 1, 'yes': 5}`` or ``{1: 1, 2: 5}`` raised, and only labels 0

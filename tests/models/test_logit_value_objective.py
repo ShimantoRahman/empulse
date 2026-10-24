@@ -10,6 +10,7 @@ from sklearn.datasets import make_classification
 from empulse._common._objective import RankingLogitValueObjective
 from empulse.metrics import (
     AUEPC,
+    Capability,
     Cost,
     CostMatrix,
     EmpiricalMaxProfit,
@@ -147,7 +148,7 @@ def test_proflogit_fits_metrics_without_a_gradient(data):
     objective = UNIFORM._logit_value_objective(features=X, y_true=y, C=1.0, l1_ratio=1.0, fit_intercept=True)
     expected = -UNIFORM(y, model.predict_proba(X[:, 1:])[:, 1]) + objective.penalty.value(model.result_.x)
     assert model.result_.fun == pytest.approx(expected, rel=1e-12)
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(ValueError, match="supports 'logit_objective'"):
         CSLogitClassifier(loss=UNIFORM, optimizer=LBFGSBOptimizer(max_iter=2)).fit(X[:, 1:], y)
 
 
@@ -182,3 +183,37 @@ def test_proflogit_trains_on_metrics_without_a_gradient(data, strategy):
     assert Metric(RANKING_MATRIX, strategy())(y, model.predict_proba(X)[:, 1], clv=clv) > Metric(
         RANKING_MATRIX, strategy()
     )(y, np.zeros(y.size), clv=clv)
+
+
+@pytest.mark.parametrize('strategy', [EmpiricalMaxProfit, EmpiricalMinCost, AUEPC])
+def test_a_gradient_optimizer_rejects_a_metric_without_a_gradient_before_fitting(data, strategy):
+    """The capability is checked before the optimizer runs, and the message says what to use instead."""
+    X, y = data
+    metric = Metric(RANKING_MATRIX, strategy())
+    assert Capability.LOGIT_VALUE_OBJECTIVE in metric.capabilities
+    assert Capability.LOGIT_OBJECTIVE not in metric.capabilities
+    model = CSLogitClassifier(loss=metric, optimizer=LBFGSBOptimizer())
+    with pytest.raises(ValueError, match=r'CSLogitClassifier with LBFGSBOptimizer.*GeneticAlgorithmOptimizer'):
+        model.fit(X, y, clv=200.0)
+    assert not hasattr(model, 'result_')
+
+
+def test_a_value_optimizer_rejects_a_strategy_without_any_logit_objective(data):
+    """A strategy with neither logit objective fails on the capability, not deep inside the optimizer."""
+    X, y = data
+
+    class ScoreOnly(Cost):
+        _capabilities = frozenset()
+
+        @property
+        def capabilities(self):
+            return frozenset()
+
+    metric = Metric(CostMatrix().add_fp_cost(1.0).add_fn_cost(5.0), ScoreOnly())
+    optimizer = GeneticAlgorithmOptimizer(max_iter=2, population_size=4, random_state=0)
+    with pytest.raises(ValueError, match="supports 'logit_value_objective'"):
+        ProfLogitClassifier(loss=metric, optimizer=optimizer).fit(X, y)
+    # Nor does the gradient optimizer's error suggest a value-only one, which would fail as well.
+    with pytest.raises(ValueError, match="supports 'logit_objective'") as error:
+        CSLogitClassifier(loss=metric).fit(X, y)
+    assert 'GeneticAlgorithmOptimizer' not in str(error.value)

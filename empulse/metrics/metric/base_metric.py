@@ -89,18 +89,20 @@ class BaseMetric(ABC):
         """
         return self.strategy.capabilities
 
-    def _require(self, capability: Capability, *, requester: str) -> None:
+    def _require(self, capability: Capability, *, requester: str, hint: str | None = None) -> None:
         """
         Raise a ``ValueError`` naming *requester* and *capability* if this metric lacks it.
 
         A small, uniformly-worded alternative to each caller writing its own
-        ``if capability not in loss.capabilities: raise ValueError(...)``.
+        ``if capability not in loss.capabilities: raise ValueError(...)``. A *hint*, such as what to
+        use instead, ends the message.
         """
         if capability not in self.capabilities:
-            raise ValueError(
+            message = (
                 f'{requester} only supports losses whose strategy supports {capability.value!r}; '
                 f'{self.__name__!r} does not.'
             )
+            raise ValueError(message if hint is None else f'{message} {hint}')
 
     @property
     @abstractmethod
