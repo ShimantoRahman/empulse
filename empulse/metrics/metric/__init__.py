@@ -1,3 +1,4 @@
+from ._direction import Direction
 from .base_metric import BaseMetric
 from .capabilities import Capability
 from .cost_matrix import CostMatrix
@@ -25,6 +26,7 @@ __all__ = [
     'Capability',
     'Cost',
     'CostMatrix',
+    'Direction',
     'ElasticNetPenalty',
     'EmpiricalMaxProfit',
     'EmpiricalMinCost',

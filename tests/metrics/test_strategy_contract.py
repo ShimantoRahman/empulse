@@ -50,7 +50,7 @@ from empulse.metrics import (
     mpcs_score,
 )
 from empulse.metrics.metric._compile import PicklableLambda
-from empulse.metrics.metric._direction import Direction
+from empulse.metrics import Direction
 from empulse.metrics.metric.strategies.cost_strategy import (
     CostBoostGradientConst,
     CostLoss,

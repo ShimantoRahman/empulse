@@ -4,6 +4,9 @@
 Metrics
 -------
 
+- |API| :class:`~empulse.metrics.Direction`, which a custom :class:`~empulse.metrics.MetricStrategy`
+  passes to its constructor and every metric reports as ``direction``, is exported from
+  :mod:`empulse.metrics`. It could only be imported from a private module.
 - |Fix| A :class:`~empulse.metrics.MixtureMetric` of :class:`~empulse.metrics.Savings` components
   decides and trains on the weighted sum of their savings. Each savings divides its component's cost by
   the cost of its baseline, but the mixture combined the costs with the mixture weights alone, so the

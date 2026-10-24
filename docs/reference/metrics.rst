@@ -60,7 +60,7 @@ Metrics
 Extension Points
 ~~~~~~~~~~~~~~~~
 
-Abstract base classes for writing a custom :class:`~empulse.metrics.MetricStrategy`. Most users
+Classes and helpers for writing a custom :class:`~empulse.metrics.MetricStrategy`. Most users
 never need these.
 
 .. autosummary::
@@ -68,6 +68,7 @@ never need these.
    :nosignatures:
    :template: base.rst
 
+   Direction
    LogitObjective
    ElasticNetPenalty
    objective_scale_from_costs

@@ -91,7 +91,9 @@ the metric:
 
 .. code-block:: python
 
-    greater_is_better = expected_cost.direction.name == 'MAXIMIZE'
+    from empulse.metrics import Direction
+
+    greater_is_better = expected_cost.direction is Direction.MAXIMIZE
     print(greater_is_better)
 
 Every metric also has a settable ``__name__``, which is what appears in

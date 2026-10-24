@@ -22,13 +22,13 @@ from scipy.integrate import trapezoid
 from empulse.metrics import (
     AUEPC,
     CostMatrix,
+    Direction,
     EmpiricalMaxProfit,
     EmpiricalMinCost,
     Metric,
     classification_threshold,
 )
 from empulse.metrics.churn.stochastic import empb_score
-from empulse.metrics.metric._direction import Direction
 from empulse.metrics.metric.strategies.auepc_strategy import AUEPCScore
 from empulse.metrics.metric.strategies.empirical_max_profit_strategy import EmpiricalMaxProfitScore
 
