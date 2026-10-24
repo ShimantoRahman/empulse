@@ -231,6 +231,13 @@ Models
 - |Fix| :class:`~empulse.models.CSBaggingClassifier` accepts missing values in ``X`` when its base
   estimator does, as its default :class:`~empulse.models.CSTreeClassifier` and
   :class:`~empulse.models.CSForestClassifier` do.
+- |Enhancement| :class:`~empulse.models.CSBoostClassifier` and :class:`~empulse.models.B2BoostClassifier`
+  accept missing values in ``X``, which XGBoost, LightGBM and CatBoost all handle, and say so in their
+  ``allow_nan`` tag. :class:`~empulse.models.CSThresholdClassifier` and
+  :class:`~empulse.models.CSRateClassifier` around them take missing values too.
+- |Fix| :class:`~empulse.models.RobustCSClassifier` only reports in its ``allow_nan`` tag that it
+  accepts missing values when its ``outlier_estimator`` does too, since that is fit on ``X`` as well.
+  The default :class:`~sklearn.linear_model.HuberRegressor` does not.
 - |Fix| :class:`~empulse.models.ProfTreeClassifier` optimizes a
   :class:`~empulse.metrics.MixtureMetric` of deterministic :class:`~empulse.metrics.MaxProfit`
   metrics, instead of the maximum profit of their averaged costs.

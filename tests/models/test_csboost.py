@@ -366,3 +366,30 @@ def test_eval_set_with_a_label_that_is_no_class_raises(cost_dataset):
         CSBoostClassifier().fit(
             X, y, fp_cost=fp_cost, fn_cost=fn_cost, fit_params={'eval_set': [(X[:5], np.full(5, 7))]}
         )
+
+
+@pytest.mark.filterwarnings('ignore::UserWarning')
+@pytest.mark.parametrize('library, classifier_name', CLASSIFIERS)
+@pytest.mark.parametrize('strategy_factory', [None, MaxProfit], ids=['cost', 'max_profit'])
+def test_missing_values_are_left_to_the_booster(library, classifier_name, strategy_factory, cost_dataset):
+    """Every backend learns where a missing value goes, so fit and predict take NaN."""
+    if library == 'catboost' and strategy_factory is MaxProfit:
+        pytest.skip('CatBoost does not support a MaxProfit loss.')
+    classifier_class = getattr(pytest.importorskip(library), classifier_name)
+    X, y, fn_cost, fp_cost = cost_dataset
+    X = X.copy()
+    X[::7, 0] = np.nan
+    extra = {'allow_writing_files': False} if library == 'catboost' else {}
+    loss = (
+        None if strategy_factory is None else Metric(CostMatrix().add_tp_benefit(5).add_fp_cost(1), strategy_factory())
+    )
+    model = CSBoostClassifier(estimator=classifier_class(n_estimators=3, verbose=0, **extra), loss=loss)
+    costs = {} if loss is not None else {'fn_cost': fn_cost, 'fp_cost': fp_cost}
+
+    y_proba = model.fit(X, y, **costs).predict_proba(X)
+
+    assert model.__sklearn_tags__().input_tags.allow_nan
+    assert np.isfinite(y_proba).all()
+    X[0, 1] = np.inf
+    with pytest.raises(ValueError, match='infinity'):
+        model.predict_proba(X)

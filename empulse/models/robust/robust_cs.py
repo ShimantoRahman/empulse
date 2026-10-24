@@ -263,10 +263,14 @@ class RobustCSClassifier(RoutesLossParameters, MetaEstimatorMixin, ClassifierMix
         tags = super().__sklearn_tags__()
         tags.classifier_tags.multi_class = False
         tags.classifier_tags.poor_score = True
-        # X goes to the wrapped estimator as given, so it decides what X may contain.
+        # X goes to the wrapped estimator as given, so it decides what X may contain. The outlier
+        # estimator is fit on X too, so X may only hold missing values if both accept them.
         estimator_tags = get_tags(self.estimator)
+        outlier_estimator = self.outlier_estimator if self.outlier_estimator is not None else HuberRegressor()
         tags.input_tags.sparse = estimator_tags.input_tags.sparse
-        tags.input_tags.allow_nan = estimator_tags.input_tags.allow_nan
+        tags.input_tags.allow_nan = (
+            estimator_tags.input_tags.allow_nan and get_tags(outlier_estimator).input_tags.allow_nan
+        )
         return tags
 
     def _get_metric_loss(self) -> BaseMetric | None:

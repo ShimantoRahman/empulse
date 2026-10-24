@@ -2,10 +2,11 @@ import numpy as np
 import pytest
 import sympy
 from sklearn.datasets import make_classification
+from sklearn.ensemble import HistGradientBoostingRegressor
 from sklearn.linear_model import HuberRegressor, LogisticRegression
 
 from empulse.metrics import Cost, CostMatrix, Metric, MixtureComponent, MixtureMetric
-from empulse.models import CSLogitClassifier, CSThresholdClassifier, RobustCSClassifier
+from empulse.models import CSLogitClassifier, CSThresholdClassifier, CSTreeClassifier, RobustCSClassifier
 
 ARRAY_COST_CASES = [
     ('fn_cost',),
@@ -265,3 +266,20 @@ def test_outliers_of_a_one_class_plain_cost_are_measured_among_that_class_only()
     changed = np.flatnonzero(~np.isclose(model.costs_['fn_cost'], fn_cost))
     assert set(planted) <= set(changed)
     assert not (y[changed] == 0).any()
+
+
+@pytest.mark.parametrize(
+    ('outlier_estimator', 'allow_nan'),
+    [(None, False), (HuberRegressor(), False), (HistGradientBoostingRegressor(), True)],
+    ids=['default', 'huber', 'hist_gradient_boosting'],
+)
+def test_allow_nan_needs_the_outlier_estimator_to_take_missing_values(outlier_estimator, allow_nan):
+    """The outlier estimator is fit on X too, so NaN in X is only fine if it takes them as well."""
+    model = RobustCSClassifier(CSTreeClassifier(), outlier_estimator=outlier_estimator)
+    assert model.__sklearn_tags__().input_tags.allow_nan is allow_nan
+    assert (
+        RobustCSClassifier(CSLogitClassifier(), outlier_estimator=outlier_estimator)
+        .__sklearn_tags__()
+        .input_tags.allow_nan
+        is False
+    )

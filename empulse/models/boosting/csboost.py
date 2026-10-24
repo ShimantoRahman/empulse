@@ -11,7 +11,7 @@ from sklearn.utils._param_validation import HasMethods
 from sklearn.utils.validation import check_is_fitted
 
 from ..._common import Parameter
-from ..._common._sklearn_compat import validate_data
+from ..._common._sklearn_compat import Tags, validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, Capability
 from .._base.cost_scale import decision_cost_scale
@@ -275,6 +275,15 @@ class CSBoostClassifier(CostSensitiveClassifier):
         self.estimator = estimator
         super().__init__(tp_cost=tp_cost, tn_cost=tn_cost, fp_cost=fp_cost, fn_cost=fn_cost, loss=loss)
 
+    # XGBoost, LightGBM and CatBoost all learn which branch a missing value takes.
+    def _more_tags(self) -> dict[str, bool]:
+        return {'allow_nan': True}
+
+    def __sklearn_tags__(self) -> Tags:
+        tags = super().__sklearn_tags__()
+        tags.input_tags.allow_nan = True
+        return tags
+
     def fit(
         self,
         X: FloatArrayLike,
@@ -440,7 +449,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
             Predicted class probabilities.
         """
         check_is_fitted(self)
-        X = validate_data(self, X, reset=False)
+        X = validate_data(self, X, reset=False, ensure_all_finite='allow-nan')
 
         y_proba: FloatNDArray
         backend = _backend_for_estimator(self.estimator_)
