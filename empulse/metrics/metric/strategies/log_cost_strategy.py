@@ -1,11 +1,9 @@
-import copy
 from functools import cached_property
 from typing import Any, ClassVar, Self
 
 import numpy as np
 import sympy
 
-from ...._common._objective import ElasticNetPenalty, LogitObjective
 from ...._types import Float64Array, FloatNDArray, IntNDArray
 from ..._loss import (
     cy_log_cost_boost_grad_hess,
@@ -26,12 +24,17 @@ from .._parameter_domain import LABEL_AND_SCORE_SYMBOLS, LABEL_SYMBOLS, _check_p
 from .._stochastic import expectation_over_random_vars
 from .._symbolic import _latex
 from ..capabilities import Capability
-from ._class_terms import ClassTerms
-from .cost_strategy import CostOptimalThreshold, _CachedPenaltyWeights, _rate_at_threshold
-from .metric_strategy import MetricStrategy
+from .cost_strategy import (
+    CostOptimalThreshold,
+    _LogitFromClassTerms,
+    _loss_constants,
+    _LossConstantsObjective,
+    _rate_at_threshold,
+)
+from .metric_strategy import MetricStrategy, _CompiledDecisions
 
 
-class LogCostLogitObjective(_CachedPenaltyWeights, LogitObjective):
+class LogCostLogitObjective(_LossConstantsObjective):
     """
     Precomputed log-cost objective for logistic regression.
 
@@ -42,59 +45,10 @@ class LogCostLogitObjective(_CachedPenaltyWeights, LogitObjective):
     constant.
 
     As with :class:`~empulse.metrics.Cost`'s objective, the loss, the gradient and the penalty are all
-    computed by a compiled kernel, which takes the penalty as the scalars cached on the objective.
+    computed by a compiled kernel, which takes the penalty as the scalars cached on the objective. The
+    penalty is scaled as for :class:`~empulse.metrics.Cost`: the per-sample gradient
+    ``c1 (1 - s) - c2 s`` has magnitude ``|c1 - c2| / 2`` at ``s = 0.5``.
     """
-
-    def __init__(
-        self,
-        *,
-        tp_benefit: Float64Array,
-        tn_benefit: Float64Array,
-        fp_cost: Float64Array,
-        fn_cost: Float64Array,
-        features: FloatNDArray,
-        y_true: FloatNDArray,
-        C: float,
-        l1_ratio: float,
-        fit_intercept: bool,
-    ) -> None:
-        loss_const1 = y_true * -tp_benefit + (1 - y_true) * fp_cost
-        loss_const2 = y_true * fn_cost - (1 - y_true) * tn_benefit
-
-        # The Cython kernels take C-contiguous float64 arrays, so convert them once here rather than
-        # on every call.
-        self.loss_const1: Float64Array = np.ascontiguousarray(loss_const1, dtype=np.float64).reshape(-1)
-        self.loss_const2: Float64Array = np.ascontiguousarray(loss_const2, dtype=np.float64).reshape(-1)
-        self.features: Float64Array = np.ascontiguousarray(features, dtype=np.float64)
-        self.fit_intercept = fit_intercept
-        # The per-sample gradient is `c1 (1 - s) - c2 s`, whose magnitude at s = 0.5 is
-        # |c1 - c2| / 2 -- the same scale the Cost strategy uses, up to a constant factor.
-        self.penalty = ElasticNetPenalty.from_scale(
-            objective_scale=float(np.mean(np.abs(self.loss_const1 - self.loss_const2))),
-            C=C,
-            l1_ratio=l1_ratio,
-            fit_intercept=fit_intercept,
-            n_samples=self.features.shape[0],
-        )
-
-    def with_indices(self, indices: FloatNDArray) -> 'LogCostLogitObjective':
-        """Return a new objective restricted to the sample subset given by *indices*.
-
-        Parameters
-        ----------
-        indices : array-like of int
-            Row indices into the full training set.
-
-        Returns
-        -------
-        LogCostLogitObjective
-            A new objective for the selected samples.
-        """
-        obj = copy.copy(self)
-        obj.loss_const1 = self.loss_const1[indices]
-        obj.loss_const2 = self.loss_const2[indices]
-        obj.features = self.features[indices]
-        return obj
 
     def _kernel_arguments(self, weights: FloatNDArray) -> tuple[Float64Array, Float64Array, Float64Array, Float64Array]:
         return np.ascontiguousarray(weights, dtype=np.float64), self.features, self.loss_const1, self.loss_const2
@@ -179,9 +133,9 @@ class LogCostBoostGradient:
     """Class to compute the gradient and hessian of the log-cost metric for gradient boosting."""
 
     def __init__(self, tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr):
-        y = sympy.symbols('y')
-        self.loss_const1_eq = y * -tp_benefit + (1 - y) * fp_cost
-        self.loss_const2_eq = y * fn_cost - (1 - y) * tn_benefit
+        self.loss_const1_eq, self.loss_const2_eq = _loss_constants(
+            sympy.Symbol('y'), tp_benefit, tn_benefit, fp_cost, fn_cost
+        )
         self.loss_const1_fn = _safe_lambdify(self.loss_const1_eq)
         self.loss_const2_fn = _safe_lambdify(self.loss_const2_eq)
 
@@ -209,7 +163,7 @@ class LogCostBoostGradient:
         )
 
 
-class LogCost(ClassTerms, MetricStrategy):
+class LogCost(_CompiledDecisions, _LogitFromClassTerms, MetricStrategy):
     r"""
     Strategy for the Expected Log Cost metric.
 
@@ -255,6 +209,7 @@ class LogCost(ClassTerms, MetricStrategy):
     _direction: Direction = Direction.MINIMIZE
     #: `optimal_threshold`/`optimal_rate` depend only on the cost values, like `Cost`'s.
     _capabilities: ClassVar[frozenset[Capability]] = frozenset({Capability.COST_ONLY_DECISION})
+    _logit_objective_type: ClassVar[type[_LossConstantsObjective]] = LogCostLogitObjective
 
     def __init__(self) -> None:
         super().__init__(name=self._name, direction=self._direction)
@@ -321,121 +276,6 @@ class LogCost(ClassTerms, MetricStrategy):
             The expected log cost loss.
         """
         return self._score_function(y_true, y_score, **parameters)
-
-    def optimal_threshold(
-        self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
-    ) -> float | FloatNDArray:
-        """
-        Compute the classification threshold(s) to optimize the metric value.
-
-        The threshold is the Bayes-optimal decision for scores that minimize the expected log cost,
-        such as those of a model trained on this metric. Such a score is not the probability of the
-        positive class: it already carries the cost weighting, and wherever the cost matrix's decision
-        flips, both outcomes weigh the same, so the score there is 0.5. The threshold is therefore 0.5
-        whenever the cost matrix calls for a positive decision for some, but not all, probabilities, and
-        0 or 1 when it calls for always (never) targeting.
-
-        To threshold calibrated probabilities instead, use :class:`~empulse.metrics.Cost`'s optimal
-        threshold on the same cost matrix.
-
-        Parameters
-        ----------
-        y_true : array-like of shape (n_samples,)
-            The ground truth labels.
-
-        y_score : array-like of shape (n_samples,)
-            The predicted (calibrated) probabilities.
-
-        **parameters : float or array-like of shape (n_samples,)
-            The parameter values for the costs and benefits defined in the metric.
-            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
-            You can set the parameter values for either the symbol names or their aliases.
-
-            - If ``float``, the same value is used for all samples (class-dependent).
-            - If ``array-like``, the values are used for each sample (instance-dependent).
-
-        Returns
-        -------
-        optimal_threshold : float | FloatNDArray
-            The optimal classification threshold(s).
-        """
-        return self._optimal_threshold(y_true, y_score, **parameters)
-
-    def optimal_rate(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
-        """
-        Compute the predicted positive rate to optimize the metric value.
-
-        Parameters
-        ----------
-        y_true : array-like of shape (n_samples,)
-            The ground truth labels.
-
-        y_score : array-like of shape (n_samples,)
-            The predicted (calibrated) probabilities.
-
-        **parameters : float or array-like of shape (n_samples,)
-            The parameter values for the costs and benefits defined in the metric.
-            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
-            You can set the parameter values for either the symbol names or their aliases.
-
-            - If ``float``, the same value is used for all samples (class-dependent).
-            - If ``array-like``, the values are used for each sample (instance-dependent).
-
-        Returns
-        -------
-        optimal_rate : float
-            The optimal predicted positive rate.
-        """
-        return self._optimal_rate(y_true, y_score, **parameters)
-
-    def logit_objective(
-        self,
-        features: FloatNDArray,
-        y_true: FloatNDArray,
-        C: float,
-        l1_ratio: float,
-        fit_intercept: bool,
-        **parameters: FloatNDArray | float,
-    ) -> LogCostLogitObjective:
-        """
-        Build an object which computes the metric value and the gradient wrt logistic coefficients.
-
-        Parameters
-        ----------
-        features : NDArray of shape (n_samples, n_features)
-            The features of the samples.
-        y_true : NDArray of shape (n_samples,)
-            The ground truth labels.
-        C : float
-            Regularization strength parameter. Smaller values specify stronger regularization.
-        l1_ratio : float
-            The Elastic-Net mixing parameter, with range 0 <= l1_ratio <= 1.
-            l1_ratio=0 corresponds to L2 penalty, l1_ratio=1 to L1 penalty.
-        fit_intercept : bool
-            Specifies if an intercept should be included in the model.
-        **parameters : float or NDArray of shape (n_samples,)
-            The parameter values for the costs and benefits defined in the metric.
-
-            - If ``float``, the same value is used for all samples (class-dependent).
-            - If ``array-like``, the values are used for each sample (instance-dependent).
-
-        Returns
-        -------
-        logistic_objective : LogCostLogitObjective
-            An object implementing the :class:`~empulse.metrics.LogitObjective` interface.
-        """
-        tp_val, tn_val, fp_val, fn_val = self._evaluate_class_terms(**parameters)
-        return LogCostLogitObjective(
-            tp_benefit=tp_val,
-            tn_benefit=tn_val,
-            fp_cost=fp_val,
-            fn_cost=fn_val,
-            features=features,
-            y_true=y_true,
-            C=C,
-            l1_ratio=l1_ratio,
-            fit_intercept=fit_intercept,
-        )
 
     def gradient_boost_objective(
         self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float

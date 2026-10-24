@@ -14,7 +14,7 @@ from .._stochastic import expectation_over_random_vars
 from .._symbolic import _latex
 from ..capabilities import Capability
 from .auepc_strategy import _build_delta_equation, _ranked_profit_curve
-from .metric_strategy import MetricStrategy
+from .metric_strategy import MetricStrategy, _CompiledDecisions
 
 
 class EmpiricalMaxProfitScore:
@@ -63,8 +63,7 @@ class EmpiricalMaxProfitScore:
 
     def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **kwargs: Any) -> float:
         """Compute the empirical maximum profit per sample."""
-        _, cumulative_profits, n_samples = self.cumulative_profits(y_true, y_score, **kwargs)
-        return float(np.max(cumulative_profits)) / n_samples
+        return self._sample_scorer(y_true, **kwargs)(y_score)
 
     def _sample_scorer(self, y_true: IntNDArray, **kwargs: Any) -> Callable[[FloatNDArray], float]:
         """
@@ -110,7 +109,7 @@ class EmpiricalMaxProfitOptimalThreshold:
         return classification_threshold(y_true, y_score, rate)
 
 
-class EmpiricalMaxProfit(MetricStrategy):
+class EmpiricalMaxProfit(_CompiledDecisions, MetricStrategy):
     """
     Strategy for the (empirical) maximum profit found by ranking samples by predicted score.
 
@@ -248,58 +247,6 @@ class EmpiricalMaxProfit(MetricStrategy):
                 n_samples=features.shape[0],
             ),
         )
-
-    def optimal_rate(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
-        """
-        Compute the fraction of samples that should be targeted (predicted positive) to maximize profit.
-
-        Parameters
-        ----------
-        y_true : array-like of shape (n_samples,)
-            The ground truth labels.
-
-        y_score : array-like of shape (n_samples,)
-            The predicted labels, probabilities, or decision scores used to rank the samples.
-
-        **parameters : float or array-like of shape (n_samples,)
-            The parameter values for the costs and benefits defined in the metric.
-
-            - If ``float``, the same value is used for all samples (class-dependent).
-            - If ``array-like``, the values are used for each sample (instance-dependent).
-
-        Returns
-        -------
-        optimal_rate : float
-            The optimal predicted positive rate.
-        """
-        return self._optimal_rate(y_true, y_score, **parameters)
-
-    def optimal_threshold(
-        self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
-    ) -> float | FloatNDArray:
-        """
-        Compute the score threshold above which a sample should be targeted to maximize profit.
-
-        Parameters
-        ----------
-        y_true : array-like of shape (n_samples,)
-            The ground truth labels.
-
-        y_score : array-like of shape (n_samples,)
-            The predicted labels, probabilities, or decision scores used to rank the samples.
-
-        **parameters : float or array-like of shape (n_samples,)
-            The parameter values for the costs and benefits defined in the metric.
-
-            - If ``float``, the same value is used for all samples (class-dependent).
-            - If ``array-like``, the values are used for each sample (instance-dependent).
-
-        Returns
-        -------
-        optimal_threshold : float
-            The optimal classification threshold.
-        """
-        return self._optimal_threshold(y_true, y_score, **parameters)
 
     def to_latex(
         self,

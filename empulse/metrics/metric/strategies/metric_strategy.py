@@ -6,7 +6,7 @@ import sympy
 
 from ...._common._objective import LogitObjective
 from ...._types import FloatNDArray, IntNDArray
-from .._compile import CountScoreFn
+from .._compile import CountScoreFn, RateFn, ThresholdFn
 from .._direction import Direction
 from ..capabilities import Capability
 
@@ -414,3 +414,78 @@ class MetricStrategy(ABC):
 
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}(direction={self.direction})'
+
+
+class _CompiledDecisions:
+    """
+    Mixin for a strategy whose :meth:`build` compiles its decision rule into two functions.
+
+    :meth:`optimal_threshold` and :meth:`optimal_rate` call ``_optimal_threshold`` and ``_optimal_rate``.
+    Defining them here, rather than leaving them to :class:`MetricStrategy`, also gives the strategy the
+    :attr:`~empulse.metrics.Capability.OPTIMAL_THRESHOLD` and :attr:`~empulse.metrics.Capability.OPTIMAL_RATE`
+    capabilities, since those follow from overriding the two methods.
+    """
+
+    _optimal_threshold: ThresholdFn
+    _optimal_rate: RateFn
+
+    def optimal_threshold(
+        self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float
+    ) -> float | FloatNDArray:
+        """
+        Compute the classification threshold(s) to optimize the metric value.
+
+        i.e., the score threshold at or above which an observation should be classified as positive to
+        optimize the metric. A strategy that decides each sample by its own costs, such as
+        :class:`~empulse.metrics.Cost`, returns one threshold per sample for instance-dependent costs and
+        benefits. Otherwise, a single threshold is returned.
+
+        Parameters
+        ----------
+        y_true : array-like of shape (n_samples,)
+            The ground truth labels.
+
+        y_score : array-like of shape (n_samples,)
+            The predicted labels, probabilities, or decision scores (based on the chosen metric).
+
+        **parameters : float or array-like of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        optimal_threshold : float | FloatNDArray
+            The optimal classification threshold(s).
+        """
+        return self._optimal_threshold(y_true, y_score, **parameters)
+
+    def optimal_rate(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
+        """
+        Compute the predicted positive rate to optimize the metric value.
+
+        Parameters
+        ----------
+        y_true : array-like of shape (n_samples,)
+            The ground truth labels.
+
+        y_score : array-like of shape (n_samples,)
+            The predicted labels, probabilities, or decision scores (based on the chosen metric).
+
+        **parameters : float or array-like of shape (n_samples,)
+            The parameter values for the costs and benefits defined in the metric.
+            If any parameter is a stochastic variable, you should pass values for their distribution parameters.
+            You can set the parameter values for either the symbol names or their aliases.
+
+            - If ``float``, the same value is used for all samples (class-dependent).
+            - If ``array-like``, the values are used for each sample (instance-dependent).
+
+        Returns
+        -------
+        optimal_rate : float
+            The optimal predicted positive rate.
+        """
+        return self._optimal_rate(y_true, y_score, **parameters)
