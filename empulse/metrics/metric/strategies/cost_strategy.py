@@ -13,7 +13,6 @@ from ..._loss import cy_logit_gradient, cy_logit_loss, cy_logit_loss_gradient
 from .._compile import (
     BoostGradientConst,
     MetricFn,
-    RateFn,
     ThresholdFn,
     _safe_lambdify,
     _safe_run_lambda,
@@ -448,18 +447,13 @@ class Cost(_CompiledDecisions, _LogitFromClassTerms, MetricStrategy):
         self._score_function: MetricFn = CostLoss(
             tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
         )
-        self._optimal_threshold: ThresholdFn = CostOptimalThreshold(
+        self._optimal_threshold = CostOptimalThreshold(
             tp_benefit=tp_benefit,
             tn_benefit=tn_benefit,
             fp_cost=fp_cost,
             fn_cost=fn_cost,
         )
-        self._optimal_rate: RateFn = CostOptimalRate(
-            tp_benefit=tp_benefit,
-            tn_benefit=tn_benefit,
-            fp_cost=fp_cost,
-            fn_cost=fn_cost,
-        )
+        self._optimal_rate = RateAtThreshold(self._optimal_threshold)
         self._prepare_boost_objective: BoostGradientConst = CostBoostGradientConst(
             tp_benefit=tp_benefit,
             tn_benefit=tn_benefit,
@@ -732,12 +726,15 @@ class CostOptimalThreshold:
         return _solve_optimal_threshold(numerator, denominator)
 
 
-class CostOptimalRate(CostOptimalThreshold):
-    """Class to compute the optimal predicted positive rate for the cost metric."""
+class RateAtThreshold:
+    """The predicted positive rate under a decision threshold: the fraction of scores that reach it."""
 
-    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: Any) -> float:  # type: ignore[override]
+    def __init__(self, threshold: ThresholdFn):
+        self.threshold = threshold
+
+    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: Any) -> float:
         """Compute the optimal predicted positive rate."""
-        return _rate_at_threshold(y_score, super().__call__(y_true, y_score, **parameters))
+        return _rate_at_threshold(y_score, self.threshold(y_true, y_score, **parameters))
 
 
 def _rate_at_threshold(y_score: FloatNDArray, threshold: FloatNDArray | float) -> float:

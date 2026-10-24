@@ -13,8 +13,6 @@ from ..._loss import (
 )
 from .._compile import (
     MetricFn,
-    RateFn,
-    ThresholdFn,
     _safe_lambdify,
     _safe_run_lambda,
     _safe_run_lambda_array,
@@ -26,10 +24,10 @@ from .._symbolic import _latex
 from ..capabilities import Capability
 from .cost_strategy import (
     CostOptimalThreshold,
+    RateAtThreshold,
     _LogitFromClassTerms,
     _loss_constants,
     _LossConstantsObjective,
-    _rate_at_threshold,
 )
 from .metric_strategy import MetricStrategy, _CompiledDecisions
 
@@ -230,18 +228,13 @@ class LogCost(_CompiledDecisions, _LogitFromClassTerms, MetricStrategy):
         self._score_function: MetricFn = LogCostLoss(
             tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
         )
-        self._optimal_threshold: ThresholdFn = LogCostOptimalThreshold(
+        self._optimal_threshold = LogCostOptimalThreshold(
             tp_benefit=tp_benefit,
             tn_benefit=tn_benefit,
             fp_cost=fp_cost,
             fn_cost=fn_cost,
         )
-        self._optimal_rate: RateFn = LogCostOptimalRate(
-            tp_benefit=tp_benefit,
-            tn_benefit=tn_benefit,
-            fp_cost=fp_cost,
-            fn_cost=fn_cost,
-        )
+        self._optimal_rate = RateAtThreshold(self._optimal_threshold)
         self._boost_gradient = LogCostBoostGradient(
             tp_benefit=tp_benefit,
             tn_benefit=tn_benefit,
@@ -340,19 +333,6 @@ class LogCostOptimalThreshold(CostOptimalThreshold):
             return 0.5 if 0.0 < probability_threshold < 1.0 else float(probability_threshold)  # type: ignore[operator, arg-type]
         threshold = np.asarray(probability_threshold, dtype=np.float64)
         return np.where((threshold > 0.0) & (threshold < 1.0), 0.5, threshold)
-
-
-class LogCostOptimalRate:
-    """Predicted positive rate under :class:`LogCostOptimalThreshold`."""
-
-    def __init__(self, tp_benefit: sympy.Expr, tn_benefit: sympy.Expr, fp_cost: sympy.Expr, fn_cost: sympy.Expr):
-        self._threshold = LogCostOptimalThreshold(
-            tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
-        )
-
-    def __call__(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: Any) -> float:
-        """Compute the optimal predicted positive rate."""
-        return _rate_at_threshold(y_score, self._threshold(y_true, y_score, **parameters))
 
 
 class LogCostLoss:

@@ -7,7 +7,7 @@ import sympy
 from ...._common._objective import ElasticNetPenalty, RankingLogitValueObjective
 from ...._types import FloatNDArray, IntNDArray
 from ...common import classification_threshold
-from .._compile import MetricFn, RateFn, ThresholdFn, _safe_lambdify, _safe_run_lambda_array
+from .._compile import _safe_lambdify, _safe_run_lambda_array
 from .._direction import Direction
 from .._parameter_domain import LABEL_SYMBOLS, _check_parameters
 from .._stochastic import expectation_over_random_vars
@@ -49,7 +49,7 @@ class EmpiricalMaxProfitScore:
         n_targeted, cumulative_profits = _ranked_profit_curve(delta, y_score)
         return n_targeted, cumulative_profits, delta.size
 
-    def profit_differential(self, y_true: IntNDArray, **kwargs: Any) -> FloatNDArray:
+    def profit_differential(self, y_true: IntNDArray | FloatNDArray, **kwargs: Any) -> FloatNDArray:
         """Return how much targeting each sample earns over not targeting it."""
         _check_parameters(self.delta_equation.free_symbols - LABEL_SYMBOLS, kwargs)
         y_true = np.asarray(y_true, dtype=np.float64).reshape(-1)
@@ -161,11 +161,12 @@ class EmpiricalMaxProfit(_CompiledDecisions, MetricStrategy):
         self._fp_cost: sympy.Expr = fp_cost
         self._fn_cost: sympy.Expr = fn_cost
 
-        self._score_function: MetricFn = EmpiricalMaxProfitScore(
+        self._score_function = EmpiricalMaxProfitScore(
             tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost
         )
-        self._optimal_rate: RateFn = EmpiricalMaxProfitOptimalRate(self._score_function)  # type: ignore[arg-type]
-        self._optimal_threshold: ThresholdFn = EmpiricalMaxProfitOptimalThreshold(self._optimal_rate)  # type: ignore[arg-type]
+        optimal_rate = EmpiricalMaxProfitOptimalRate(self._score_function)
+        self._optimal_rate = optimal_rate
+        self._optimal_threshold = EmpiricalMaxProfitOptimalThreshold(optimal_rate)
         return self
 
     def score(self, y_true: IntNDArray, y_score: FloatNDArray, **parameters: FloatNDArray | float) -> float:
@@ -235,9 +236,9 @@ class EmpiricalMaxProfit(_CompiledDecisions, MetricStrategy):
         parameters = {
             name: value.reshape(-1) if isinstance(value, np.ndarray) else value for name, value in parameters.items()
         }
-        delta = self._score_function.profit_differential(y_true, **parameters)  # type: ignore[attr-defined]
+        delta = self._score_function.profit_differential(y_true, **parameters)
         return RankingLogitValueObjective(
-            score=self._score_function._scorer_for_differential(delta),  # type: ignore[attr-defined]
+            score=self._score_function._scorer_for_differential(delta),
             features=features,
             penalty=ElasticNetPenalty.from_scale(
                 objective_scale=float(np.mean(np.abs(delta))),

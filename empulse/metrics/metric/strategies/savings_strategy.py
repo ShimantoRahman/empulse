@@ -7,7 +7,7 @@ import sympy
 from sklearn.exceptions import UndefinedMetricWarning
 
 from ...._types import FloatArrayLike, FloatNDArray, IntNDArray
-from .._compile import MetricFn, _safe_lambdify, _safe_run_lambda
+from .._compile import _safe_lambdify, _safe_run_lambda
 from .._direction import Direction
 from .._parameter_domain import LABEL_AND_SCORE_SYMBOLS, _check_parameters
 from .._symbolic import _latex
@@ -40,7 +40,7 @@ class Savings(Cost):
 
         Infinite when the baseline costs nothing, for then the savings are undefined.
         """
-        cost_base = self._score_function.baseline_cost(y_true, baseline, **parameters)  # type: ignore[attr-defined]
+        cost_base = self._savings_score.baseline_cost(y_true, baseline, **parameters)
         return float('inf') if cost_base == 0.0 else 1.0 / abs(cost_base)
 
     def build(
@@ -52,7 +52,8 @@ class Savings(Cost):
     ) -> Self:
         """Build the metric strategy."""
         super().build(tp_benefit, tn_benefit, fp_cost, fn_cost)
-        self._score_function: MetricFn = SavingsScore(  # type: ignore[assignment]
+        # Not the score function: it takes the baseline, which a plain score function does not.
+        self._savings_score = SavingsScore(
             tp_benefit=self._tp_benefit,
             tn_benefit=self._tn_benefit,
             fp_cost=self._fp_cost,
@@ -109,7 +110,7 @@ class Savings(Cost):
         score : float
             The expected savings score.
         """
-        return self._score_function(y_true, y_score, baseline=baseline, **parameters)
+        return self._savings_score(y_true, y_score, baseline=baseline, **parameters)
 
     def to_latex(
         self,

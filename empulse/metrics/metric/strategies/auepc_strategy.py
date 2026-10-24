@@ -7,7 +7,7 @@ from scipy.integrate import trapezoid
 
 from ...._common._objective import ElasticNetPenalty, RankingLogitValueObjective
 from ...._types import Float64Array, FloatNDArray, IntNDArray
-from .._compile import MetricFn, _safe_lambdify, _safe_run_lambda_array
+from .._compile import _safe_lambdify, _safe_run_lambda_array
 from .._direction import Direction
 from .._parameter_domain import LABEL_SYMBOLS, _check_parameters
 from .._stochastic import expectation_over_random_vars
@@ -77,7 +77,7 @@ class AUEPCScore:
         """Compute the AUEPC score."""
         return self._sample_scorer(y_true, **kwargs)(y_score)
 
-    def _sample_scorer(self, y_true: IntNDArray, **kwargs: Any) -> Callable[[FloatNDArray], float]:
+    def _sample_scorer(self, y_true: IntNDArray | FloatNDArray, **kwargs: Any) -> Callable[[FloatNDArray], float]:
         """
         Prepare the score of fixed labels, for parameter values fixed across many calls.
 
@@ -187,7 +187,7 @@ class AUEPC(MetricStrategy):
         self._fp_cost: sympy.Expr = fp_cost
         self._fn_cost: sympy.Expr = fn_cost
 
-        self._score_function: MetricFn = AUEPCScore(
+        self._score_function = AUEPCScore(
             tp_benefit=tp_benefit, tn_benefit=tn_benefit, fp_cost=fp_cost, fn_cost=fn_cost, normalize=self.normalize
         )
         return self
@@ -259,7 +259,7 @@ class AUEPC(MetricStrategy):
             name: value.reshape(-1) if isinstance(value, np.ndarray) else value for name, value in parameters.items()
         }
         return RankingLogitValueObjective(
-            score=self._score_function._sample_scorer(y_true, **parameters),  # type: ignore[attr-defined]
+            score=self._score_function._sample_scorer(y_true, **parameters),
             features=features,
             penalty=ElasticNetPenalty.from_scale(
                 objective_scale=1.0, C=C, l1_ratio=l1_ratio, fit_intercept=fit_intercept, n_samples=features.shape[0]

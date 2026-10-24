@@ -54,8 +54,8 @@ from empulse.metrics.metric._compile import PicklableLambda
 from empulse.metrics.metric.strategies.cost_strategy import (
     CostBoostGradientConst,
     CostLoss,
-    CostOptimalRate,
     CostOptimalThreshold,
+    RateAtThreshold,
 )
 from empulse.metrics.metric.strategies.max_profit_strategy.deterministic import MaxProfitScoreDeterministic
 from empulse.metrics.metric.strategies.max_profit_strategy.gradient_piecewise import (
@@ -239,7 +239,7 @@ def test_picklable_lambda_multiple_pickle_cycles():
         pytest.param(lambda: CostLoss(*_COST_EXPRS), id='CostLoss'),
         pytest.param(lambda: CostBoostGradientConst(*_COST_EXPRS), id='CostBoostGradientConst'),
         pytest.param(lambda: CostOptimalThreshold(*_COST_EXPRS), id='CostOptimalThreshold'),
-        pytest.param(lambda: CostOptimalRate(*_COST_EXPRS), id='CostOptimalRate'),
+        pytest.param(lambda: RateAtThreshold(CostOptimalThreshold(*_COST_EXPRS)), id='RateAtThreshold'),
         pytest.param(lambda: SavingsScore(*_COST_EXPRS), id='SavingsScore'),
         pytest.param(
             lambda: MaxProfitScoreDeterministic(*_make_deterministic_profit_function()),
