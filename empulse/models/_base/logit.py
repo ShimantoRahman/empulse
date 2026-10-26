@@ -94,6 +94,8 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
             self.coef_ = self.result_.x[1:]
         else:
             self.coef_ = self.result_.x
+            if 'intercept_' in vars(self):
+                del self.intercept_
 
         self.n_iter_ = self.result_.nit
 

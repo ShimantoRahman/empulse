@@ -255,6 +255,9 @@ Models
   ``outlier_threshold`` is a number of standard deviations. It divided the absolute residuals by
   their own standard deviation, as the original paper does, so the default of 2.5 flagged costs
   beyond about 1.5 standard deviations, around 13% of normally distributed costs instead of 1%.
+- |Fix| Refitting :class:`~empulse.models.CSLogitClassifier` or
+  :class:`~empulse.models.ProfLogitClassifier` with ``fit_intercept=False`` removes the
+  ``intercept_`` of an earlier fit.
 - |Fix| Cost-sensitive models accept the ``baseline`` of a :class:`~empulse.metrics.Savings` loss in
   ``fit``, and route it through metadata routing like the cost matrix's parameters. Most models
   raised a ``TypeError``, and :class:`~empulse.models.CSThresholdClassifier` and

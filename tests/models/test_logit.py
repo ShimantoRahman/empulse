@@ -74,6 +74,13 @@ class TestCSLogit:
         assert data_value + objective.penalty.value(weights) == pytest.approx(value)
         np.testing.assert_allclose(data_gradient + objective.penalty.gradient(weights), gradient)
 
+    def test_refit_without_an_intercept_drops_the_old_one(self, X, y):
+        clf = CSLogitClassifier().fit(X, y, fp_cost=1.0, fn_cost=1.0)
+        assert hasattr(clf, 'intercept_')
+        clf.set_params(fit_intercept=False).fit(X, y, fp_cost=1.0, fn_cost=1.0)
+        assert not hasattr(clf, 'intercept_')
+        assert clf.coef_.shape == (X.shape[1],)
+
     def test_explicit_optimizer_is_used_for_fitting(self, X, y):
         clf = CSLogitClassifier(optimizer=LBFGSBOptimizer(max_iter=3))
         clf.fit(X, y, fp_cost=1.0, fn_cost=1.0)
