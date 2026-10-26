@@ -33,6 +33,7 @@ from empulse.metrics import (
     MixtureComponent,
     MixtureMetric,
     Profit,
+    Savings,
 )
 from empulse.models import (
     CSBaggingClassifier,
@@ -615,6 +616,56 @@ def test_a_model_fitted_on_empcs_score_can_be_pickled():
     model = CSThresholdClassifier(LogisticRegression(), loss=empcs_score).fit(X, y)
     restored = pickle.loads(pickle.dumps(model))
     np.testing.assert_array_equal(restored.predict(X), model.predict(X))
+
+
+# --- A mixture of Savings ------------------------------------------------------------------------
+#
+# Savings divides each component's cost by its baseline's cost, so the mixture's score weighs the
+# components' costs by the mixture weights and by those baselines. Models train on the costs weighed
+# alike, `_decision_costs`, and take `baseline` as a fit parameter.
+
+SAVINGS_PARAMS: dict[str, float] = {'a': 1.0, 'b': 5.0, 'c': 2.0, 'd': 1.0}
+
+
+@pytest.fixture
+def savings_mixture():
+    return MixtureMetric([
+        MixtureComponent(0.5, Metric(CostMatrix().add_fp_cost('a').add_fn_cost('b'), Savings()), {}),
+        MixtureComponent(0.5, Metric(CostMatrix().add_fp_cost('c').add_fn_cost('d'), Savings()), {}),
+    ])
+
+
+@pytest.fixture
+def noisy_data():
+    return make_classification(n_samples=600, n_informative=3, class_sep=0.5, flip_y=0.1, weights=[0.8], random_state=0)
+
+
+@pytest.mark.parametrize(
+    'estimator',
+    [
+        CSLogitClassifier(optimizer=LBFGSBOptimizer(max_iter=10)),
+        CSBoostClassifier(XGBClassifier(n_estimators=5, max_depth=2)),
+        CSTreeClassifier(max_depth=3),
+        CSForestClassifier(n_estimators=3, max_depth=2, random_state=0),
+        CSBaggingClassifier(n_estimators=3, random_state=0),
+        CSThresholdClassifier(LogisticRegression(), calibrator=None),
+        CSRateClassifier(LogisticRegression()),
+    ],
+    ids=estimator_id,
+)
+@pytest.mark.parametrize('baseline', ['one', 0.5])
+def test_savings_baseline_is_a_fit_parameter(estimator, baseline, savings_mixture, noisy_data):
+    X, y = noisy_data
+    clone(estimator).set_params(loss=savings_mixture).fit(X, y, baseline=baseline, **SAVINGS_PARAMS)
+
+
+@pytest.mark.parametrize('baseline', ['zero_one', 'one'])
+def test_a_threshold_follows_the_baseline_of_a_savings_mixture(baseline, savings_mixture, noisy_data):
+    X, y = noisy_data
+    fp_cost, fn_cost, _, _ = savings_mixture._decision_costs(y, baseline=baseline, **SAVINGS_PARAMS)
+    model = CSThresholdClassifier(LogisticRegression(), calibrator=None, loss=savings_mixture)
+    model.fit(X, y, baseline=baseline, **SAVINGS_PARAMS)
+    assert model.threshold_ == pytest.approx(float(fp_cost) / float(fp_cost + fn_cost))
 
 
 def test_a_mixture_of_strategy_types_gets_the_models_own_error():

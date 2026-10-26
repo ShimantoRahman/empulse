@@ -69,7 +69,7 @@ def _class_dependent_metric(loss: BaseMetric, y: IntNDArray, loss_params: dict[s
 
 def _extract_loss_params(params: dict[str, Any], loss: BaseMetric) -> dict[str, Any]:
     loss_params = {}
-    loss_param_names = loss._all_parameters
+    loss_param_names = loss._all_parameters | loss._extra_parameters
     for param_name in list(params.keys()):
         if param_name in loss_param_names:
             loss_params[param_name] = params[param_name]
@@ -443,7 +443,9 @@ class CSDecisionRuleClassifier(PassesXThrough, ClassesFromEstimator, CostSensiti
                 }
             loss_params = self._add_standard_costs_to_params(**costs, params=loss_params)
             y_score = self._positive_score(X)
-            loss_params = self._normalize_cost_shapes(loss_params, size=len(y_score), names=loss._all_parameters)
+            loss_params = self._normalize_cost_shapes(
+                loss_params, size=len(y_score), names=loss._all_parameters | loss._extra_parameters
+            )
             decision = self._compute_decision_at_predict(y_score, loss, loss_params)
 
         return self._apply_decision(y_score, decision)

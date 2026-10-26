@@ -233,6 +233,11 @@ Metrics
 Models
 ------
 
+- |Fix| Cost-sensitive models accept the ``baseline`` of a :class:`~empulse.metrics.Savings` loss in
+  ``fit``, and route it through metadata routing like the cost matrix's parameters. Most models
+  raised a ``TypeError``, and :class:`~empulse.models.CSThresholdClassifier` and
+  :class:`~empulse.models.CSRateClassifier` passed it on to their estimator, so a mixture of savings
+  always trained against the ``'zero_one'`` baseline.
 - |Fix| :class:`~empulse.models.RobustCSClassifier` wraps a :class:`~sklearn.pipeline.Pipeline` whose
   last step is a cost-sensitive classifier. It looked for the loss and the costs on the pipeline itself,
   so it missed a ``loss`` set on the classifier, and passed the costs to ``Pipeline.fit`` under their

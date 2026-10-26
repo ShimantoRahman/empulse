@@ -177,7 +177,7 @@ class CostSensitiveClassifier(RoutesLossParameters, BinaryClassifierTags, ABC, C
             )
         loss = loss_ if loss_ is not None else self._get_default_loss()
 
-        known = loss._all_parameters
+        known = loss._all_parameters | loss._extra_parameters
         loss_params = self._normalize_cost_shapes(loss_params, size=y.size, names=known)
         if self._extra_fit_params is not None:
             unknown = sorted(set(loss_params) - known - self._extra_fit_params)

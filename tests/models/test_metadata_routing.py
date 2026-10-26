@@ -15,7 +15,7 @@ import sympy
 from sklearn import config_context
 from sklearn.model_selection import cross_val_score
 
-from empulse.metrics import Cost, CostMatrix, Metric
+from empulse.metrics import Cost, CostMatrix, Metric, Savings
 from empulse.models import (
     B2BoostClassifier,
     CSBoostClassifier,
@@ -127,6 +127,15 @@ class TestCSDecisionRuleClassifierRoutesFitAndPredict:
         model.set_predict_request(clv=True)
         assert model.get_metadata_routing()._self_request.fit.requests['clv'] is True
         assert model.get_metadata_routing()._self_request.predict.requests['clv'] is True
+
+
+def test_a_loss_parameter_besides_the_cost_matrix_is_routable():
+    """Savings' ``baseline`` is not a symbol of the cost matrix, but the loss takes it, so it is routed."""
+    loss = Metric(CostMatrix().add_fp_cost('a').add_fn_cost('b'), Savings())
+    X, y = sklearn.datasets.make_classification(n_samples=150, random_state=0)
+    model = CSLogitClassifier(loss=loss).set_fit_request(baseline=True, a=True, b=True)
+    assert model.get_metadata_routing().fit.requests['baseline'] is True
+    cross_val_score(model, X, y, params={'baseline': 'one', 'a': 1.0, 'b': 5.0}, cv=3)
 
 
 def test_fit_request_follows_a_loss_replaced_after_fitting():

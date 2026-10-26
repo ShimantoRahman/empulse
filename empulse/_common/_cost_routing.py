@@ -246,13 +246,14 @@ class RoutesLossParameters:
 
     def _loss_parameter_names(self) -> set[str]:
         """
-        Return the cost-matrix parameter names of the loss the next fit uses, or an empty set.
+        Return the parameter names of the loss the next fit uses, or an empty set.
 
-        That is ``self.loss`` where the estimator has one, rather than the copy an earlier fit took
-        (see :meth:`_get_metric_loss`), which ``set_params(loss=...)`` leaves behind.
+        Its cost-matrix parameters and the other keyword arguments it takes, such as Savings'
+        ``baseline``. The loss is ``self.loss`` where the estimator has one, rather than the copy an
+        earlier fit took (see :meth:`_get_metric_loss`), which ``set_params(loss=...)`` leaves behind.
         """
         loss = self.loss if hasattr(self, 'loss') else self._get_metric_loss()
-        return set(loss._all_parameters) if loss is not None else set()
+        return set(loss._all_parameters | loss._extra_parameters) if loss is not None else set()
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         # scikit-learn's __init_subclass__ installs a plain RequestMethod for every set_{method}_request
