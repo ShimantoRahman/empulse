@@ -134,14 +134,14 @@ def robust_cost_correction(theme: dict[str, str]) -> str:
     X = np.linspace(0, 10, 40)[:, None]
     labels = np.tile([0, 1], 20)
     observed = 25 + 4 * X[:, 0] + np.random.default_rng(4).normal(0, 1.2, len(labels))
-    outlier = 28
+    outlier = 29  # a positive row: `clv` is a false-negative cost, so only positive rows are checked
     observed[outlier] = 100
     loss = Metric(CostMatrix().add_fn_cost('clv').add_fp_cost(5).mark_outlier_sensitive('clv'), Cost())
     model = RobustCSClassifier(CSLogitClassifier(loss=loss)).fit(X, labels, clv=observed)
     predicted = model.outlier_estimators_['clv'].predict(X)
     corrected = model.costs_['clv']
-    residuals = np.abs(observed - predicted)
-    standardized = residuals[outlier] / np.std(residuals)
+    residuals = (observed - predicted)[labels == 1]
+    standardized = abs(observed[outlier] - predicted[outlier] - np.mean(residuals)) / np.std(residuals)
     replacement = corrected[outlier]
 
     c = Canvas(960, 628, theme)
@@ -194,7 +194,7 @@ def robust_cost_correction(theme: dict[str, str]) -> str:
         mono=True,
         anchor='start',
     )
-    c.text(590, 297, 'Standardized absolute residual:', size=17, anchor='start')
+    c.text(590, 297, 'Standardized residual:', size=17, anchor='start')
     c.text(
         590,
         327,
