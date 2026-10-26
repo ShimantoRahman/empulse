@@ -8,27 +8,29 @@ import numpy as np
 from ..._types import FloatNDArray
 
 
-def goodness_weights(losses: FloatNDArray) -> FloatNDArray:
+def goodness_weights(losses: FloatNDArray, scale: float = 1.0) -> FloatNDArray:
     """
     Convert per-estimator loss values into normalized, non-negative voting weights.
 
-    A loss points the wrong way for weighting -- a lower value is a better estimator, so it must be
-    inverted before "more weight = better" -- and normalizing signed values by their raw sum is
-    unsound (the sum can be near zero, or individual weights can end up negative). This maps every
-    loss to a "goodness" score, shifts it to be non-negative, and normalizes it to sum to 1.
+    Each estimator weighs ``1 + (mean_loss - loss) / scale``, clipped at zero, so its weight grows
+    by how much better than average it is, measured in units of *scale*. Estimators whose losses
+    differ little relative to the scale vote almost equally, and only one worse than average by a
+    whole *scale* or more loses its vote.
 
     Parameters
     ----------
     losses : ndarray of shape (n_estimators,)
         The loss computed for each estimator (on its out-of-bag samples), lower is better. ``nan``
         for an estimator that has no out-of-bag samples to be judged on.
+    scale : float, default=1.0
+        The loss difference that counts as large: the average cost of a wrong decision, in the
+        units of the loss (see ``loss_scale``).
 
     Returns
     -------
     weights : ndarray of shape (n_estimators,)
         Non-negative weights summing to 1. An estimator without a finite loss gets the average
-        goodness of the others. Falls back to a uniform distribution when every estimator has the
-        same goodness (nothing to distinguish them by) or none has a finite loss.
+        weight. Uniform when no estimator has a finite loss.
     """
     goodness: FloatNDArray = -np.asarray(losses, dtype=np.float64)
     n_estimators = goodness.shape[0]
@@ -36,11 +38,9 @@ def goodness_weights(losses: FloatNDArray) -> FloatNDArray:
     if not finite.any():
         return np.full(n_estimators, 1.0 / n_estimators)
     goodness = np.where(finite, goodness, np.mean(goodness[finite]))
-    shifted = goodness - goodness.min()
-    total = shifted.sum()
-    if total == 0.0:
-        return np.full(n_estimators, 1.0 / n_estimators)
-    weights: FloatNDArray = shifted / total
+    # The unclipped weights sum to n_estimators, so the clipped ones cannot sum to zero.
+    shifted = np.maximum(1.0 + (goodness - goodness.mean()) / scale, 0.0)
+    weights: FloatNDArray = shifted / shifted.sum()
     return weights
 
 

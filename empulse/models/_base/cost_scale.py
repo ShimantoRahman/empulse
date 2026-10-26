@@ -21,3 +21,13 @@ def decision_cost_scale(loss: BaseMetric, y: IntNDArray, **loss_params: Any) -> 
         return 1.0
     fp_cost, fn_cost, tp_cost, tn_cost = loss._decision_costs(y, **loss_params)
     return objective_scale_from_costs(y, -np.asarray(tp_cost), -np.asarray(tn_cost), fp_cost, fn_cost)
+
+
+def loss_scale(loss: BaseMetric, y: IntNDArray, **loss_params: Any) -> float:
+    """
+    Return :func:`decision_cost_scale` in the units of ``loss._loss``.
+
+    The two differ for a loss whose value is not an amount of money, such as the savings, which divide
+    the cost by the baseline's cost.
+    """
+    return decision_cost_scale(loss, y, **loss_params) * loss._cost_weight(y, **loss_params)

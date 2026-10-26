@@ -17,6 +17,7 @@ from ..._common._metaestimators import estimator_has
 from ..._common._sklearn_compat import Tags, get_tags, indices_to_mask, validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric
+from .._base.cost_scale import loss_scale
 from .._base.cost_sensitive import CostSensitiveClassifier, subset_loss_params
 from .._base.ensemble_weighting import accumulate_weighted_prediction, goodness_weights
 from .cstree import CSTreeClassifier, _warn_if_trees_ignore_strategy
@@ -556,7 +557,7 @@ class CSBaggingClassifier(CostSensitiveClassifier):
             oob_loss_params = subset_loss_params(loss_params, mask, n_samples)
             losses[i] = loss._loss(y[mask], y_pred, validate=False, **oob_loss_params)
 
-        weights: FloatNDArray = goodness_weights(losses)
+        weights: FloatNDArray = goodness_weights(losses, scale=loss_scale(loss, y, **loss_params))
         return weights
 
     def _predict_weighted_proba(self, X: FloatNDArray) -> FloatNDArray:

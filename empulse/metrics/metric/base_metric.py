@@ -72,7 +72,8 @@ class BaseMetric(ABC):
       :meth:`_validate_parameters`, :meth:`_parameter_spellings` and
       :meth:`_outlier_sensitive_parameters`.
     - Values: :meth:`_loss`, :meth:`_prepare_count_loss`, :meth:`_closed_form_expected_max_profit`,
-      :meth:`_evaluate_costs`, :meth:`_decision_costs` and :attr:`_decides_from_costs`.
+      :meth:`_evaluate_costs`, :meth:`_decision_costs`, :meth:`_cost_weight` and
+      :attr:`_decides_from_costs`.
     - Training: :meth:`_logit_objective`, :meth:`_logit_value_objective`,
       :meth:`_gradient_boost_objective` and :meth:`_prepare_boost_objective`.
     - Description: :attr:`capabilities` with :meth:`_require`, :attr:`_is_deterministic`,

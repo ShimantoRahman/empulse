@@ -305,14 +305,14 @@ class TestGoodnessWeights:
 
     def test_lower_loss_gets_more_weight(self):
         losses = np.array([1.0, 5.0, 0.5, 10.0])
-        weights = goodness_weights(losses)
+        weights = goodness_weights(losses, scale=100.0)
         assert weights.argmax() == 2  # lowest loss
         assert weights.argmin() == 3  # highest loss
 
     def test_negated_score_ranks_the_same_way(self):
         """A MAXIMIZE metric reaches this via `_loss`, i.e. negated; the best score must still win."""
         scores = np.array([1.0, 5.0, 0.5, 10.0])
-        weights = goodness_weights(-scores)
+        weights = goodness_weights(-scores, scale=100.0)
         assert weights.argmax() == 3  # highest score
         assert weights.argmin() == 2  # lowest score
 
@@ -322,7 +322,7 @@ class TestGoodnessWeights:
         assert weights.sum() == pytest.approx(1.0)
 
     def test_signed_values_do_not_produce_negative_weights(self):
-        """Normalizing signed values by their raw sum can go negative; goodness-shifting must not."""
+        """Normalizing signed values by their raw sum can go negative; these weights must not."""
         weights = goodness_weights(np.array([-10.0, -5.0, 3.0, 8.0]))
         assert (weights >= 0).all()
 
@@ -331,13 +331,31 @@ class TestGoodnessWeights:
         np.testing.assert_allclose(weights, np.full(3, 1 / 3))
 
     def test_a_non_finite_loss_gets_the_average_goodness(self):
-        # Goodness -1, -2 (the mean of the finite ones) and -3, shifted to 2, 1 and 0.
+        # Goodness -1, -2 (the mean of the finite ones) and -3, so 1 plus their deviations is 2, 1 and 0.
         weights = goodness_weights(np.array([1.0, np.nan, 3.0]))
         np.testing.assert_allclose(weights, [2 / 3, 1 / 3, 0.0])
 
     def test_only_non_finite_losses_fall_back_to_uniform(self):
         weights = goodness_weights(np.array([np.nan, np.inf, np.nan]))
         np.testing.assert_allclose(weights, np.full(3, 1 / 3))
+
+    def test_near_equal_losses_get_near_equal_weights(self):
+        """The worst estimator keeps its vote when it is only slightly worse than the others."""
+        weights = goodness_weights(np.array([1.0, 1.01]), scale=1.0)
+        np.testing.assert_allclose(weights, [0.5025, 0.4975])
+
+    def test_one_bad_estimator_does_not_change_how_the_others_compare(self):
+        weights = goodness_weights(np.array([1.0, 1.01, 5.0]), scale=1.0)
+        assert weights[2] == 0.0
+        assert weights[0] == pytest.approx(weights[1], rel=0.01)
+
+    def test_an_estimator_a_whole_scale_worse_than_average_loses_its_vote(self):
+        weights = goodness_weights(np.array([0.0, 0.0, 3.0]), scale=1.0)
+        np.testing.assert_allclose(weights, [0.5, 0.5, 0.0])
+
+    def test_weights_do_not_depend_on_the_units_of_the_loss(self):
+        losses = np.array([1.0, 1.4, 0.7, 2.5])
+        np.testing.assert_allclose(goodness_weights(losses, scale=0.8), goodness_weights(64 * losses, scale=64 * 0.8))
 
 
 class TestSubsetLossParams:
