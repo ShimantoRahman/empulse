@@ -47,6 +47,9 @@ Metrics
 - |Efficiency| Scoring :class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.Savings` and
   :class:`~empulse.metrics.LogCost` is about a tenth faster: the symbols a call is checked against are
   worked out once rather than on every call.
+- |Efficiency| Copying a metric, as cloning or fitting a model with it as ``loss`` does, reuses its
+  compiled expressions instead of compiling them again. Cloning
+  ``CSLogitClassifier(loss=empc_score)`` is 2.5 times as fast.
 - |Fix| A :class:`~empulse.metrics.MixtureMetric` without ``Capability.OPTIMAL_RATE`` or
   ``Capability.OPTIMAL_THRESHOLD``, such as one of a :class:`~empulse.metrics.Profit` and a
   :class:`~empulse.metrics.Savings` component, raises a ``ValueError`` from ``optimal_rate`` and

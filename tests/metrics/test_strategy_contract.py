@@ -149,10 +149,11 @@ def test_picklable_lambda_multiple_variables():
     assert restored(x=2, y=3) == pl(x=2, y=3) == 8
 
 
-def test_picklable_lambda_deepcopy_shares_the_compiled_function():
+@pytest.mark.parametrize('dummify', [False, True])
+def test_picklable_lambda_deepcopy_shares_the_compiled_function(dummify):
     """Deep-copying (e.g. when cloning an estimator) reuses the compiled function instead of recompiling."""
     x, y = sympy.symbols('x y')
-    pl = PicklableLambda(x * y + x)
+    pl = PicklableLambda(x * y + x, dummify=dummify)
 
     copied = copy.deepcopy(pl)
     assert copied is not pl
@@ -160,9 +161,10 @@ def test_picklable_lambda_deepcopy_shares_the_compiled_function():
     assert copied(x=2, y=3) == 8
 
 
-def test_picklable_lambda_reuses_the_function_compiled_for_an_equal_expression():
+@pytest.mark.parametrize('dummify', [False, True])
+def test_picklable_lambda_reuses_the_function_compiled_for_an_equal_expression(dummify):
     x = sympy.Symbol('x')
-    assert PicklableLambda(x**2 + 1).func is PicklableLambda(x**2 + 1).func
+    assert PicklableLambda(x**2 + 1, dummify=dummify).func is PicklableLambda(x**2 + 1, dummify=dummify).func
 
 
 def test_picklable_lambda_dummify_keeps_functions_named_like_a_variable():

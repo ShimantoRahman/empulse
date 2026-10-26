@@ -9,7 +9,6 @@ compiled function with only the keyword arguments it actually uses, via :func:`_
 since a cost expression's compiled function only accepts the free symbols it was built from.
 """
 
-import copy
 import inspect
 import re
 from collections.abc import Callable, Iterable
@@ -127,7 +126,9 @@ class PicklableLambda:
         # The compiled function is stateless and the expression immutable, so a copy shares both
         # instead of compiling again, as the default deepcopy through pickling would. Cloning an
         # estimator deep-copies its loss, so this saves one compile per clone in a grid search.
-        new = copy.copy(self)
+        # Not copy.copy, which goes through __getstate__ and __setstate__ and so compiles again.
+        new = object.__new__(type(self))
+        new.__dict__.update(self.__dict__)
         memo[id(self)] = new
         return new
 
@@ -172,6 +173,23 @@ def _calls_an_argument(func: Callable[..., Any], names: tuple[str, ...]) -> bool
 def _dummified_lambdify(variables: tuple[sympy.Symbol, ...], expression: sympy.Expr) -> Callable[..., Any]:
     """
     Compile *expression* with private argument names, accepting arguments by position or by symbol name.
+
+    Reuses the function compiled for an equal expression, as :func:`_lambdify` does.
+    """
+    try:
+        return _cached_dummified_lambdify(variables, expression)
+    except TypeError:  # an unhashable expression, e.g. a mutable sympy Matrix
+        return _compile_dummified(variables, expression)
+
+
+@lru_cache(maxsize=1024)
+def _cached_dummified_lambdify(variables: tuple[sympy.Symbol, ...], expression: sympy.Expr) -> Callable[..., Any]:
+    return _compile_dummified(variables, expression)
+
+
+def _compile_dummified(variables: tuple[sympy.Symbol, ...], expression: sympy.Expr) -> Callable[..., Any]:
+    """
+    See :func:`_dummified_lambdify`.
 
     Substituted here rather than with lambdify's own `dummify`, which still binds the symbols' names in
     the function's namespace, where they shadow functions of the same name.
