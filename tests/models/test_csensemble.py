@@ -205,6 +205,32 @@ class TestCSForestWarmStart:
             model.set_params(n_estimators=2).fit(X, y, fp_cost=1.0, fn_cost=5.0)
 
 
+class TestCSBaggingSingleClassBootstrap:
+    """A bootstrap sample that draws no sample of the rare class becomes a tree of one leaf, not an error."""
+
+    @pytest.mark.parametrize('combination', ['majority_voting', 'weighted_voting'])
+    def test_a_rare_class_does_not_abort_the_fit(self, seeded_rng, combination):
+        X = seeded_rng.normal(size=(40, 3))
+        y = np.array(['no'] * 40, dtype=object)
+        y[:2] = 'yes'
+        model = CSBaggingClassifier(n_estimators=10, combination=combination, random_state=0)
+        model.fit(X, y, fp_cost=1.0, fn_cost=5.0)
+
+        assert any(estimator.get_n_leaves() == 1 for estimator in model.estimators_)
+        assert set(model.predict(X)) <= {'no', 'yes'}
+        assert model.predict_proba(X).shape == (40, 2)
+
+    def test_bagged_trees_are_still_cost_sensitive_trees(self, classification_data):
+        X, y = classification_data
+        model = CSBaggingClassifier(n_estimators=3, random_state=0).fit(X, y, fp_cost=1.0, fn_cost=5.0)
+        assert type(model.base_estimator_) is CSTreeClassifier
+        assert all(isinstance(estimator, CSTreeClassifier) for estimator in model.estimators_)
+
+    def test_a_standalone_tree_still_rejects_a_single_class(self):
+        with pytest.raises(ValueError, match='only one class'):
+            CSTreeClassifier().fit(np.zeros((5, 2)), np.zeros(5), fp_cost=1.0, fn_cost=5.0)
+
+
 class TestCSForestOutOfBag:
     def test_oob_decision_function_averages_the_trees_that_left_each_sample_out(self, make_data):
         X, y = make_data(n_samples=300)

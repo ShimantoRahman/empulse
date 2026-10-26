@@ -150,9 +150,7 @@ class CostSensitiveClassifier(RoutesLossParameters, BinaryClassifierTags, ABC, C
         X, y = X_checked, y_checked
         check_binary_target(y)
         if not isinstance(self, MetaEstimatorMixin):
-            self.classes_ = np.unique(y)
-            if len(self.classes_) == 1:
-                raise ValueError("Classifier can't train when only one class is present.")
+            self.classes_ = self._classes_of(y)
             y = np.where(y == self.classes_[1], 1, 0)
 
         self._take_fit_local_loss()
@@ -190,6 +188,13 @@ class CostSensitiveClassifier(RoutesLossParameters, BinaryClassifierTags, ABC, C
         loss._validate_parameters(**{name: value for name, value in loss_params.items() if name in known})
 
         return self._fit(X, y, loss=loss, **loss_params)
+
+    def _classes_of(self, y: NDArray[Any]) -> NDArray[Any]:
+        """Return the sorted classes of the binary target *y*, raising if it holds only one."""
+        classes: NDArray[Any] = np.unique(y)
+        if len(classes) == 1:
+            raise ValueError("Classifier can't train when only one class is present.")
+        return classes
 
     @abstractmethod
     def _fit(self, X: FloatNDArray, y: IntNDArray, loss: BaseMetric, **loss_params: Any) -> Self: ...

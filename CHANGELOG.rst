@@ -243,6 +243,8 @@ Models
   so ``predict`` failed on other data or applied the wrong thresholds, and weighted voting in
   :class:`~empulse.models.CSForestClassifier` and :class:`~empulse.models.CSBaggingClassifier` raised
   a length mismatch.
+- |Fix| :class:`~empulse.models.CSBaggingClassifier` fits when a bootstrap sample holds only one
+  class, which then gives a tree of a single leaf. It raised a ``ValueError``.
 - |Fix| Cost-sensitive models accept the ``baseline`` of a :class:`~empulse.metrics.Savings` loss in
   ``fit``, and route it through metadata routing like the cost matrix's parameters. Most models
   raised a ``TypeError``, and :class:`~empulse.models.CSThresholdClassifier` and

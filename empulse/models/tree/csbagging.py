@@ -4,6 +4,7 @@ from typing import Any, ClassVar, Literal, Self
 
 import numpy as np
 from joblib import Parallel, delayed
+from numpy.typing import NDArray
 from sklearn import config_context
 from sklearn.base import clone
 from sklearn.ensemble import BaggingClassifier
@@ -388,8 +389,11 @@ class CSBaggingClassifier(CostSensitiveClassifier):
             )
 
         with config_context(enable_metadata_routing=True):
+            bagged_estimator = self.base_estimator_
+            if type(bagged_estimator) is CSTreeClassifier:
+                bagged_estimator = _BaggedCSTreeClassifier(**bagged_estimator.get_params(deep=False))
             self.estimator_ = BaggingClassifier(
-                estimator=self.base_estimator_.set_fit_request(tp_cost=True, fp_cost=True, tn_cost=True, fn_cost=True),
+                estimator=bagged_estimator.set_fit_request(tp_cost=True, fp_cost=True, tn_cost=True, fn_cost=True),
                 n_estimators=self.n_estimators,
                 max_features=self.max_features,
                 bootstrap=self.bootstrap,
@@ -566,3 +570,19 @@ class CSBaggingClassifier(CostSensitiveClassifier):
         )
 
         return all_proba
+
+
+class _BaggedCSTreeClassifier(CSTreeClassifier):
+    """
+    A :class:`CSTreeClassifier` for bagging, which fits a bootstrap sample holding only one class.
+
+    The bagging ensemble trains on the 0/1 encoding of the target, so both classes are known even when
+    a bootstrap sample of a rare class draws none of it. The tree then becomes a single leaf, which
+    votes for whichever class costs least on the samples it was drawn.
+    """
+
+    def _classes_of(self, y: NDArray[Any]) -> NDArray[Any]:
+        classes = np.array([0, 1])
+        if not np.isin(y, classes).all():
+            raise ValueError(f'A bagged tree is trained on the 0/1 encoded target, got the classes {np.unique(y)}.')
+        return classes
