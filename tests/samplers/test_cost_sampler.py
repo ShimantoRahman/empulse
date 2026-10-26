@@ -12,7 +12,7 @@ import pytest
 from sklearn import config_context
 from sklearn.datasets import make_classification
 
-from empulse.metrics import Cost, CostMatrix, Metric, MixtureComponent, MixtureMetric
+from empulse.metrics import Cost, CostMatrix, Metric, MixtureComponent, MixtureMetric, Savings
 from empulse.samplers import CostSensitiveSampler
 
 METHODS = ['rejection sampling', 'oversampling']
@@ -158,6 +158,25 @@ def test_mixture_metric_loss_is_used_not_silently_ignored(data):
     )
     assert np.array_equal(from_mixture[0], from_plain[0])
     assert np.array_equal(from_mixture[1], from_plain[1])
+
+
+def test_a_mixture_of_savings_weighs_each_components_costs_by_its_baseline(data):
+    """The sampler weighs the rows by the costs the mixture's score weighs, not by the mixture weights alone."""
+    X, y = data
+    mixture = MixtureMetric([
+        MixtureComponent(0.5, Metric(CostMatrix().add_fp_cost('a').add_fn_cost('b'), Savings()), {}),
+        MixtureComponent(0.5, Metric(CostMatrix().add_fp_cost('c').add_fn_cost('d'), Savings()), {}),
+    ])
+    params = {'a': 1.0, 'b': 5.0, 'c': 2.0, 'd': 1.0}
+    fp_cost, fn_cost, _, _ = mixture._decision_costs(y.astype(np.float64), **params)
+
+    from_mixture = CostSensitiveSampler(method='rejection sampling', loss=mixture, random_state=42).fit_resample(
+        X, y, **params
+    )
+    from_costs = CostSensitiveSampler(method='rejection sampling', random_state=42).fit_resample(
+        X, y, fp_cost=float(fp_cost), fn_cost=float(fn_cost)
+    )
+    assert np.array_equal(from_mixture[0], from_costs[0])
 
 
 class TestCostSensitiveSamplerRouting:

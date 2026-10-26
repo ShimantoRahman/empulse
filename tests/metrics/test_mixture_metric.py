@@ -698,7 +698,8 @@ class TestSavingsComponents:
 
     def test_the_decision_needs_the_labels(self, mixture, metric):
         assert Capability.COST_ONLY_DECISION not in mixture.capabilities
-        assert Capability.EXPECTED_COST not in mixture.capabilities
+        # Its score is still an expected cost, of the costs each weighed by its baseline.
+        assert Capability.EXPECTED_COST in mixture.capabilities
         assert {Capability.OPTIMAL_THRESHOLD, Capability.OPTIMAL_RATE} <= mixture.capabilities
         # One component weighs nothing against another, so its decision is the component's own.
         assert Capability.COST_ONLY_DECISION in MixtureMetric([MixtureComponent(1.0, metric, {})]).capabilities

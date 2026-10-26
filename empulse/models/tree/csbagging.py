@@ -351,7 +351,7 @@ class CSBaggingClassifier(CostSensitiveClassifier):
             raise ValueError('Weighted voting is only available when bootstrap=True.')
 
         _warn_if_trees_ignore_strategy(loss, type(self).__name__, loss_used_for='weighted voting')
-        fp_cost, fn_cost, tp_cost, tn_cost = loss._evaluate_costs(replace_stochastic=True, **loss_params)
+        fp_cost, fn_cost, tp_cost, tn_cost = loss._decision_costs(np.asarray(y).reshape(-1), **loss_params)
 
         n_samples = X.shape[0]
         for name, cost in zip(

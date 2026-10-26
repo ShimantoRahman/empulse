@@ -9,6 +9,7 @@ everywhere a ``Metric`` is.
 """
 
 import pickle
+import warnings
 from typing import ClassVar
 
 import numpy as np
@@ -657,6 +658,22 @@ def noisy_data():
 def test_savings_baseline_is_a_fit_parameter(estimator, baseline, savings_mixture, noisy_data):
     X, y = noisy_data
     clone(estimator).set_params(loss=savings_mixture).fit(X, y, baseline=baseline, **SAVINGS_PARAMS)
+
+
+@pytest.mark.parametrize('baseline', ['zero_one', 'one'])
+def test_a_tree_grows_on_the_costs_a_savings_mixture_weighs(baseline, savings_mixture, noisy_data):
+    X, y = noisy_data
+    fp_cost, fn_cost, _, _ = savings_mixture._decision_costs(y, baseline=baseline, **SAVINGS_PARAMS)
+
+    with warnings.catch_warnings():
+        # It optimizes the mixture itself, so it does not warn that it only minimizes an expected cost.
+        warnings.simplefilter('error', UserWarning)
+        tree = CSTreeClassifier(loss=savings_mixture, max_depth=4, random_state=0).fit(
+            X, y, baseline=baseline, **SAVINGS_PARAMS
+        )
+    reference = CSTreeClassifier(max_depth=4, random_state=0).fit(X, y, fp_cost=float(fp_cost), fn_cost=float(fn_cost))
+
+    np.testing.assert_array_equal(tree.predict(X), reference.predict(X))
 
 
 @pytest.mark.parametrize('baseline', ['zero_one', 'one'])

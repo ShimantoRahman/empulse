@@ -255,20 +255,19 @@ class CostSensitiveSampler(RoutesLossParameters, BaseSampler):  # type: ignore[m
     ) -> tuple[NDArray[Any], NDArray[Any]]:
         self._take_fit_local_loss()
         loss_ = self._get_metric_loss()
+        self.classes_ = np.unique(y)
+        is_positive = y == self._resolve_pos_label()
 
         if loss_ is not None:
             loss_params = self._route_costs_to_loss(
                 loss_, loss_params, fp_cost=fp_cost, fn_cost=fn_cost, caller='fit_resample'
             )
             loss_._validate_parameters(**loss_params)
-            fp_cost, fn_cost, tp_cost, tn_cost = loss_._evaluate_costs(replace_stochastic=True, **loss_params)
+            fp_cost, fn_cost, tp_cost, tn_cost = loss_._decision_costs(is_positive.astype(np.float64), **loss_params)
         else:
             resolved = self._check_costs(fp_cost=fp_cost, fn_cost=fn_cost, caller='fit_resample')
             fp_cost, fn_cost = resolved['fp_cost'], resolved['fn_cost']
             tp_cost = tn_cost = 0.0
-
-        self.classes_ = np.unique(y)
-        is_positive = y == self._resolve_pos_label()
         # What deciding a sample wrongly costs over deciding it rightly.
         misclassification_costs = np.abs(
             np.where(is_positive, np.asarray(fn_cost, dtype=np.float64), np.asarray(fp_cost, dtype=np.float64))

@@ -77,12 +77,15 @@ class Capability(Enum):
         ``fp_cost``, ``fn_cost``), which is what a model needs to feed a cost-sensitive criterion
         (e.g. a decision tree's split criterion) that only accepts scalar, class-dependent costs.
     EXPECTED_COST : Capability
-        The score is the expected cost of the cost matrix, averaged over the samples with ``y_score``
-        read as a calibrated probability, or an increasing or decreasing affine map of it. A model
-        that minimizes the expected cost directly from the evaluated (instance-dependent) costs, such
+        For given labels, the score is the expected cost of the metric's decision costs, averaged
+        over the samples with ``y_score`` read as a calibrated probability, or an increasing or
+        decreasing affine map of it. The decision costs are those of the cost matrix; a
+        :class:`~empulse.metrics.MixtureMetric` weighs each component's by how much its score
+        changes per unit of cost, which for :class:`~empulse.metrics.Savings` depends on the labels.
+        A model that minimizes the expected cost directly from those (instance-dependent) costs, such
         as a tree split on cost impurity, then optimizes the metric itself. Present for
         :class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.Profit` and
-        :class:`~empulse.metrics.Savings`.
+        :class:`~empulse.metrics.Savings`, and for mixtures of them.
     RANKING : Capability
         The score depends on ``y_score`` only through how it ranks the samples, ties included: any
         strictly increasing transformation of the scores gives the same score. A model can then

@@ -22,10 +22,12 @@ Metrics
   the cost of its baseline, but the mixture combined the costs with the mixture weights alone, so the
   component with the largest costs decided: in one example the threshold was 0.78 instead of 0.46,
   which cut the savings from -0.50 to -1.33. The ``optimal_threshold``, ``optimal_rate``,
-  training objectives and :class:`~empulse.models.CSThresholdClassifier` now weigh each component by
-  its mixture weight over its baseline's cost. That weight depends on the labels, so such a mixture no
-  longer has ``Capability.COST_ONLY_DECISION`` (it cannot decide from costs passed to ``predict``) or
-  ``Capability.EXPECTED_COST``.
+  training objectives, the trees of :class:`~empulse.models.CSTreeClassifier`,
+  :class:`~empulse.models.CSForestClassifier` and :class:`~empulse.models.CSBaggingClassifier`,
+  :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.samplers.CostSensitiveSampler`
+  now weigh each component by its mixture weight over its baseline's cost. That weight depends on the
+  labels, so such a mixture no longer has ``Capability.COST_ONLY_DECISION``: it cannot decide from
+  costs passed to ``predict``.
 - |Feature| :meth:`CostMatrix.constrain <empulse.metrics.CostMatrix.constrain>` and
   :meth:`MixtureMetric.constrain <empulse.metrics.MixtureMetric.constrain>` take a condition relating
   several parameters, written as a comparison such as ``'clv > incentive_cost'`` or as a sympy

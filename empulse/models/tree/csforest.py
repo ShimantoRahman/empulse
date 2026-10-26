@@ -457,8 +457,8 @@ class CSForestClassifier(CostSensitiveClassifier):
         _warn_if_trees_ignore_strategy(
             loss, type(self).__name__, loss_used_for='the out-of-bag score and weighted voting'
         )
-        fp_cost, fn_cost, tp_cost, tn_cost = loss._evaluate_costs(replace_stochastic=True, **loss_params)
         y = np.asarray(y).reshape(-1)
+        fp_cost, fn_cost, tp_cost, tn_cost = loss._decision_costs(y, **loss_params)
         n_samples, n_features = X.shape
         records = cost_records(y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
         cost_scale = decision_cost_scale(loss, y, **loss_params)

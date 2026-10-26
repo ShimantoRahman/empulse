@@ -174,7 +174,7 @@ class MixtureMetric(BaseMetric):
     :class:`~empulse.metrics.Savings` divides each component's cost by the cost of that component's
     baseline, so a mixture of savings combines the costs, and trains models, with each weight divided
     by that baseline cost too. That depends on the labels, so such a mixture lacks
-    ``Capability.COST_ONLY_DECISION`` and ``Capability.EXPECTED_COST``.
+    ``Capability.COST_ONLY_DECISION``.
 
     Read more in the :ref:`User Guide <metric_objects>`.
 
@@ -440,10 +440,10 @@ class MixtureMetric(BaseMetric):
             # The decision follows from the combined costs only through one strategy's rule.
             capabilities -= {Capability.COST_ONLY_DECISION, Capability.OPTIMAL_THRESHOLD, Capability.OPTIMAL_RATE}
         if self._label_dependent_cost_weight and len(self.components) > 1:
-            # The labels weigh the components' costs, as the savings divide each by its baseline's cost.
-            # So the decision needs the labels, and the costs summed with the mixture weights alone
-            # are not what the score weighs.
-            capabilities -= {Capability.COST_ONLY_DECISION, Capability.EXPECTED_COST}
+            # The labels weigh the components' costs, as the savings divide each by its baseline's cost,
+            # so the decision needs the labels. The score is still an expected cost: that of
+            # `_decision_costs`, which are weighed alike.
+            capabilities -= {Capability.COST_ONLY_DECISION}
         return capabilities
 
     @property
