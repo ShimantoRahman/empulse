@@ -66,11 +66,10 @@ class RobustCSClassifier(  # type: ignore[misc]
         If not provided, a :class:`sklearn:sklearn.linear_model.HuberRegressor` is used with default settings.
     outlier_threshold : float, default=2.5
         The threshold for the standardized residuals to detect outliers.
-        A residual is standardized by dividing its absolute value by the standard deviation of the
-        absolute residuals. If the standardized residual is greater than the threshold, the cost is
-        an outlier and will be imputed with the predicted cost. The standard deviation of absolute
-        residuals is smaller than that of the residuals (about 0.6 times for normal residuals), so the
-        default flags residuals more than about 1.5 standard deviations from the prediction.
+        A residual, the cost minus its predicted cost, is standardized by subtracting the mean of the
+        residuals and dividing by their standard deviation. If the absolute standardized residual is
+        greater than the threshold, the cost is an outlier and will be imputed with the predicted cost.
+        The default therefore flags residuals more than 2.5 standard deviations from the mean.
 
     detect_outliers_for : {'all', 'tp_cost', 'tn_cost', 'fn_cost', 'fp_cost', list}, default='all'
         The costs for which to detect outliers.
@@ -137,7 +136,11 @@ class RobustCSClassifier(  # type: ignore[misc]
     -----
     Constant costs are not used for outlier detection and imputation.
 
-    Code adapted from [1]_.
+    Code adapted from [1]_, with one deviation: [1]_ divides the absolute residuals by their own
+    standard deviation, which is about 0.6 times that of the residuals when they are normally
+    distributed, so a threshold of 2.5 there flags residuals beyond about 1.5 standard deviations.
+    Here the residuals are standardized, so ``outlier_threshold`` is the number of standard deviations
+    it says.
 
     References
     ----------
@@ -429,10 +432,10 @@ class RobustCSClassifier(  # type: ignore[misc]
     def _impute_outliers(self, outlier_estimator: Any, X: FloatNDArray, target: FloatNDArray) -> FloatNDArray:
         """Predict costs with *outlier_estimator* and replace outlier values in *target*."""
         predictions = outlier_estimator.predict(X)
-        residuals = np.abs(target - predictions)
+        residuals = target - predictions
         std = np.std(residuals)
-        std_residuals = residuals / std if std > 0 else np.zeros_like(residuals)
-        outliers = std_residuals > self.outlier_threshold
+        std_residuals = (residuals - np.mean(residuals)) / std if std > 0 else np.zeros_like(residuals)
+        outliers = np.abs(std_residuals) > self.outlier_threshold
         return np.where(outliers, predictions, target)
 
     def _impute_metric_costs(

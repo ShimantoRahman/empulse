@@ -251,6 +251,10 @@ Models
   :class:`~empulse.models.CSBaggingClassifier` weighs each estimator by how much better than average
   its out-of-bag loss is, relative to the average cost of a wrong decision. The worst estimator always
   got no vote, so of two nearly equal trees only one counted.
+- |Fix| :class:`~empulse.models.RobustCSClassifier` standardizes the residuals of the costs, so
+  ``outlier_threshold`` is a number of standard deviations. It divided the absolute residuals by
+  their own standard deviation, as the original paper does, so the default of 2.5 flagged costs
+  beyond about 1.5 standard deviations, around 13% of normally distributed costs instead of 1%.
 - |Fix| Cost-sensitive models accept the ``baseline`` of a :class:`~empulse.metrics.Savings` loss in
   ``fit``, and route it through metadata routing like the cost matrix's parameters. Most models
   raised a ``TypeError``, and :class:`~empulse.models.CSThresholdClassifier` and

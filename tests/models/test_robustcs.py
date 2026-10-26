@@ -268,6 +268,32 @@ def test_outliers_of_a_one_class_plain_cost_are_measured_among_that_class_only()
     assert not (y[changed] == 0).any()
 
 
+def test_outlier_threshold_counts_standard_deviations_of_the_residuals(seeded_rng):
+    """With normal residuals, a threshold of 2.5 flags the about 1.2% of costs beyond 2.5 standard deviations."""
+    n_samples = 20_000
+    X = seeded_rng.normal(size=(n_samples, 2))
+    y = np.tile([0, 1], n_samples // 2)
+    fn_cost = 100 + 10 * X[:, 0] + seeded_rng.normal(0, 5, n_samples)
+
+    model = RobustCSClassifier(CSLogitClassifier(), detect_outliers_for='fn_cost').fit(
+        X, y, fn_cost=fn_cost, fp_cost=5.0
+    )
+
+    flagged = np.mean(~np.isclose(model.costs_['fn_cost'], fn_cost)[y == 1])
+    assert flagged == pytest.approx(0.0124, abs=0.004)
+
+
+def test_residuals_are_centered_before_they_are_compared_with_the_threshold():
+    class Zero:
+        def predict(self, X):
+            return np.zeros(len(X))
+
+    # Residuals of 50 plus or minus 1: none is an outlier once centered, however far from zero they are.
+    target = 50.0 + np.tile([-1.0, 1.0], 10)
+    imputed = RobustCSClassifier(CSLogitClassifier())._impute_outliers(Zero(), np.zeros((20, 1)), target)
+    np.testing.assert_array_equal(imputed, target)
+
+
 @pytest.mark.parametrize(
     ('outlier_estimator', 'allow_nan'),
     [(None, False), (HuberRegressor(), False), (HistGradientBoostingRegressor(), True)],
