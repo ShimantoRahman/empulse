@@ -33,7 +33,7 @@ cdef class Splitter:
     # Parameters
     cdef CriterionKind kind
     cdef bint random                 # draw one random threshold per feature instead of trying all
-    cdef bint track_oracle           # sum the per-sample cheapest costs, for the cost bound
+    cdef bint track_oracle           # sum the per-sample cheapest costs, for the cost bound and can_lower_cost
     cdef intp_t max_features
     cdef intp_t min_samples_leaf
     cdef float64_t min_weight_leaf
@@ -56,4 +56,5 @@ cdef class Splitter:
     cdef void node_reset(self, intp_t start, intp_t end, float64_t* weighted_n_node_samples) noexcept nogil
     cdef float64_t node_impurity(self) noexcept nogil
     cdef float64_t max_cost_decrease(self) noexcept nogil
+    cdef bint can_lower_cost(self) noexcept nogil
     cdef int node_split(self, float64_t impurity, SplitRecord* split, intp_t* n_constant_features) except -1 nogil

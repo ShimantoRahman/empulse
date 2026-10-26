@@ -546,10 +546,13 @@ cdef inline bint _is_unsplittable(
         or weighted_n_node_samples < 2 * params.min_weight_leaf
         # impurity == 0 with tolerance due to rounding errors
         or impurity <= params.epsilon
-        # A node of one class is a leaf, whatever its costs: shifting a class's costs by a constant,
-        # which changes no decision, leaves the cost impurity of such a node above zero.
-        or splitter.total.cw[0] <= 0.0
-        or splitter.total.cw[1] <= 0.0
+        # A node of one class is a leaf unless its samples disagree on the cheaper decision: shifting a
+        # class's costs by a constant, which changes no decision, leaves the cost impurity of such a
+        # node above zero. The other criteria are zero on a node of one class.
+        or (
+            (splitter.total.cw[0] <= 0.0 or splitter.total.cw[1] <= 0.0)
+            and not (splitter.track_oracle and splitter.can_lower_cost())
+        )
         or (params.cost_bound and splitter.max_cost_decrease() + params.epsilon < params.min_impurity_decrease)
     )
 

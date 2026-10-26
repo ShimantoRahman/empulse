@@ -429,3 +429,22 @@ def test_a_node_of_one_class_is_a_leaf(make_data, costs):
     internal = tree.children_left != -1
     class_shares = tree.value[internal, 0, :]
     assert np.all(class_shares > 0)
+
+
+@pytest.mark.parametrize('min_impurity_decrease', [None, 0.0])
+def test_a_node_of_one_class_splits_where_its_samples_disagree_on_the_cheaper_decision(
+    seeded_rng, min_impurity_decrease
+):
+    """Negatives whose cost of being left alone exceeds their cost of being targeted are best targeted."""
+    X = seeded_rng.random((400, 2))
+    y = (X[:, 0] > 0.5).astype(int)
+    costs = {
+        'tp_cost': 0.0,
+        'fn_cost': 1.0,
+        'fp_cost': 4.0,
+        'tn_cost': np.where(X[:, 1] > 0.75, 5.0, 0.0),
+    }
+    tree = CSTreeClassifier(min_impurity_decrease=min_impurity_decrease, random_state=0).fit(X, y, **costs)
+
+    targeted_negatives = (y == 0) & (costs['tn_cost'] > costs['fp_cost'])
+    np.testing.assert_array_equal(tree.predict(X), np.where((y == 1) | targeted_negatives, 1, 0))

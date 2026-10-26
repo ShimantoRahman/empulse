@@ -70,7 +70,8 @@ cdef class Splitter:
     seed : int
         Seed of the feature and threshold draws.
     track_oracle : bool
-        Sum the cheapest cost of every sample of a node, which ``max_cost_decrease`` needs.
+        Sum the cheapest cost of every sample of a node, which ``max_cost_decrease`` and
+        ``can_lower_cost`` need.
     missing_mask : ndarray of shape (n_features,), dtype uint8, or None
         Whether any row misses each feature (is NaN). ``None`` when no row misses any.
     """
@@ -185,10 +186,19 @@ cdef class Splitter:
         cdef float64_t pos_cost = self.total.cp[0] + self.total.cp[1]
         cdef float64_t neg_cost = self.total.cn[0] + self.total.cn[1]
         cdef float64_t node_cost = fast_fmin(pos_cost, neg_cost)
-        cdef float64_t slack = ROUNDING * (self.end - self.start + 1) * (
-            abs(pos_cost) + abs(neg_cost) + abs(self.oracle)
-        )
-        return (node_cost - self.oracle + slack) / self.weighted_n_samples
+        return (node_cost - self.oracle + _oracle_slack(self, pos_cost, neg_cost)) / self.weighted_n_samples
+
+    cdef bint can_lower_cost(self) noexcept nogil:
+        """
+        Whether some split could lower the node's cost, beyond rounding.
+
+        A split can only where the samples disagree on which decision is cheaper, so that the node's
+        cost exceeds the sum of w min(a, b). Only meaningful for the cost criterion, with ``track_oracle``.
+        """
+        cdef float64_t pos_cost = self.total.cp[0] + self.total.cp[1]
+        cdef float64_t neg_cost = self.total.cn[0] + self.total.cn[1]
+        cdef float64_t node_cost = fast_fmin(pos_cost, neg_cost)
+        return node_cost - self.oracle > _oracle_slack(self, pos_cost, neg_cost)
 
     cdef int node_split(self, float64_t impurity, SplitRecord* split, intp_t* n_constant_features) except -1 nogil:
         """
@@ -330,6 +340,11 @@ cdef class Splitter:
         n_constant_features[0] = n_total_constants
         split[0] = best_split
         return 0
+
+cdef inline float64_t _oracle_slack(Splitter self, float64_t pos_cost, float64_t neg_cost) noexcept nogil:
+    """How far the node's cost and its oracle, summed over its samples, may be apart through rounding alone."""
+    return ROUNDING * (self.end - self.start + 1) * (abs(pos_cost) + abs(neg_cost) + abs(self.oracle))
+
 
 cdef inline void _reset(Splitter self) noexcept nogil:
     """Move every sample of the node to the right child."""

@@ -360,8 +360,9 @@ Models
   ``"entropy"``. It grew with node size, which favoured even splits and let noise pass
   ``min_impurity_decrease``. Trees grown with it change.
 - |Fix| A node of :class:`~empulse.models.CSTreeClassifier`, :class:`~empulse.models.CSForestClassifier`
-  and :class:`~empulse.models.CSBaggingClassifier` that holds a single class is a leaf. With negative
-  or non-zero correct-decision costs such nodes kept splitting without changing any prediction.
+  and :class:`~empulse.models.CSBaggingClassifier` that holds a single class is a leaf, unless its
+  samples disagree on which prediction costs less. With negative or non-zero correct-decision costs
+  such nodes kept splitting without changing any prediction.
 - |Fix| Weighted voting in :class:`~empulse.models.CSForestClassifier` and
   :class:`~empulse.models.CSBaggingClassifier` gives a tree without out-of-bag samples the average
   weight, instead of making every weight uniform (forest) or failing (bagging).

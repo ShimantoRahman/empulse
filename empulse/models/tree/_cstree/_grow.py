@@ -68,6 +68,11 @@ class TreeParams:
         """Whether nodes no split could improve enough become leaves without a split search."""
         return self.criterion == criterion_kind('cost') and self.min_impurity_decrease > 0
 
+    @property
+    def tracks_oracle(self) -> bool:
+        """Whether the splitter sums each node's cheapest cost per sample, for the cost bound and nodes of one class."""
+        return self.criterion == criterion_kind('cost')
+
     def min_weight_leaf(self, n_samples: int, sample_weight: FloatNDArray | None) -> float:
         """Return the least total weight of a leaf."""
         if sample_weight is None:
@@ -194,7 +199,7 @@ def grow_tree(
         params.min_samples_leaf,
         params.min_weight_leaf(n_samples, sample_weight),
         random_state.randint(0, RAND_R_MAX),
-        params.cost_bound,
+        params.tracks_oracle,
         missing_mask,
     )
     tree = CostTree(n_features)
