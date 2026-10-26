@@ -284,6 +284,22 @@ class TestInstanceDependentCostsReduceToTheirAverage:
             on_metric.fit(X, y, a=a_values, b=b_values).threshold_
         )
 
+    @pytest.mark.parametrize('container', [list, 'series'])
+    def test_an_array_like_parameter_is_averaged_like_an_array(self, data, container):
+        """A list or Series is instance-dependent too, so it still gives one threshold, not one per sample."""
+        pd = pytest.importorskip('pandas')
+        X, y = data
+        loss = Metric(CostMatrix().add_fp_cost('a').add_fn_cost('clv'), Cost())
+        clv = np.linspace(1.0, 10.0, len(y))
+        value = clv.tolist() if container is list else pd.Series(clv, index=np.arange(len(y)) + 1000)
+
+        clf = CSThresholdClassifier(LogisticRegression(), loss=loss, calibrator=None).fit(X, y, a=1.0, clv=value)
+
+        reference = CSThresholdClassifier(LogisticRegression(), loss=loss, calibrator=None).fit(X, y, a=1.0, clv=clv)
+        assert np.ndim(clf.threshold_) == 0
+        assert clf.threshold_ == pytest.approx(reference.threshold_)
+        assert clf.predict(X[:7]).shape == (7,)
+
 
 def test_threshold_of_a_cost_mixture_matches_its_combined_metric(data):
     """A mixture of Cost components thresholds like one Cost metric with the weighted costs."""

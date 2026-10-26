@@ -238,6 +238,11 @@ Metrics
 Models
 ------
 
+- |Fix| A loss parameter passed to ``fit`` as a list or a pandas Series is treated like an array.
+  :class:`~empulse.models.CSThresholdClassifier` learned one threshold per training sample from it,
+  so ``predict`` failed on other data or applied the wrong thresholds, and weighted voting in
+  :class:`~empulse.models.CSForestClassifier` and :class:`~empulse.models.CSBaggingClassifier` raised
+  a length mismatch.
 - |Fix| Cost-sensitive models accept the ``baseline`` of a :class:`~empulse.metrics.Savings` loss in
   ``fit``, and route it through metadata routing like the cost matrix's parameters. Most models
   raised a ``TypeError``, and :class:`~empulse.models.CSThresholdClassifier` and

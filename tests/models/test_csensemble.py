@@ -8,6 +8,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.datasets import make_classification
 from sklearn.tree import DecisionTreeClassifier
 
+from empulse.metrics import Cost, CostMatrix, Metric
 from empulse.models import CSBaggingClassifier, CSForestClassifier, CSTreeClassifier
 from empulse.models._base.cost_sensitive import subset_loss_params
 from empulse.models._base.ensemble_weighting import accumulate_weighted_prediction, goodness_weights
@@ -124,6 +125,23 @@ class TestOOBWeightingDirectionAndInstanceCosts:
         model.fit(X, y, fp_cost=1.0, fn_cost=fn_cost)
         assert np.isfinite(model.estimator_weights_).all()
         assert model.estimator_weights_.sum() == pytest.approx(1.0)
+
+    @pytest.mark.parametrize('model_cls', [CSForestClassifier, CSBaggingClassifier])
+    @pytest.mark.parametrize('container', [list, 'series'])
+    def test_weighted_voting_with_an_array_like_loss_parameter(self, model_cls, container):
+        """A list or Series parameter of a metric loss is subset to the out-of-bag rows like an array."""
+        pd = pytest.importorskip('pandas')
+        X, y = make_classification(n_samples=200, n_features=10, random_state=0)
+        clv = np.random.default_rng(0).uniform(1.0, 10.0, size=200)
+        loss = Metric(CostMatrix().add_fp_cost('a').add_fn_cost('clv'), Cost())
+        value = clv.tolist() if container is list else pd.Series(clv, index=np.arange(200) + 1000)
+
+        model = model_cls(loss=loss, n_estimators=5, combination='weighted_voting', random_state=0)
+        model.fit(X, y, a=1.0, clv=value)
+        reference = model_cls(loss=loss, n_estimators=5, combination='weighted_voting', random_state=0)
+        reference.fit(X, y, a=1.0, clv=clv)
+
+        np.testing.assert_allclose(model.estimator_weights_, reference.estimator_weights_)
 
     @pytest.mark.parametrize('model_cls', [CSForestClassifier, CSBaggingClassifier])
     def test_weighted_voting_beats_or_matches_majority_voting_on_holdout(self, model_cls):

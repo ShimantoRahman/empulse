@@ -213,9 +213,15 @@ class CostSensitiveClassifier(RoutesLossParameters, BinaryClassifierTags, ABC, C
         return y_pred
 
     def _normalize_cost_shapes(self, loss_params: dict[str, Any], size: int, names: Collection[str]) -> dict[str, Any]:
-        """Flatten the arrays among the parameters in *names*, checking each has one value or one per sample."""
+        """
+        Turn the array-likes among the parameters in *names* into flat arrays of one value or one per sample.
+
+        A list or a pandas Series becomes an array here, so that every model and helper that subsets or
+        reduces instance-dependent parameters recognizes it as one.
+        """
         for key, value in loss_params.items():
-            if key in names and isinstance(value, np.ndarray):
+            if key in names and value is not None and not isinstance(value, Real | str):
+                value = np.asarray(value)
                 if value.size not in {1, size}:
                     raise ValueError(
                         f"Parameter '{key}' has length {value.size}, but expected length "
