@@ -341,6 +341,22 @@ def test_a_sample_whose_decisions_cost_the_same_is_never_targeted_without_a_warn
     np.testing.assert_allclose(thresholds, [0.2, np.inf, 0.2, np.inf, 0.2])
 
 
+def test_per_sample_thresholds_are_the_same_whether_or_not_one_falls_outside_the_probability_range():
+    metric = Metric(COST_MATRIX, Cost())
+    a = np.array([1.0, 2.0, 3.0, 1.0, 1.0])
+    b = np.array([4.0, 2.0, 1.0, 9.0, 4.0])
+    expected = a / (a + b)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        inside = metric.optimal_threshold(Y_TRUE, Y_SCORE, a=a, b=b)
+    with pytest.warns(UserWarning, match='every sample or none'):
+        one_outside = metric.optimal_threshold(Y_TRUE, Y_SCORE, a=a, b=np.append(b[:-1], -2.0))
+
+    np.testing.assert_allclose(inside, expected, rtol=1e-15)
+    np.testing.assert_allclose(one_outside, [*expected[:-1], np.inf], rtol=1e-15)
+
+
 @pytest.mark.parametrize(
     ('a', 'b', 'expected'),
     [(1.0, -3.0, np.inf), (-1.0, 3.0, 0.0), (3.0, -1.0, np.inf), (-3.0, 1.0, 0.0)],

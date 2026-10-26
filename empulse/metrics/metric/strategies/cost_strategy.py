@@ -679,6 +679,10 @@ def _solve_optimal_threshold(
     )
     with np.errstate(divide='ignore', invalid='ignore'):
         ratio = numerator / denominator
+    # The usual case, a threshold inside (0, 1] for every sample, needs none of the case analysis below,
+    # which takes many passes over instance-dependent costs. NaN fails both comparisons and falls through.
+    if ratio.size and denominator.min() > 0 and ratio.min() > 0 and ratio.max() <= 1:
+        return float(ratio.item()) if is_scalar else ratio
     increasing = denominator > 0
     decreasing = denominator < 0
     if np.any(decreasing & (ratio > 0) & (ratio < 1)):
