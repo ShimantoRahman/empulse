@@ -213,6 +213,8 @@ class CSBaggingClassifier(CostSensitiveClassifier):
            2015, http://arxiv.org/abs/1505.04637.
     """
 
+    estimator_: BaggingClassifier
+
     _parameter_constraints: ClassVar[ParameterConstraint] = {
         **CostSensitiveClassifier._parameter_constraints,
         'combination': [
@@ -392,19 +394,23 @@ class CSBaggingClassifier(CostSensitiveClassifier):
             bagged_estimator = self.base_estimator_
             if type(bagged_estimator) is CSTreeClassifier:
                 bagged_estimator = _BaggedCSTreeClassifier(**bagged_estimator.get_params(deep=False))
-            self.estimator_ = BaggingClassifier(
-                estimator=bagged_estimator.set_fit_request(tp_cost=True, fp_cost=True, tn_cost=True, fn_cost=True),
-                n_estimators=self.n_estimators,
-                max_features=self.max_features,
-                bootstrap=self.bootstrap,
-                bootstrap_features=self.bootstrap_features,
-                oob_score=self.oob_score,
-                n_jobs=self.n_jobs,
-                random_state=self.random_state,
-                verbose=self.verbose,
-                warm_start=self.warm_start,
-                max_samples=self.max_samples,
-            )
+            bagging_params = {
+                'estimator': bagged_estimator.set_fit_request(tp_cost=True, fp_cost=True, tn_cost=True, fn_cost=True),
+                'n_estimators': self.n_estimators,
+                'max_features': self.max_features,
+                'bootstrap': self.bootstrap,
+                'bootstrap_features': self.bootstrap_features,
+                'oob_score': self.oob_score,
+                'n_jobs': self.n_jobs,
+                'random_state': self.random_state,
+                'verbose': self.verbose,
+                'warm_start': self.warm_start,
+                'max_samples': self.max_samples,
+            }
+            if self.warm_start and isinstance(getattr(self, 'estimator_', None), BaggingClassifier):
+                self.estimator_.set_params(**bagging_params)
+            else:
+                self.estimator_ = BaggingClassifier(**bagging_params)
             self.estimator_.fit(X, y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
 
         if self.combination == 'weighted_voting':

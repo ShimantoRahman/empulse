@@ -205,6 +205,27 @@ class TestCSForestWarmStart:
             model.set_params(n_estimators=2).fit(X, y, fp_cost=1.0, fn_cost=5.0)
 
 
+class TestCSBaggingWarmStart:
+    """``warm_start`` keeps the estimators already fitted, as it does for CSForestClassifier."""
+
+    def test_adding_estimators_keeps_the_old_ones(self, make_data):
+        X, y = make_data(n_samples=300)
+        model = CSBaggingClassifier(n_estimators=3, warm_start=True, random_state=0).fit(X, y, fp_cost=1.0, fn_cost=5.0)
+        first = list(model.estimators_)
+        model.set_params(n_estimators=5).fit(X, y, fp_cost=1.0, fn_cost=5.0)
+
+        assert len(model.estimators_) == 5
+        assert all(a is b for a, b in zip(first, model.estimators_[:3], strict=False))
+
+    def test_without_warm_start_every_estimator_is_refitted(self, make_data):
+        X, y = make_data(n_samples=300)
+        model = CSBaggingClassifier(n_estimators=3, random_state=0).fit(X, y, fp_cost=1.0, fn_cost=5.0)
+        first = list(model.estimators_)
+        model.set_params(n_estimators=5).fit(X, y, fp_cost=1.0, fn_cost=5.0)
+
+        assert not any(a is b for a, b in zip(first, model.estimators_[:3], strict=False))
+
+
 class TestCSBaggingSingleClassBootstrap:
     """A bootstrap sample that draws no sample of the rare class becomes a tree of one leaf, not an error."""
 

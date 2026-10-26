@@ -245,6 +245,8 @@ Models
   a length mismatch.
 - |Fix| :class:`~empulse.models.CSBaggingClassifier` fits when a bootstrap sample holds only one
   class, which then gives a tree of a single leaf. It raised a ``ValueError``.
+- |Fix| :class:`~empulse.models.CSBaggingClassifier` with ``warm_start=True`` keeps the estimators
+  fitted earlier and only fits the new ones. It refitted all of them.
 - |Fix| Cost-sensitive models accept the ``baseline`` of a :class:`~empulse.metrics.Savings` loss in
   ``fit``, and route it through metadata routing like the cost matrix's parameters. Most models
   raised a ``TypeError``, and :class:`~empulse.models.CSThresholdClassifier` and
