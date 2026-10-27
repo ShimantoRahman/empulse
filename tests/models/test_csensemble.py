@@ -299,7 +299,7 @@ def test_csforest_balanced_subsample_weighs_each_bootstrap_sample(make_data):
 class TestGoodnessWeights:
     """OOB weighting gives more weight to better estimators.
 
-    `goodness_weights` takes values from `BaseMetric._loss`, which is always minimized, so a lower
+    `goodness_weights` takes values from `ModelInterface.loss`, which is always minimized, so a lower
     value must win the higher weight. It must also not blow up when normalizing signed values.
     """
 

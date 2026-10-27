@@ -54,7 +54,7 @@ def test_max_profit_gradient_objective_with_assumption_symbols_matches_plain_sym
     weights = np.full(RANKING_FEATURES.shape[1], 0.1)
     values = [
         _metric(make_distribution, 'auto', polynomial=True, **assumptions)
-        ._logit_objective(
+        .model.logit_objective(
             features=RANKING_FEATURES, y_true=RANKING_Y_TRUE, C=1.0, l1_ratio=1.0, fit_intercept=True, **parameters
         )
         .logit_loss(weights)

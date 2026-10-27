@@ -12,7 +12,6 @@ from sklearn.utils.validation import check_is_fitted
 from ..._common._sklearn_compat import Tags, validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntArrayLike, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, Capability
-from .._base.cost_scale import decision_cost_scale
 from .._base.cost_sensitive import CostSensitiveClassifier
 from ._cstree import CostTree, ccp_pruning_path, cost_records
 from ._cstree._grow import (
@@ -415,12 +414,12 @@ class CSTreeClassifier(CostSensitiveClassifier):  # type: ignore[misc]
         """
         _warn_if_trees_ignore_strategy(loss, type(self).__name__)
         y = np.asarray(y).reshape(-1)
-        fp_cost, fn_cost, tp_cost, tn_cost = loss._decision_costs(y, **loss_params)
+        fp_cost, fn_cost, tp_cost, tn_cost = loss.model.decision_costs(y, **loss_params)
         records = cost_records(y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
         class_weight = _encoded_class_weight(self.class_weight, self.classes_)
         sample_weight = None if class_weight is None else compute_sample_weight(class_weight, y)
 
-        self._cost_scale = decision_cost_scale(loss, y, **loss_params)
+        self._cost_scale = loss.model.decision_cost_scale(y, **loss_params)
         self.min_impurity_decrease_ = resolve_min_impurity_decrease(
             self.min_impurity_decrease,
             criterion=self.criterion,

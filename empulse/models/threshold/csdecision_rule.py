@@ -52,11 +52,11 @@ def _class_dependent_metric(loss: BaseMetric, y: IntNDArray, loss_params: dict[s
     decision depends on nothing but the costs, which for a mixture of savings the labels *y* weigh;
     ``None`` otherwise.
     """
-    if not loss._decides_from_costs:
+    if not loss.model.decides_from_costs:
         return None
     if not any(isinstance(value, np.ndarray) and value.size > 1 for value in loss_params.values()):
         return None
-    fp_cost, fn_cost, tp_cost, tn_cost = loss._decision_costs(y, **loss_params)
+    fp_cost, fn_cost, tp_cost, tn_cost = loss.model.decision_costs(y, **loss_params)
     cost_matrix = (
         CostMatrix()
         .add_tp_cost(float(np.mean(tp_cost)))
@@ -69,7 +69,7 @@ def _class_dependent_metric(loss: BaseMetric, y: IntNDArray, loss_params: dict[s
 
 def _extract_loss_params(params: dict[str, Any], loss: BaseMetric) -> dict[str, Any]:
     loss_params = {}
-    loss_param_names = loss._all_parameters | loss._extra_parameters
+    loss_param_names = loss.model.accepted_parameters
     for param_name in list(params.keys()):
         if param_name in loss_param_names:
             loss_params[param_name] = params[param_name]
@@ -163,7 +163,7 @@ class CSDecisionRuleClassifier(PassesXThrough, ClassesFromEstimator, CostSensiti
         loss = self._get_metric_loss()
         if loss is None:
             return _all_costs_zero({name: params[name] for name in self._cost_names})
-        return bool(loss._missing_parameters(params.keys()))
+        return bool(loss.model.missing_parameters(params.keys()))
 
     def _unfitted_estimator(self) -> tuple[str, Any]:
         """Return the routing name and an unfitted copy of the estimator to fit."""
@@ -444,7 +444,7 @@ class CSDecisionRuleClassifier(PassesXThrough, ClassesFromEstimator, CostSensiti
             loss_params = self._add_standard_costs_to_params(**costs, params=loss_params)
             y_score = self._positive_score(X)
             loss_params = self._normalize_cost_shapes(
-                loss_params, size=len(y_score), names=loss._all_parameters | loss._extra_parameters
+                loss_params, size=len(y_score), names=loss.model.accepted_parameters
             )
             decision = self._compute_decision_at_predict(y_score, loss, loss_params)
 

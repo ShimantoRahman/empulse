@@ -12,7 +12,6 @@ from sklearn.utils.validation import check_is_fitted
 from ..._common._sklearn_compat import validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, MaxProfit
-from .cost_scale import decision_cost_scale
 from .cost_sensitive import CostSensitiveClassifier, MetricStrategyFactory
 
 if TYPE_CHECKING:
@@ -344,7 +343,7 @@ class BaseMinimaxProbabilityMachine(CostSensitiveClassifier, ABC):
 
         # The penalty is measured against the average cost of a wrong decision, so that lambda_reg
         # does not depend on the units of the costs.
-        scale = decision_cost_scale(loss, y, **loss_params)
+        scale = loss.model.decision_cost_scale(y, **loss_params)
         c1 = max(pi_1 * (tp_benefit + fn_cost) / scale, 1e-12)
         c0 = max(pi_0 * (tn_benefit + fp_cost) / scale, 1e-12)
 

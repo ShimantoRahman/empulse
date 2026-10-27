@@ -61,7 +61,7 @@ def test_optimizers_state_whether_they_use_the_gradient():
 def test_value_objective_is_the_negated_metric_plus_the_penalty(data, metric):
     X, y = data
     weights = np.random.default_rng(0).normal(size=X.shape[1])
-    objective = metric._logit_value_objective(features=X, y_true=y, C=0.1, l1_ratio=0.5, fit_intercept=True)
+    objective = metric.model.logit_value_objective(features=X, y_true=y, C=0.1, l1_ratio=0.5, fit_intercept=True)
     assert isinstance(objective, RankingLogitValueObjective)
     expected = -metric(y, expit(X @ weights)) + objective.penalty.value(weights)
     assert objective.logit_loss(weights) == pytest.approx(expected, rel=1e-12)
@@ -75,8 +75,8 @@ def test_value_objective_matches_the_value_of_the_gradient_objective(data, metri
     X, y = data
     weights = np.random.default_rng(1).normal(size=X.shape[1])
     arguments = {'features': X, 'y_true': y, 'C': 0.1, 'l1_ratio': 0.5, 'fit_intercept': True}
-    value = metric._logit_value_objective(**arguments).logit_loss(weights)
-    assert value == pytest.approx(metric._logit_objective(**arguments).logit_loss(weights), rel=1e-12)
+    value = metric.model.logit_value_objective(**arguments).logit_loss(weights)
+    assert value == pytest.approx(metric.model.logit_objective(**arguments).logit_loss(weights), rel=1e-12)
 
 
 @pytest.mark.parametrize('metric', [DETERMINISTIC, BETA, UNIFORM], ids=['deterministic', 'beta', 'uniform'])
@@ -89,7 +89,7 @@ def test_value_objective_ranks_models_with_large_linear_predictions(metric):
     X = np.column_stack((np.ones(100), x))
     weights = np.array([45.0, 1.0])
     assert np.all(expit(X @ weights) == 1.0)
-    objective = metric._logit_value_objective(features=X, y_true=y, C=np.inf, l1_ratio=0.0, fit_intercept=True)
+    objective = metric.model.logit_value_objective(features=X, y_true=y, C=np.inf, l1_ratio=0.0, fit_intercept=True)
     # Without the intercept, the probabilities rank the samples as the predictions do.
     expected = -metric(y, expit(x))
     assert objective.logit_loss(weights) == pytest.approx(expected, rel=1e-12)
@@ -102,14 +102,14 @@ def test_cost_metrics_keep_their_objective_for_value_only_optimizers(data):
     fp, fn = sympy.symbols('fp fn')
     metric = Metric(CostMatrix().add_fp_cost(fp).add_fn_cost(fn).set_default(fp=1, fn=5), Cost())
     arguments = {'features': X, 'y_true': y, 'C': 1.0, 'l1_ratio': 1.0, 'fit_intercept': True}
-    assert type(metric._logit_value_objective(**arguments)) is type(metric._logit_objective(**arguments))
+    assert type(metric.model.logit_value_objective(**arguments)) is type(metric.model.logit_objective(**arguments))
 
 
 def test_mixture_combines_the_value_objectives_of_its_components(data):
     X, y = data
     weights = np.random.default_rng(2).normal(size=X.shape[1])
     mixture = MixtureMetric([MixtureComponent(0.25, DETERMINISTIC, {}), MixtureComponent(0.75, UNIFORM, {})])
-    objective = mixture._logit_value_objective(features=X, y_true=y, C=np.inf, l1_ratio=0.0, fit_intercept=True)
+    objective = mixture.model.logit_value_objective(features=X, y_true=y, C=np.inf, l1_ratio=0.0, fit_intercept=True)
     y_score = expit(X @ weights)
     expected = -(0.25 * DETERMINISTIC(y, y_score) + 0.75 * UNIFORM(y, y_score))
     assert objective.logit_loss(weights) == pytest.approx(expected, rel=1e-12)
@@ -145,7 +145,7 @@ def test_proflogit_fits_metrics_without_a_gradient(data):
     X, y = data
     optimizer = GeneticAlgorithmOptimizer(max_iter=5, population_size=10, random_state=0)
     model = ProfLogitClassifier(loss=UNIFORM, optimizer=optimizer).fit(X[:, 1:], y)
-    objective = UNIFORM._logit_value_objective(features=X, y_true=y, C=1.0, l1_ratio=1.0, fit_intercept=True)
+    objective = UNIFORM.model.logit_value_objective(features=X, y_true=y, C=1.0, l1_ratio=1.0, fit_intercept=True)
     expected = -UNIFORM(y, model.predict_proba(X[:, 1:])[:, 1]) + objective.penalty.value(model.result_.x)
     assert model.result_.fun == pytest.approx(expected, rel=1e-12)
     with pytest.raises(ValueError, match="supports 'logit_objective'"):
@@ -161,10 +161,12 @@ def test_metrics_without_a_gradient_have_a_value_objective(data, strategy):
     clv = np.random.default_rng(1).uniform(50, 400, y.size)
     metric = Metric(RANKING_MATRIX, strategy())
     weights = np.random.default_rng(0).normal(size=X.shape[1])
-    objective = metric._logit_value_objective(features=X, y_true=y, C=0.1, l1_ratio=0.5, fit_intercept=True, clv=clv)
+    objective = metric.model.logit_value_objective(
+        features=X, y_true=y, C=0.1, l1_ratio=0.5, fit_intercept=True, clv=clv
+    )
 
     assert objective.logit_loss(weights) == pytest.approx(
-        metric._loss(y, X @ weights, clv=clv) + objective.penalty.value(weights), rel=1e-12
+        metric.model.loss(y, X @ weights, clv=clv) + objective.penalty.value(weights), rel=1e-12
     )
     with pytest.raises(NotImplementedError, match='only the value'):
         objective.logit_gradient(weights)

@@ -240,7 +240,7 @@ class TestCompilationIsNotOnHotPaths:
         metric = instance_dependent_metric(Cost())
         with mock.patch('sympy.lambdify', wraps=sympy.lambdify) as spy:
             for _ in range(10):
-                metric._evaluate_costs(c=1.0, d=2.0)
+                metric.model.evaluate_costs(c=1.0, d=2.0)
         assert spy.call_count == 0  # already compiled by Metric.__init__
 
     def test_metric_evaluate_costs_replace_stochastic_compiles_once(self):
@@ -250,10 +250,10 @@ class TestCompilationIsNotOnHotPaths:
         # The first replace_stochastic=True call builds and caches the compiled mean-substituted
         # expressions. Its lambdify count is an implementation detail (PicklableLambda skips
         # sympy.lambdify for the constant tn_cost/fn_cost), so only later calls are counted.
-        metric._evaluate_costs(alpha=2.0, beta=5.0, d=1.0, replace_stochastic=True)
+        metric.model.evaluate_costs(alpha=2.0, beta=5.0, d=1.0, replace_stochastic=True)
         with mock.patch('sympy.lambdify', wraps=sympy.lambdify) as spy:
             for _ in range(10):
-                metric._evaluate_costs(alpha=2.0, beta=5.0, d=1.0, replace_stochastic=True)
+                metric.model.evaluate_costs(alpha=2.0, beta=5.0, d=1.0, replace_stochastic=True)
         assert spy.call_count == 0  # cached by the first call above, not recompiled since
 
     def test_max_profit_evaluate_class_costs_compiles_once(self):

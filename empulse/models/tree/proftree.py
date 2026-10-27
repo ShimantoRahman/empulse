@@ -11,7 +11,6 @@ from ..._common._sklearn_compat import validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, Capability, MaxProfit
 from ...metrics._cy_max_profit import _expected_max_profit_of_groups_address
-from .._base.cost_scale import decision_cost_scale
 from .._base.cost_sensitive import CostSensitiveClassifier, MetricStrategyFactory
 from ._cy_proftree.evolutionary_tree import EvolutionaryTree
 
@@ -23,7 +22,7 @@ MAX_INT = 2147483647
 
 def _negated_loss(loss: BaseMetric, y_true: IntNDArray, y_score: FloatNDArray, **loss_params: Any) -> float:
     """Return the negated loss of *y_score*, as a fitness to maximize."""
-    return -loss._loss(y_true, y_score, validate=False, **loss_params)
+    return -loss.model.loss(y_true, y_score, validate=False, **loss_params)
 
 
 def _negated_count_loss(
@@ -356,7 +355,7 @@ class ProfTreeClassifier(CostSensitiveClassifier):
         mutate_value_rate = self.mutate_value_rate / total_probability
 
         random_state = int(check_random_state(self.random_state).randint(low=0, high=2**31 - 1))
-        cost_scale = decision_cost_scale(loss, y, **loss_params)
+        cost_scale = loss.model.decision_cost_scale(y, **loss_params)
 
         self.tree_ = EvolutionaryTree()
         loss_ = self._get_metric_loss()
@@ -388,7 +387,9 @@ class ProfTreeClassifier(CostSensitiveClassifier):
         # loss, such as a stochastic MaxProfit metric or a mixture of maximum profits, goes through a
         # custom fitness function.
         use_fit_max_profit = loss_ is None or (
-            Capability.CLASS_COSTS in loss_.capabilities and loss_._is_deterministic and loss_._has_single_cost_matrix
+            Capability.CLASS_COSTS in loss_.capabilities
+            and loss_.model.is_deterministic
+            and loss_.model.has_single_cost_matrix
         )
 
         if use_fit_max_profit:
@@ -406,7 +407,7 @@ class ProfTreeClassifier(CostSensitiveClassifier):
                 # A loss that scores samples grouped by score (e.g. a stochastic MaxProfit metric) gets
                 # each tree's leaves with their class counts instead of every sample's prediction, and
                 # its parameters are resolved once here.
-                count_loss = loss_._prepare_count_loss(n_samples=y.size, validate=False, **loss_params)
+                count_loss = loss_.model.prepare_count_loss(n_samples=y.size, validate=False, **loss_params)
                 if count_loss is None:
                     fitness_fn = partial(_negated_loss, loss_, **loss_params)
                     probe: tuple[Any, ...] = (y.astype(np.int32), y_proba)

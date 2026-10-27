@@ -17,7 +17,6 @@ from sklearn.utils.validation import check_is_fitted
 from ..._common._sklearn_compat import Tags, validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric
-from .._base.cost_scale import decision_cost_scale, loss_scale
 from .._base.cost_sensitive import CostSensitiveClassifier, subset_loss_params
 from .._base.ensemble_weighting import goodness_weights
 from ._cstree import CostTree, cost_records
@@ -458,10 +457,10 @@ class CSForestClassifier(CostSensitiveClassifier):
             loss, type(self).__name__, loss_used_for='the out-of-bag score and weighted voting'
         )
         y = np.asarray(y).reshape(-1)
-        fp_cost, fn_cost, tp_cost, tn_cost = loss._decision_costs(y, **loss_params)
+        fp_cost, fn_cost, tp_cost, tn_cost = loss.model.decision_costs(y, **loss_params)
         n_samples, n_features = X.shape
         records = cost_records(y, tp_cost=tp_cost, tn_cost=tn_cost, fn_cost=fn_cost, fp_cost=fp_cost)
-        cost_scale = decision_cost_scale(loss, y, **loss_params)
+        cost_scale = loss.model.decision_cost_scale(y, **loss_params)
 
         self._n_samples = n_samples
         self._sample_weight = self._class_sample_weight(y)
@@ -582,10 +581,10 @@ class CSForestClassifier(CostSensitiveClassifier):
                     losses[i] = np.nan
                     continue
                 oob_params = subset_loss_params(loss_params, unsampled, n_samples)
-                losses[i] = loss._loss(y[unsampled], proba[:, 1], validate=False, **oob_params)
+                losses[i] = loss.model.loss(y[unsampled], proba[:, 1], validate=False, **oob_params)
 
         if self.combination == 'weighted_voting':
-            self.estimator_weights_ = goodness_weights(losses, scale=loss_scale(loss, y, **loss_params))
+            self.estimator_weights_ = goodness_weights(losses, scale=loss.model.loss_scale(y, **loss_params))
 
         if self.oob_score and (n_new_trees > 0 or not hasattr(self, 'oob_score_')):
             if (n_oob == 0).any():

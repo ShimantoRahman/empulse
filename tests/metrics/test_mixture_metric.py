@@ -216,15 +216,15 @@ def test_mixture_all_symbols_includes_weight_and_component_names(empcs_mixture, 
 
 def test_mixture_missing_parameters_nothing_supplied(empcs_mixture):
     """Without a mixture-level default, every weight name and component symbol is required."""
-    assert empcs_mixture._missing_parameters([]) == {'success_rate', 'default_rate', 'roi'}
+    assert empcs_mixture.model.missing_parameters([]) == {'success_rate', 'default_rate', 'roi'}
 
 
 def test_mixture_missing_parameters_all_supplied(empcs_mixture):
-    assert empcs_mixture._missing_parameters(['success_rate', 'default_rate', 'roi']) == set()
+    assert empcs_mixture.model.missing_parameters(['success_rate', 'default_rate', 'roi']) == set()
 
 
 def test_mixture_missing_parameters_partial(empcs_mixture):
-    assert empcs_mixture._missing_parameters(['success_rate']) == {'default_rate', 'roi'}
+    assert empcs_mixture.model.missing_parameters(['success_rate']) == {'default_rate', 'roi'}
 
 
 def test_mixture_missing_parameters_mixture_level_default_covers_every_component():
@@ -238,23 +238,23 @@ def test_mixture_missing_parameters_mixture_level_default_covers_every_component
         ],
         defaults={'roi': 0.2644},
     )
-    assert mixture._missing_parameters([]) == {'success_rate', 'default_rate'}
-    assert mixture._missing_parameters(['success_rate', 'default_rate']) == set()
+    assert mixture.model.missing_parameters([]) == {'success_rate', 'default_rate'}
+    assert mixture.model.missing_parameters(['success_rate', 'default_rate']) == set()
 
 
 def test_mixture_missing_parameters_real_prebuilt_metric_has_no_missing_by_default():
     """empcs_score sets defaults for every one of its parameters, so nothing is ever missing."""
-    assert empcs_score._missing_parameters([]) == set()
+    assert empcs_score.model.missing_parameters([]) == set()
 
 
 def test_mixture_is_deterministic_false_with_stochastic_component(empcs_mixture):
-    assert empcs_mixture._is_deterministic is False
+    assert empcs_mixture.model.is_deterministic is False
 
 
 def test_mixture_is_deterministic_true_for_point_masses_only(credit_scoring_metrics):
     metric_det, _ = credit_scoring_metrics
     mixture = _two_point_mixture(metric_det, 0.6, 0.4)
-    assert mixture._is_deterministic is True
+    assert mixture.model.is_deterministic is True
 
 
 @pytest.mark.parametrize('replace_stochastic', [False, True])
@@ -263,9 +263,9 @@ def test_mixture_evaluate_costs_matches_manual_combination(credit_scoring_metric
     mixture = _two_point_mixture(metric_det, 0.6, 0.4)
     roi = 0.2644
 
-    fp, fn, tp, tn = mixture._evaluate_costs(replace_stochastic=replace_stochastic, roi=roi)
-    fp0, fn0, tp0, tn0 = metric_det._evaluate_costs(replace_stochastic=replace_stochastic, gamma=0.0, roi=roi)
-    fp1, fn1, tp1, tn1 = metric_det._evaluate_costs(replace_stochastic=replace_stochastic, gamma=1.0, roi=roi)
+    fp, fn, tp, tn = mixture.model.evaluate_costs(replace_stochastic=replace_stochastic, roi=roi)
+    fp0, fn0, tp0, tn0 = metric_det.model.evaluate_costs(replace_stochastic=replace_stochastic, gamma=0.0, roi=roi)
+    fp1, fn1, tp1, tn1 = metric_det.model.evaluate_costs(replace_stochastic=replace_stochastic, gamma=1.0, roi=roi)
 
     assert pytest.approx(fp) == 0.6 * fp0 + 0.4 * fp1
     assert pytest.approx(fn) == 0.6 * fn0 + 0.4 * fn1
@@ -286,7 +286,7 @@ def test_mixture_evaluate_costs_replace_stochastic_with_stochastic_component(cre
         MixtureComponent(0.1, metric_det, {'gamma': 1.0}),
         MixtureComponent(0.35, metric_stoch, {}),
     ])
-    fp, fn, tp, tn = mixture._evaluate_costs(replace_stochastic=True, roi=0.2644)
+    fp, fn, tp, tn = mixture.model.evaluate_costs(replace_stochastic=True, roi=0.2644)
     for cost in (fp, fn, tp, tn):
         assert np.isfinite(cost)
 
@@ -323,10 +323,10 @@ def test_gradient_boost_objective_matches_manual_combination(y_true_and_predicti
     w0, w1, roi_val = 0.6, 0.4, 0.2644
     mixture = _two_point_mixture(metric_det, w0, w1)
 
-    grad, hess = mixture._gradient_boost_objective(y, y_proba, roi=roi_val)
+    grad, hess = mixture.model.gradient_boost_objective(y, y_proba, roi=roi_val)
 
-    grad0, hess0 = metric_det._gradient_boost_objective(y, y_proba, gamma=0.0, roi=roi_val)
-    grad1, hess1 = metric_det._gradient_boost_objective(y, y_proba, gamma=1.0, roi=roi_val)
+    grad0, hess0 = metric_det.model.gradient_boost_objective(y, y_proba, gamma=0.0, roi=roi_val)
+    grad1, hess1 = metric_det.model.gradient_boost_objective(y, y_proba, gamma=1.0, roi=roi_val)
 
     expected_grad = w0 * grad0 + w1 * grad1
     expected_hess = w0 * hess0 + w1 * hess1
@@ -349,10 +349,10 @@ def test_prepare_boost_objective_matches_manual_combination(y_true_and_predictio
         MixtureComponent(w1, metric_cost, {'a': 1.0, 'b': 8.0}),
     ])
 
-    const = mixture._prepare_boost_objective(y)
+    const = mixture.model.prepare_boost_objective(y)
 
-    const0 = metric_cost._prepare_boost_objective(y, a=5.0, b=2.0)
-    const1 = metric_cost._prepare_boost_objective(y, a=1.0, b=8.0)
+    const0 = metric_cost.model.prepare_boost_objective(y, a=5.0, b=2.0)
+    const1 = metric_cost.model.prepare_boost_objective(y, a=1.0, b=8.0)
     expected = w0 * const0 + w1 * const1
 
     np.testing.assert_allclose(const, expected)
@@ -366,9 +366,9 @@ def test_logit_objective_matches_manual_combination(credit_scoring_metrics):
     mixture = _two_point_mixture(metric_det, w0, w1)
 
     common_kwargs = {'C': 1.0, 'l1_ratio': 0.0, 'fit_intercept': True}
-    objective = mixture._logit_objective(features=X, y_true=y, roi=roi, **common_kwargs)
-    objective0 = metric_det._logit_objective(features=X, y_true=y, gamma=0.0, roi=roi, **common_kwargs)
-    objective1 = metric_det._logit_objective(features=X, y_true=y, gamma=1.0, roi=roi, **common_kwargs)
+    objective = mixture.model.logit_objective(features=X, y_true=y, roi=roi, **common_kwargs)
+    objective0 = metric_det.model.logit_objective(features=X, y_true=y, gamma=0.0, roi=roi, **common_kwargs)
+    objective1 = metric_det.model.logit_objective(features=X, y_true=y, gamma=1.0, roi=roi, **common_kwargs)
 
     weights = np.zeros(X.shape[1], dtype=np.float64)
     loss, grad = objective.logit_loss_gradient(weights)
@@ -391,7 +391,7 @@ def test_logit_objective_with_indices_and_set_alpha(credit_scoring_metrics):
     roi = 0.2644
     mixture = _two_point_mixture(metric_det, 0.6, 0.4)
     common_kwargs = {'C': 1.0, 'l1_ratio': 0.0, 'fit_intercept': True}
-    objective = mixture._logit_objective(features=X, y_true=y, roi=roi, **common_kwargs)
+    objective = mixture.model.logit_objective(features=X, y_true=y, roi=roi, **common_kwargs)
 
     # set_alpha should not raise, even though this cost structure has no annealed component
     objective.set_alpha(2.5)
@@ -413,7 +413,7 @@ def test_logit_gradient_steps_matches_direct_call():
     roi = 0.2644
     mixture = _two_point_mixture(metric_det, 0.6, 0.4)
     common_kwargs = {'C': 1.0, 'l1_ratio': 0.0, 'fit_intercept': True}
-    objective = mixture._logit_objective(features=X, y_true=y, roi=roi, **common_kwargs)
+    objective = mixture.model.logit_objective(features=X, y_true=y, roi=roi, **common_kwargs)
 
     weights = np.zeros(X.shape[1], dtype=np.float64)
     direct_grad = objective.logit_gradient(weights)
@@ -441,7 +441,7 @@ def test_full_mixture_gradient_training_not_yet_supported(credit_scoring_metrics
         MixtureComponent(0.35, metric_stoch, {}),
     ])
     with pytest.raises(NotImplementedError):
-        mixture._gradient_boost_objective(y, y_proba, roi=0.2644)
+        mixture.model.gradient_boost_objective(y, y_proba, roi=0.2644)
 
 
 # ---- optimal_rate with hardcoded Uniform bounds ----
@@ -488,7 +488,7 @@ class TestOutlierSensitiveParameters:
         first = Metric(CostMatrix().add_tp_benefit(a).mark_outlier_sensitive(a), Cost())
         second = Metric(CostMatrix().add_fp_cost(b).mark_outlier_sensitive(b), Cost())
         mixture = MixtureMetric([MixtureComponent(0.5, first, {}), MixtureComponent(0.5, second, {})])
-        assert mixture._outlier_sensitive_parameters() == {'a': 'positive', 'b': 'negative'}
+        assert mixture.model.outlier_sensitive_parameters() == {'a': 'positive', 'b': 'negative'}
 
     def test_components_that_disagree_give_both(self):
         a, b = sympy.symbols('a b')
@@ -496,13 +496,13 @@ class TestOutlierSensitiveParameters:
         negative = Metric(CostMatrix().add_fp_cost(a).add_fn_cost(b).mark_outlier_sensitive(a), Cost())
         for components in ((positive, negative), (negative, positive)):
             mixture = MixtureMetric([MixtureComponent(0.5, metric, {}) for metric in components])
-            assert mixture._outlier_sensitive_parameters() == {'a': 'both'}
+            assert mixture.model.outlier_sensitive_parameters() == {'a': 'both'}
 
     def test_empty_when_no_component_marks_anything(self):
         a = sympy.symbols('a')
         metric = Metric(CostMatrix().add_tp_benefit(a), Cost())
         mixture = MixtureMetric([MixtureComponent(1.0, metric, {})])
-        assert mixture._outlier_sensitive_parameters() == {}
+        assert mixture.model.outlier_sensitive_parameters() == {}
 
 
 @pytest.mark.parametrize('method', ['__call__', 'optimal_rate', 'optimal_threshold'])
@@ -541,10 +541,10 @@ def test_logit_objective_applies_the_penalty_once(strategy, method):
         MixtureComponent(0.7, metric, {'fp': 2.0, 'fn': 1.0}),
     ])
     arguments = {'features': X, 'y_true': y, 'C': 0.05, 'l1_ratio': 0.5, 'fit_intercept': True}
-    objective = mixture._logit_objective(**arguments)
+    objective = mixture.model.logit_objective(**arguments)
     components = [
-        metric._logit_objective(**arguments, fp=1.0, fn=5.0),
-        metric._logit_objective(**arguments, fp=2.0, fn=1.0),
+        metric.model.logit_objective(**arguments, fp=1.0, fn=5.0),
+        metric.model.logit_objective(**arguments, fp=2.0, fn=1.0),
     ]
     weights = np.array([0.1, -0.8, 0.5, 1.2])
     assert objective.penalty.value(weights) > 0
@@ -572,7 +572,7 @@ def test_logit_objective_forwards_n_threads_to_its_components():
     ])
     X = _with_intercept(np.random.default_rng(0).normal(size=(40, 2)))
     y = np.arange(40) % 3 == 0
-    objective = mixture._logit_objective(features=X, y_true=y, C=0.1, l1_ratio=0.5, fit_intercept=True)
+    objective = mixture.model.logit_objective(features=X, y_true=y, C=0.1, l1_ratio=0.5, fit_intercept=True)
     assert objective.n_threads == 1
     objective.n_threads = 4
     assert objective.n_threads == 4
@@ -728,18 +728,18 @@ class TestSavingsComponents:
         weights = [0.5 / self._baseline_cost(y, costs) for costs in (CHEAP_COSTS, COSTLY_COSTS)]
         weights = [weight / sum(weights) for weight in weights]
 
-        boost = mixture._prepare_boost_objective(y)
+        boost = mixture.model.prepare_boost_objective(y)
         expected_boost = sum(
-            weight * metric._prepare_boost_objective(y, **costs)
+            weight * metric.model.prepare_boost_objective(y, **costs)
             for weight, costs in zip(weights, (CHEAP_COSTS, COSTLY_COSTS), strict=True)
         )
         np.testing.assert_allclose(boost, expected_boost)
 
         logit_kwargs = {'C': 1.0, 'l1_ratio': 0.0, 'fit_intercept': True}
         coefficients = np.linspace(-0.5, 0.5, X.shape[1])
-        loss = mixture._logit_objective(features=X, y_true=y, **logit_kwargs).data_loss(coefficients)
+        loss = mixture.model.logit_objective(features=X, y_true=y, **logit_kwargs).data_loss(coefficients)
         expected_loss = sum(
-            weight * metric._logit_objective(features=X, y_true=y, **logit_kwargs, **costs).data_loss(coefficients)
+            weight * metric.model.logit_objective(features=X, y_true=y, **logit_kwargs, **costs).data_loss(coefficients)
             for weight, costs in zip(weights, (CHEAP_COSTS, COSTLY_COSTS), strict=True)
         )
         assert loss == pytest.approx(expected_loss)
@@ -761,8 +761,8 @@ class TestAliasedOverrides:
 
     def test_override_by_alias_is_not_required_from_the_caller(self, metric):
         mixture = MixtureMetric([MixtureComponent(1.0, metric, {'rate': 0.0})])
-        assert mixture._missing_parameters({'v'}) == set()
-        assert {'g', 'rate'}.isdisjoint(mixture._all_parameters)
+        assert mixture.model.missing_parameters({'v'}) == set()
+        assert {'g', 'rate'}.isdisjoint(mixture.parameter_names)
 
 
 def test_components_with_different_parameters_do_not_warn():
@@ -801,8 +801,8 @@ class TestWeights:
 
     def test_weight_parameters_are_parameters_of_the_mixture(self):
         mixture = self.mixture()
-        assert 'w' in mixture._all_parameters
-        assert mixture._missing_parameters({'a'}) == {'w'}
+        assert 'w' in mixture.parameter_names
+        assert mixture.model.missing_parameters({'a'}) == {'w'}
         with warnings.catch_warnings():
             warnings.simplefilter('error')
             mixture(Y_TRUE, Y_SCORE, a=2.0, w=0.3)
@@ -861,7 +861,7 @@ class TestComponentChecks:
             MixtureComponent(0.5, metric, {'lam': 0.0}),
             MixtureComponent(0.5, metric, {'lam': 1.0}),
         ])
-        assert mixture._outlier_sensitive_parameters() == {}
+        assert mixture.model.outlier_sensitive_parameters() == {}
 
 
 class TestConstrain:
@@ -973,7 +973,7 @@ def test_mixed_strategy_mixture_has_no_shared_strategy_and_still_reports_capabil
 def test_nested_mixed_strategy_mixture_accepts_its_components_extra_parameters():
     """A nested mixture of Savings and Profit accepts Savings' ``baseline``, without an unknown-parameter warning."""
     nested = MixtureMetric([MixtureComponent(1.0, _mixed_strategy_mixture(), {})])
-    assert 'baseline' in nested._extra_parameters
+    assert 'baseline' in nested.model.accepted_parameters
     y_true, y_score = np.array([0, 1, 1, 0]), np.array([0.2, 0.8, 0.6, 0.4])
     with warnings.catch_warnings():
         warnings.simplefilter('error')

@@ -4,6 +4,7 @@ from .capabilities import Capability
 from .cost_matrix import CostMatrix
 from .metric import Metric
 from .mixture_metric import MixtureComponent, MixtureMetric
+from .model_interface import ModelInterface
 from .strategies import (
     AUEPC,
     Cost,
@@ -38,6 +39,7 @@ __all__ = [
     'MinCost',
     'MixtureComponent',
     'MixtureMetric',
+    'ModelInterface',
     'Profit',
     'Savings',
     'objective_scale_from_costs',

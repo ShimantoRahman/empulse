@@ -367,9 +367,7 @@ class RobustCSClassifier(  # type: ignore[misc]
             self.costs_, self.outlier_estimators_ = self._impute_metric_costs(
                 X, is_positive, metric_loss, estimator_params
             )
-            estimator_params = self._named_for_estimator(
-                estimator_params, metric_loss._all_parameters | metric_loss._extra_parameters
-            )
+            estimator_params = self._named_for_estimator(estimator_params, metric_loss.model.accepted_parameters)
         else:
             self.costs_ = self._check_costs(
                 **self._costs_with_estimator_fallback(
@@ -452,8 +450,8 @@ class RobustCSClassifier(  # type: ignore[misc]
         imputed_costs: dict[str, FloatNDArray] = {}
         outlier_estimators: dict[str, Any] = {}
 
-        for name, cls in metric_loss._outlier_sensitive_parameters().items():
-            spellings = metric_loss._parameter_spellings(name)
+        for name, cls in metric_loss.model.outlier_sensitive_parameters().items():
+            spellings = metric_loss.model.parameter_spellings(name)
             # The metric takes a parameter under its symbol name or any alias, and so does this.
             supplied = sorted(spellings & estimator_params.keys())
             if not supplied:

@@ -101,7 +101,9 @@ class TestScaleInvariance:
         X, y = standardised_data
         features = np.hstack([np.ones((X.shape[0], 1)), X])
         metric = Metric(CostMatrix().add_tp_benefit('b').add_tn_benefit('b'), LogCost())
-        objective = metric._logit_objective(features=features, y_true=y, C=2.0, l1_ratio=1.0, fit_intercept=True, b=1.0)
+        objective = metric.model.logit_objective(
+            features=features, y_true=y, C=2.0, l1_ratio=1.0, fit_intercept=True, b=1.0
+        )
         assert objective.penalty.lambda_ == pytest.approx(1 / (2.0 * len(y)))
 
     @pytest.mark.parametrize('C', [0.01, 0.1, 1.0, 10.0, 100.0])
@@ -156,7 +158,7 @@ class TestSparsity:
 
         features = np.hstack([np.ones((X.shape[0], 1)), X])
         metric = Metric(CostMatrix().add_fp_cost('fp_cost').add_fn_cost('fn_cost'), Cost())
-        objective = metric._logit_objective(
+        objective = metric.model.logit_objective(
             features=features, y_true=y, C=0.5, l1_ratio=0.5, fit_intercept=True, fp_cost=1.0, fn_cost=1.0
         )
         penalty = objective.penalty
@@ -202,7 +204,7 @@ class TestSparsity:
         optimizer = LBFGSBOptimizer()
         metric = Metric(CostMatrix().add_fp_cost('fp_cost').add_fn_cost('fn_cost'), Cost())
         features = np.hstack([np.ones((X.shape[0], 1)), X])
-        objective = metric._logit_objective(
+        objective = metric.model.logit_objective(
             features=features, y_true=y, C=1.0, l1_ratio=1.0, fit_intercept=True, fp_cost=1.0, fn_cost=1.0
         )
         with pytest.warns(UserWarning, match='bounds cannot be combined'):
@@ -218,7 +220,7 @@ class TestGradientCorrectness:
         X, y = standardised_data
         features = np.hstack([np.ones((X.shape[0], 1)), X])
         metric = Metric(CostMatrix().add_fp_cost('fp_cost').add_fn_cost('fn_cost'), strategy())
-        objective = metric._logit_objective(
+        objective = metric.model.logit_objective(
             features=features,
             y_true=y,
             C=1.0,
@@ -240,7 +242,7 @@ class TestGradientCorrectness:
         X, y = standardised_data
         features = np.hstack([np.ones((X.shape[0], 1)), X])
         metric = Metric(CostMatrix().add_fp_cost('fp_cost').add_fn_cost('fn_cost'), strategy())
-        objective = metric._logit_objective(
+        objective = metric.model.logit_objective(
             features=features, y_true=y, C=1.0, l1_ratio=1.0, fit_intercept=True, fp_cost=1.0, fn_cost=1.0
         )
         weights = np.full(features.shape[1], 0.3)
@@ -273,7 +275,7 @@ class TestNoTrainingSignal:
         X, y = standardised_data
         features = np.hstack([np.ones((X.shape[0], 1)), X])
         matrix = CostMatrix().add_tp_cost('tp').add_fn_cost('fn').add_fp_cost('fp').add_tn_cost('tn')
-        objective = Metric(matrix, Cost())._logit_objective(
+        objective = Metric(matrix, Cost()).model.logit_objective(
             features=features, y_true=y, C=1.0, l1_ratio=0.0, fit_intercept=True, tp=2.0, fn=2.0, fp=3.0, tn=3.0
         )
         _, gradient = objective.data_loss_gradient(np.full(features.shape[1], 0.3))

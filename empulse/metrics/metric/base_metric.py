@@ -6,6 +6,7 @@ from ..._types import FloatArrayLike, FloatNDArray
 from ._compile import CountScoreFn
 from ._direction import Direction
 from .capabilities import Capability
+from .model_interface import ModelInterface
 from .strategies import LogitObjective, MetricStrategy
 
 
@@ -41,43 +42,30 @@ class BaseMetric(ABC):
     metric from scratch. To combine existing :class:`~empulse.metrics.Metric` objects, use
     :class:`~empulse.metrics.MixtureMetric` instead.
 
+    Models reach a metric through :attr:`model`, a :class:`~empulse.metrics.ModelInterface` that
+    gives them the metric's parameters, decision costs, losses and training objectives.
+
     Notes
     -----
-    Implementations follow a single orientation rule, so that models never have to branch on
-    :attr:`direction`:
-
-    - :meth:`__call__` returns the metric in its natural orientation, which :attr:`direction`
-      describes. This is the only orientation a user sees.
-    - :meth:`_loss`, :meth:`_logit_objective`, :meth:`_gradient_boost_objective` and
-      :meth:`_prepare_boost_objective` are always **minimized**, whatever :attr:`direction` says.
-      These are what models optimize.
-    - :meth:`optimal_rate`, :meth:`optimal_threshold` and :meth:`_evaluate_costs` are
-      orientation-free: an optimal threshold is the same point whether the metric is phrased as a
-      cost to minimize or a profit to maximize.
-
-    The gradient-based objectives are only required to be *monotonically equivalent* to
-    :meth:`_loss`, not equal to it: they must have the same minimizer, but may differ by an
-    increasing transformation. :class:`~empulse.metrics.Savings` is the standing example -- it is
-    maximized, but reuses :class:`~empulse.metrics.Cost`'s objectives, and minimizing expected cost
-    is equivalent to maximizing savings because savings is a decreasing affine map of cost. That map
-    divides by the baseline's cost, which differs between cost matrices, so a
-    :class:`~empulse.metrics.MixtureMetric` weighs each component's objective by its
-    :meth:`_cost_weight` to keep the sum of the objectives equivalent to the sum of the scores.
-
-    Besides the public methods, models and samplers use these private members, and only these: a new
-    kind of metric implements them, and a model needs nothing else of a metric. A test keeps the list
-    complete.
+    :class:`~empulse.metrics.ModelInterface` forwards to the protected methods below, and a new kind
+    of metric implements them. A test keeps the list complete.
 
     - Parameters: :attr:`_all_parameters`, :attr:`_extra_parameters`, :meth:`_missing_parameters`,
       :meth:`_validate_parameters`, :meth:`_parameter_spellings` and
       :meth:`_outlier_sensitive_parameters`.
-    - Values: :meth:`_loss`, :meth:`_prepare_count_loss`, :meth:`_closed_form_expected_max_profit`,
-      :meth:`_evaluate_costs`, :meth:`_decision_costs`, :meth:`_cost_weight` and
-      :attr:`_decides_from_costs`.
+    - Values: :meth:`_loss`, :meth:`_prepare_count_loss`, :meth:`_evaluate_costs`,
+      :meth:`_decision_costs`, :meth:`_cost_weight` and :attr:`_decides_from_costs`.
     - Training: :meth:`_logit_objective`, :meth:`_logit_value_objective`,
       :meth:`_gradient_boost_objective` and :meth:`_prepare_boost_objective`.
-    - Description: :attr:`capabilities` with :meth:`_require`, :attr:`_is_deterministic`,
-      :attr:`_has_single_cost_matrix` and :attr:`_is_unitless`.
+    - Description: :meth:`_require`, :attr:`_is_deterministic`, :attr:`_has_single_cost_matrix` and
+      :attr:`_is_unitless`.
+
+    :meth:`_loss` and the four training objectives are always minimized, whatever :attr:`direction`
+    says; the objectives need only have the same minimizer as :meth:`_loss`. A
+    :class:`~empulse.metrics.MixtureMetric` weighs each component's objective by its
+    :meth:`_cost_weight`, so that the sum of the objectives keeps the minimizer of the sum of the
+    scores. :meth:`_closed_form_expected_max_profit` is optional, and only ProfTree's compiled code
+    uses it.
     """
 
     @property
@@ -88,6 +76,15 @@ class BaseMetric(ABC):
 
         For a composite metric, a representative strategy shared by all of its components.
         """
+
+    @property
+    def model(self) -> ModelInterface:
+        """
+        What a model needs of this metric: its parameters, decision costs, losses and training objectives.
+
+        Only someone writing their own estimator needs it; see :class:`~empulse.metrics.ModelInterface`.
+        """
+        return ModelInterface(self)
 
     def _shared_strategy(self) -> MetricStrategy | None:
         """Return :attr:`strategy`, or ``None`` for a composite metric whose components use more than one type."""

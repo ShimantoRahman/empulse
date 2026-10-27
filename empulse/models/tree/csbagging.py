@@ -17,7 +17,6 @@ from ..._common._metaestimators import estimator_has
 from ..._common._sklearn_compat import Tags, get_tags, indices_to_mask, validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric
-from .._base.cost_scale import loss_scale
 from .._base.cost_sensitive import CostSensitiveClassifier, subset_loss_params
 from .._base.ensemble_weighting import accumulate_weighted_prediction, goodness_weights
 from .cstree import CSTreeClassifier, _warn_if_trees_ignore_strategy
@@ -355,7 +354,7 @@ class CSBaggingClassifier(CostSensitiveClassifier):
             raise ValueError('Weighted voting is only available when bootstrap=True.')
 
         _warn_if_trees_ignore_strategy(loss, type(self).__name__, loss_used_for='weighted voting')
-        fp_cost, fn_cost, tp_cost, tn_cost = loss._decision_costs(np.asarray(y).reshape(-1), **loss_params)
+        fp_cost, fn_cost, tp_cost, tn_cost = loss.model.decision_costs(np.asarray(y).reshape(-1), **loss_params)
 
         n_samples = X.shape[0]
         for name, cost in zip(
@@ -555,9 +554,9 @@ class CSBaggingClassifier(CostSensitiveClassifier):
 
             y_pred = estimator.predict_proba((X[mask, :])[:, features])[:, 1]
             oob_loss_params = subset_loss_params(loss_params, mask, n_samples)
-            losses[i] = loss._loss(y[mask], y_pred, validate=False, **oob_loss_params)
+            losses[i] = loss.model.loss(y[mask], y_pred, validate=False, **oob_loss_params)
 
-        weights: FloatNDArray = goodness_weights(losses, scale=loss_scale(loss, y, **loss_params))
+        weights: FloatNDArray = goodness_weights(losses, scale=loss.model.loss_scale(y, **loss_params))
         return weights
 
     def _predict_weighted_proba(self, X: FloatNDArray) -> FloatNDArray:

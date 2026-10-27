@@ -23,13 +23,13 @@ def logit_and_count_evaluations(metric, parameters):
     unique_scores, groups = np.unique(RANKING_Y_SCORE, return_inverse=True)
     n_positive = np.bincount(groups, weights=RANKING_Y_TRUE).astype(np.int64)
     n_negative = np.bincount(groups, weights=1 - RANKING_Y_TRUE).astype(np.int64)
-    objective = metric._logit_value_objective(
+    objective = metric.model.logit_value_objective(
         features=RANKING_FEATURES, y_true=RANKING_Y_TRUE, C=1.0, l1_ratio=1.0, fit_intercept=True, **parameters
     )
     return [
         metric(RANKING_Y_TRUE, RANKING_Y_SCORE, **parameters),
         metric.optimal_rate(RANKING_Y_TRUE, RANKING_Y_SCORE, **parameters),
-        metric._prepare_count_loss(**parameters)(unique_scores, n_positive, n_negative),
+        metric.model.prepare_count_loss(**parameters)(unique_scores, n_positive, n_negative),
         objective.logit_loss(np.full(RANKING_FEATURES.shape[1], 0.1)),
     ]
 

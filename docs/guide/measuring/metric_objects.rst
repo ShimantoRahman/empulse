@@ -152,6 +152,41 @@ A mixture behaves like a plain metric everywhere else. It satisfies the same
 same direction and must all be amounts of money or all pure numbers, which is checked when the mixture
 is built; accessing ``strategy`` raises if they use different strategy types.
 
+.. _metric_model_interface:
+
+Using a metric in your own estimator
+====================================
+
+Empulse's models train and decide with a metric through its ``model`` attribute, a
+:class:`~empulse.metrics.ModelInterface`. An estimator of your own that takes a ``loss`` can use the
+same interface. It gives the per-sample costs a tree or sampler trains on, the metric as a value to
+minimize whatever its direction, the training objectives of logistic regression and gradient
+boosting, and the average cost of a wrong decision, against which hyperparameters with absolute units
+are measured.
+
+.. code-block:: python
+
+    import numpy as np
+    from empulse.metrics import Capability, Cost, CostMatrix, Metric
+
+    metric = Metric(CostMatrix().add_fp_cost('fp').add_fn_cost('fn'), Cost())
+    interface = metric.model
+
+    rng = np.random.default_rng(42)
+    y = rng.integers(0, 2, 100)
+    y_proba = rng.random(100)
+    costs = {'fp': 1.0, 'fn': rng.uniform(5, 20, 100)}
+
+    interface.require(Capability.EXPECTED_COST, requester='MyEstimator')
+    interface.validate_parameters(**costs)  # once, where the values arrive
+
+    fp_cost, fn_cost, tp_cost, tn_cost = interface.decision_costs(y, **costs)
+    tolerance = 1e-4 * interface.decision_cost_scale(y, **costs)
+    loss = interface.loss(y, y_proba, validate=False, **costs)
+
+Validate the parameters once, at the start of ``fit``, and pass ``validate=False`` wherever training
+evaluates the metric again on the same values: validation reads the arrays.
+
 Where next
 ==========
 

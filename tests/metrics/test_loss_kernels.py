@@ -172,8 +172,8 @@ def test_objective_accepts_features_in_fortran_order(strategy, seeded_rng):
     y_true = (seeded_rng.random(300) < 0.3).astype(int)
     weights = seeded_rng.normal(size=4)
     arguments = {'y_true': y_true, 'C': 1.0, 'l1_ratio': 0.5, 'fit_intercept': True}
-    c_order = metric._logit_objective(features=features, **arguments)
-    fortran_order = metric._logit_objective(features=np.asfortranarray(features), **arguments)
+    c_order = metric.model.logit_objective(features=features, **arguments)
+    fortran_order = metric.model.logit_objective(features=np.asfortranarray(features), **arguments)
     loss, gradient = fortran_order.logit_loss_gradient(np.repeat(weights, 2)[::2])
     expected_loss, expected_gradient = c_order.logit_loss_gradient(weights)
     assert loss == expected_loss

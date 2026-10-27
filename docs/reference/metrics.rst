@@ -56,6 +56,7 @@ Metrics
    Metric
    MixtureComponent
    MixtureMetric
+   ModelInterface
 
 Extension Points
 ~~~~~~~~~~~~~~~~

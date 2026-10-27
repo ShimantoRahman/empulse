@@ -262,8 +262,10 @@ class CostSensitiveSampler(RoutesLossParameters, BaseSampler):  # type: ignore[m
             loss_params = self._route_costs_to_loss(
                 loss_, loss_params, fp_cost=fp_cost, fn_cost=fn_cost, caller='fit_resample'
             )
-            loss_._validate_parameters(**loss_params)
-            fp_cost, fn_cost, tp_cost, tn_cost = loss_._decision_costs(is_positive.astype(np.float64), **loss_params)
+            loss_.model.validate_parameters(**loss_params)
+            fp_cost, fn_cost, tp_cost, tn_cost = loss_.model.decision_costs(
+                is_positive.astype(np.float64), **loss_params
+            )
         else:
             resolved = self._check_costs(fp_cost=fp_cost, fn_cost=fn_cost, caller='fit_resample')
             fp_cost, fn_cost = resolved['fp_cost'], resolved['fn_cost']

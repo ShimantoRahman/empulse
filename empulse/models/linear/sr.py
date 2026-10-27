@@ -12,7 +12,6 @@ from ..._common._sklearn_compat import validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, Capability, MaxProfit
 from .._base import CostSensitiveClassifier, MetricStrategyFactory
-from .._base.cost_scale import decision_cost_scale
 from .._base.cost_sensitive import subset_loss_params
 from ._symbolic import ParetoPoint, Program, ProgramSpace, SearchSettings, evolve, get_function
 
@@ -34,7 +33,7 @@ class _LossFitness:
     """Loss of a program's output on rows of the training data, with ``inf`` for outputs that cannot be scored."""
 
     def __init__(self, loss: BaseMetric, y: IntNDArray, loss_params: dict[str, Any], scores_rank_only: bool) -> None:
-        self.loss = loss
+        self.interface = loss.model
         self.y = y
         self.loss_params = loss_params
         self.scores_rank_only = scores_rank_only
@@ -44,10 +43,10 @@ class _LossFitness:
             return np.inf
         y_score = y_pred if self.scores_rank_only else expit(y_pred)
         if rows is None:
-            value = self.loss._loss(self.y, y_score, validate=False, **self.loss_params)
+            value = self.interface.loss(self.y, y_score, validate=False, **self.loss_params)
         else:
             loss_params = subset_loss_params(self.loss_params, rows, self.y.shape[0])
-            value = self.loss._loss(self.y[rows], y_score, validate=False, **loss_params)
+            value = self.interface.loss(self.y[rows], y_score, validate=False, **loss_params)
         return float(value) if np.isfinite(value) else np.inf
 
 
@@ -462,7 +461,7 @@ class ProfSRClassifier(CostSensitiveClassifier):
             tolerance=self.tolerance,
             max_time=self.max_time,
             n_jobs=effective_n_jobs(self.n_jobs),
-            loss_scale=decision_cost_scale(loss, y, **loss_params),
+            loss_scale=loss.model.decision_cost_scale(y, **loss_params),
         )
         result = evolve(X, fitness, space, settings, self.random_state)
 

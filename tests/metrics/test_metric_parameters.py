@@ -27,7 +27,7 @@ Y_SCORE = np.array([0.9, 0.1, 0.8, 0.2, 0.7])
 
 class TestMissingParameters:
     """
-    Tests for Metric._missing_parameters, used by CSThresholdClassifier/CSRateClassifier.
+    Tests for ``ModelInterface.missing_parameters``, used by CSThresholdClassifier/CSRateClassifier.
 
     A caller supplies one spelling per parameter (a symbol's raw name or its alias), so either must
     count as covered. Comparing the caller's keys for equality against `_all_parameters`, which lists
@@ -41,51 +41,51 @@ class TestMissingParameters:
 
     def test_nothing_supplied(self):
         metric = self._aliased_metric()
-        assert metric._missing_parameters([]) == {'clv', 'd'}
+        assert metric.model.missing_parameters([]) == {'clv', 'd'}
 
     def test_supplied_by_symbol_name(self):
         metric = self._aliased_metric()
-        assert metric._missing_parameters(['clv', 'd']) == set()
+        assert metric.model.missing_parameters(['clv', 'd']) == set()
 
     def test_supplied_by_alias(self):
         """A parameter is satisfied by its alias just as well as by its raw symbol name."""
         metric = self._aliased_metric()
-        assert metric._missing_parameters(['clv', 'incentive_cost']) == set()
+        assert metric.model.missing_parameters(['clv', 'incentive_cost']) == set()
 
     def test_partial_supply_still_reports_missing(self):
         metric = self._aliased_metric()
-        assert metric._missing_parameters(['clv']) == {'d'}
+        assert metric.model.missing_parameters(['clv']) == {'d'}
 
     def test_unrelated_extra_keys_are_ignored(self):
         """Extra keys the metric doesn't recognize (e.g. sample_weight) don't affect the result."""
         metric = self._aliased_metric()
-        assert metric._missing_parameters(['clv', 'incentive_cost', 'sample_weight']) == set()
+        assert metric.model.missing_parameters(['clv', 'incentive_cost', 'sample_weight']) == set()
 
     def test_default_parameters_are_never_missing(self):
         clv, d = sympy.symbols('clv d')
         metric = Metric(CostMatrix().add_fn_cost(clv).add_fp_cost(d).set_default(clv=100.0), Cost())
-        assert metric._missing_parameters([]) == {'d'}
-        assert metric._missing_parameters(['d']) == set()
+        assert metric.model.missing_parameters([]) == {'d'}
+        assert metric.model.missing_parameters(['d']) == set()
 
 
 class TestOutlierSensitiveParameters:
-    """Tests for Metric._outlier_sensitive_parameters, used by RobustCSClassifier."""
+    """Tests for ``ModelInterface.outlier_sensitive_parameters``, used by RobustCSClassifier."""
 
     def test_no_outlier_sensitive_parameters(self):
         metric = Metric(CostMatrix().add_tp_benefit('a').add_fp_cost('b'), Cost())
-        assert metric._outlier_sensitive_parameters() == {}
+        assert metric.model.outlier_sensitive_parameters() == {}
 
     def test_positive_class_parameter(self):
         """A symbol used only in tp_cost/fn_cost is classified 'positive'."""
         a = sympy.Symbol('a')
         metric = Metric(CostMatrix().add_tp_benefit(a).add_fp_cost('b').mark_outlier_sensitive(a), Cost())
-        assert metric._outlier_sensitive_parameters() == {'a': 'positive'}
+        assert metric.model.outlier_sensitive_parameters() == {'a': 'positive'}
 
     def test_negative_class_parameter(self):
         """A symbol used only in tn_cost/fp_cost is classified 'negative'."""
         b = sympy.Symbol('b')
         metric = Metric(CostMatrix().add_tp_benefit('a').add_fp_cost(b).mark_outlier_sensitive(b), Cost())
-        assert metric._outlier_sensitive_parameters() == {'b': 'negative'}
+        assert metric.model.outlier_sensitive_parameters() == {'b': 'negative'}
 
     def test_both_classes_parameter(self):
         """A symbol used on both sides is classified 'both'."""
@@ -94,7 +94,7 @@ class TestOutlierSensitiveParameters:
             CostMatrix().add_tp_benefit(a).add_fp_cost(a).mark_outlier_sensitive(a),
             Cost(),
         )
-        assert metric._outlier_sensitive_parameters() == {'a': 'both'}
+        assert metric.model.outlier_sensitive_parameters() == {'a': 'both'}
 
     def test_returned_under_its_symbol_name_with_every_spelling_available(self):
         """The key is the symbol name; `_parameter_spellings` gives every keyword it can be passed as."""
@@ -103,8 +103,8 @@ class TestOutlierSensitiveParameters:
             CostMatrix().add_fp_cost(d).alias({'incentive_cost': 'd'}).mark_outlier_sensitive(d),
             Cost(),
         )
-        assert metric._outlier_sensitive_parameters() == {'d': 'negative'}
-        assert metric._parameter_spellings('d') == {'d', 'incentive_cost'}
+        assert metric.model.outlier_sensitive_parameters() == {'d': 'negative'}
+        assert metric.model.parameter_spellings('d') == {'d', 'incentive_cost'}
 
     def test_a_symbol_with_two_aliases(self):
         """Inverting the alias map to find "the" alias raised for a symbol with two of them."""
@@ -116,7 +116,7 @@ class TestOutlierSensitiveParameters:
             .mark_outlier_sensitive('value'),
             Cost(),
         )
-        assert metric._outlier_sensitive_parameters() == {'clv': 'positive'}
+        assert metric.model.outlier_sensitive_parameters() == {'clv': 'positive'}
 
     def test_a_distribution_parameter_is_classified_by_the_costs_it_enters(self):
         alpha = sympy.Symbol('alpha')
@@ -125,7 +125,7 @@ class TestOutlierSensitiveParameters:
             CostMatrix().add_tp_benefit(gamma * sympy.Symbol('clv')).add_fp_cost(1).mark_outlier_sensitive(alpha),
             MaxProfit(),
         )
-        assert metric._outlier_sensitive_parameters() == {'alpha': 'positive'}
+        assert metric.model.outlier_sensitive_parameters() == {'alpha': 'positive'}
 
     def test_marked_by_alias(self):
         """Marking a symbol by its alias classifies the symbol the alias stands for."""
@@ -138,18 +138,18 @@ class TestOutlierSensitiveParameters:
             .mark_outlier_sensitive('incentive_cost'),
             Cost(),
         )
-        assert metric._outlier_sensitive_parameters() == {'d': 'positive'}
+        assert metric.model.outlier_sensitive_parameters() == {'d': 'positive'}
 
     def test_marked_by_name_of_a_symbol_with_assumptions(self):
         """``mark_outlier_sensitive('d')`` creates an assumption-free symbol, which must still match ``d``."""
         d = sympy.Symbol('d', positive=True)
         metric = Metric(CostMatrix().add_fn_cost(d).add_fp_cost('f').mark_outlier_sensitive('d'), Cost())
-        assert metric._outlier_sensitive_parameters() == {'d': 'positive'}
+        assert metric.model.outlier_sensitive_parameters() == {'d': 'positive'}
 
     def test_unaliased_symbol_uses_raw_name(self):
         clv = sympy.Symbol('clv')
         metric = Metric(CostMatrix().add_tp_benefit(clv).mark_outlier_sensitive(clv), Cost())
-        assert metric._outlier_sensitive_parameters() == {'clv': 'positive'}
+        assert metric.model.outlier_sensitive_parameters() == {'clv': 'positive'}
 
     def test_multiple_outlier_sensitive_parameters(self):
         clv, d = sympy.symbols('clv d')
@@ -157,7 +157,7 @@ class TestOutlierSensitiveParameters:
             CostMatrix().add_tp_benefit(clv).add_fp_cost(d).mark_outlier_sensitive(clv).mark_outlier_sensitive(d),
             Cost(),
         )
-        assert metric._outlier_sensitive_parameters() == {'clv': 'positive', 'd': 'negative'}
+        assert metric.model.outlier_sensitive_parameters() == {'clv': 'positive', 'd': 'negative'}
 
 
 # --- Parameter names and aliases ---------------------------------------------------------------------
@@ -195,10 +195,10 @@ class TestParameterSpellings:
 
     @pytest.mark.parametrize('name', ['d', 'amount', 'incentive'])
     def test_any_spelling_gives_all_of_them(self, name):
-        assert self._aliased_metric()._parameter_spellings(name) == {'d', 'amount', 'incentive'}
+        assert self._aliased_metric().model.parameter_spellings(name) == {'d', 'amount', 'incentive'}
 
     def test_an_unaliased_symbol_has_one_spelling(self):
-        assert self._aliased_metric()._parameter_spellings('f') == {'f'}
+        assert self._aliased_metric().model.parameter_spellings('f') == {'f'}
 
 
 @pytest.mark.parametrize('kwarg_order', ['symbol_first', 'alias_first'])
@@ -255,21 +255,21 @@ def _metric():
 
 def test_parameter_names_are_a_copy():
     metric = _metric()
-    assert metric._all_parameters == {'clv', 'd'}
-    metric._all_parameters.add('typo')
-    assert metric._all_parameters == {'clv', 'd'}
+    assert metric.parameter_names == {'clv', 'd'}
+    metric.parameter_names.add('typo')
+    assert metric.parameter_names == {'clv', 'd'}
 
 
 def test_changing_the_cost_matrix_copy_does_not_change_the_metric():
     metric = _metric()
     expected = metric(Y_TRUE, Y_SCORE)
     metric.cost_matrix.alias('discount', 'd').add_fp_cost(sympy.Symbol('f'))
-    assert metric._all_parameters == {'clv', 'd'}
+    assert metric.parameter_names == {'clv', 'd'}
     assert metric(Y_TRUE, Y_SCORE) == expected
 
 
 def test_parameter_names_survive_pickling():
     metric = _metric()
-    names = metric._all_parameters
+    names = metric.parameter_names
     restored = pickle.loads(pickle.dumps(metric))
-    assert restored._all_parameters == names
+    assert restored.parameter_names == names

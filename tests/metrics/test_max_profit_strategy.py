@@ -531,7 +531,7 @@ def test_objective_max_profit_logit_deterministic():
     metric = Metric(CostMatrix().add_tp_benefit(clv), MaxProfit())
 
     X, y = make_classification(n_samples=40, n_features=4, random_state=12)
-    objective = metric._logit_objective(
+    objective = metric.model.logit_objective(
         X,
         y,
         C=1.0,
@@ -561,7 +561,7 @@ def test_max_profit_logit_alpha_is_constant():
     metric = Metric(CostMatrix().add_tp_benefit(clv), MaxProfit(alpha=1.0))
 
     X, y = make_classification(n_samples=40, n_features=4, random_state=21)
-    objective = metric._logit_objective(
+    objective = metric.model.logit_objective(
         X,
         y,
         C=1.0,
@@ -655,7 +655,7 @@ def test_objective_boost_max_profit_deterministic_linear():
 
     _, y = make_classification(n_samples=40, random_state=12)
     y_score = np.linspace(-1.0, 1.0, y.shape[0])
-    gradient, hessian = metric._gradient_boost_objective(y, y_score, clv=5.0)
+    gradient, hessian = metric.model.gradient_boost_objective(y, y_score, clv=5.0)
 
     assert gradient.shape == y.shape
     assert hessian.shape == y.shape
@@ -676,9 +676,9 @@ def test_objective_boost_max_profit_alpha_is_constant_across_fits():
     y_score = np.linspace(-1.0, 1.0, y.shape[0])
 
     assert metric.strategy.alpha == pytest.approx(2.0)  # type: ignore[attr-defined]
-    gradient_1, hessian_1 = metric._gradient_boost_objective(y, y_score, clv=5.0)
+    gradient_1, hessian_1 = metric.model.gradient_boost_objective(y, y_score, clv=5.0)
     assert metric.strategy.alpha == pytest.approx(2.0)  # type: ignore[attr-defined]
-    gradient_2, hessian_2 = metric._gradient_boost_objective(y, y_score, clv=5.0)
+    gradient_2, hessian_2 = metric.model.gradient_boost_objective(y, y_score, clv=5.0)
     assert metric.strategy.alpha == pytest.approx(2.0)  # type: ignore[attr-defined]
 
     np.testing.assert_array_equal(gradient_1, gradient_2)
@@ -695,7 +695,7 @@ def test_value_objective_is_the_score_for_non_linear_instance_parameters(seeded_
     parameters = {'a': seeded_rng.uniform(0, 20, n_samples), 'b': seeded_rng.uniform(0, 2, n_samples)}
     weights = np.array([0.1, 0.5, -0.2, 0.3])
 
-    objective = metric._logit_value_objective(
+    objective = metric.model.logit_value_objective(
         features=features, y_true=y_true, C=1.0, l1_ratio=0.0, fit_intercept=True, **parameters
     )
     y_score = 1 / (1 + np.exp(-(features @ weights)))

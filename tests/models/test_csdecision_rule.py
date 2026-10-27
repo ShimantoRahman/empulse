@@ -596,7 +596,7 @@ class TestAliasedMetric:
     """
     Cost-sensitive fitting with an aliased Metric.
 
-    `_should_skip_cost_sensitive_fit` must not compare `loss._all_parameters` (which lists both a
+    `_should_skip_cost_sensitive_fit` must not compare `loss.parameter_names` (which lists both a
     symbol's raw name and its alias) for equality against the caller's supplied keys. A caller only
     supplies one spelling per parameter, so that equality can never hold for an aliased metric: the
     model would skip learning a threshold/rate and forward the loss's kwargs straight to the base

@@ -1,5 +1,5 @@
 """
-``BaseMetric._prepare_count_loss``: the loss of samples grouped by score, prepared once per fit.
+``ModelInterface.prepare_count_loss``: the loss of samples grouped by score, prepared once per fit.
 
 A model whose predictions take few distinct values, like the leaves of a decision tree, scores them
 from each value's numbers of positive and negative samples instead of predicting every sample.
@@ -68,9 +68,9 @@ def tree_like_predictions():
 )
 def test_count_loss_equals_the_loss_of_the_samples(metric, parameters, tree_like_predictions):
     y_true, y_score = tree_like_predictions
-    count_loss = metric._prepare_count_loss(n_samples=y_true.size, **parameters)
+    count_loss = metric.model.prepare_count_loss(n_samples=y_true.size, **parameters)
     assert count_loss is not None
-    assert count_loss(*grouped(y_true, y_score)) == metric._loss(y_true, y_score, **parameters)
+    assert count_loss(*grouped(y_true, y_score)) == metric.model.loss(y_true, y_score, **parameters)
 
 
 @pytest.mark.parametrize(
@@ -86,7 +86,7 @@ def test_count_loss_equals_the_loss_of_the_samples(metric, parameters, tree_like
     ids=['deterministic_max_profit', 'cost', 'mixture_with_a_component_needing_every_sample'],
 )
 def test_count_loss_is_none_when_every_sample_is_needed(metric):
-    assert metric._prepare_count_loss(clv=200.0, d=10.0) is None
+    assert metric.model.prepare_count_loss(clv=200.0, d=10.0) is None
 
 
 def test_mixture_count_loss_is_the_weighted_sum_of_its_components(tree_like_predictions):
@@ -95,16 +95,16 @@ def test_mixture_count_loss_is_the_weighted_sum_of_its_components(tree_like_pred
         MixtureComponent(0.3, Metric(EMPC_MATRIX, MaxProfit()), {}),
         MixtureComponent(0.7, Metric(TWO_VARIABLES, MaxProfit()), {}),
     ])
-    count_loss = mixture._prepare_count_loss(n_samples=y_true.size, clv=200.0)
+    count_loss = mixture.model.prepare_count_loss(n_samples=y_true.size, clv=200.0)
     assert count_loss is not None
-    assert count_loss(*grouped(y_true, y_score)) == pytest.approx(mixture._loss(y_true, y_score, clv=200.0))
+    assert count_loss(*grouped(y_true, y_score)) == pytest.approx(mixture.model.loss(y_true, y_score, clv=200.0))
 
 
 def test_count_loss_resolves_its_parameters_once(tree_like_predictions):
     """Aliases, defaults and parameter checks are resolved when the loss is prepared, not per call."""
     y_true, y_score = tree_like_predictions
     metric = Metric(EMPC_MATRIX.alias('customer_lifetime_value', clv), MaxProfit())
-    count_loss = metric._prepare_count_loss(n_samples=y_true.size, customer_lifetime_value=200.0)
+    count_loss = metric.model.prepare_count_loss(n_samples=y_true.size, customer_lifetime_value=200.0)
     groups = grouped(y_true, y_score)
 
     with mock.patch.object(
@@ -117,4 +117,4 @@ def test_count_loss_resolves_its_parameters_once(tree_like_predictions):
 def test_count_loss_checks_the_parameters_when_prepared():
     metric = Metric(EMPC_MATRIX, MaxProfit())
     with pytest.raises(ValueError, match='clv'):
-        metric._prepare_count_loss()
+        metric.model.prepare_count_loss()

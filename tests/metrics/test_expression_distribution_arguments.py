@@ -60,8 +60,8 @@ def test_expression_arguments_in_the_gradient_objective():
         'l1_ratio': 1.0,
         'fit_intercept': True,
     }
-    actual = _metric(expression, 'auto', polynomial=True)._logit_objective(**arguments, **PARAMETERS)
-    expected = _metric(value, 'auto', polynomial=True)._logit_objective(**arguments)
+    actual = _metric(expression, 'auto', polynomial=True).model.logit_objective(**arguments, **PARAMETERS)
+    expected = _metric(value, 'auto', polynomial=True).model.logit_objective(**arguments)
     assert actual.logit_loss(weights) == pytest.approx(expected.logit_loss(weights), rel=1e-12)
     np.testing.assert_allclose(actual.logit_gradient(weights), expected.logit_gradient(weights), rtol=1e-9)
 

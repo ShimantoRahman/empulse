@@ -168,7 +168,7 @@ def test_a_mixture_of_savings_weighs_each_components_costs_by_its_baseline(data)
         MixtureComponent(0.5, Metric(CostMatrix().add_fp_cost('c').add_fn_cost('d'), Savings()), {}),
     ])
     params = {'a': 1.0, 'b': 5.0, 'c': 2.0, 'd': 1.0}
-    fp_cost, fn_cost, _, _ = mixture._decision_costs(y.astype(np.float64), **params)
+    fp_cost, fn_cost, _, _ = mixture.model.decision_costs(y.astype(np.float64), **params)
 
     from_mixture = CostSensitiveSampler(method='rejection sampling', loss=mixture, random_state=42).fit_resample(
         X, y, **params

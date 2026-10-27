@@ -14,7 +14,6 @@ from ..._common import Parameter
 from ..._common._sklearn_compat import Tags, validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, Capability
-from .._base.cost_scale import decision_cost_scale
 from .._base.cost_sensitive import CostSensitiveClassifier
 from ._backends import (
     BoostingBackend,
@@ -364,7 +363,7 @@ class CSBoostClassifier(CostSensitiveClassifier):
                 f'{type(self).__name__} does not take sample_weight: the costs of the cost matrix already '
                 'weigh each sample. Fold any extra weight into the costs instead.'
             )
-        scaling = ObjectiveScaling(scale=decision_cost_scale(loss, y, **loss_params))
+        scaling = ObjectiveScaling(scale=loss.model.decision_cost_scale(y, **loss_params))
 
         if self.estimator is None:
             backend = self._initialize_default_estimator(y=y, loss=loss, scaling=scaling, **loss_params)

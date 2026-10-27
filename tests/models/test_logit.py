@@ -57,7 +57,7 @@ class TestCSLogit:
         """L-BFGS-B minimizes an L1 penalty through a reformulation that needs the unpenalized MaxProfit."""
         loss = Metric(CostMatrix().add_tp_cost('tp').add_fp_cost('fp').add_fn_cost('fn'), MaxProfit())
         clf = CSLogitClassifier(loss=loss, l1_ratio=l1_ratio).fit(X, y, tp=-1.0, fp=1.0, fn=4.0)
-        objective = loss._logit_objective(
+        objective = loss.model.logit_objective(
             features=np.column_stack([np.ones(len(y)), X]),
             y_true=y,
             C=1.0,

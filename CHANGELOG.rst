@@ -4,6 +4,9 @@
 Metrics
 -------
 
+- |Feature| A metric's ``model`` attribute, a :class:`~empulse.metrics.ModelInterface`, gives an
+  estimator of your own what Empulse's models use of a ``loss``: its parameters, decision costs,
+  loss, training objectives and cost scale. See :ref:`metric_model_interface`.
 - |API| :class:`~empulse.metrics.Direction`, which a custom :class:`~empulse.metrics.MetricStrategy`
   passes to its constructor and every metric reports as ``direction``, is exported from
   :mod:`empulse.metrics`. It could only be imported from a private module.

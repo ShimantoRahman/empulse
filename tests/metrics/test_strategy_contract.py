@@ -511,7 +511,7 @@ class TestCapabilities:
             pytest.skip('not a ranking metric')
         y_true, y_score, transformed_scores = self._scores_and_transforms(seeded_rng)
         # Per-sample values for whatever the metric has no default for (e.g. the customer lifetime value).
-        parameters = {name: seeded_rng.uniform(50, 150, y_true.size) for name in metric._missing_parameters(())}
+        parameters = {name: seeded_rng.uniform(50, 150, y_true.size) for name in metric.model.missing_parameters(())}
         expected = metric(y_true, y_score, **parameters)
         for transformed in transformed_scores:
             assert metric(y_true, transformed, **parameters) == pytest.approx(expected, rel=1e-12, abs=1e-12)
@@ -643,7 +643,7 @@ def test_prebuilt_metric_direction(metric, expected):
 def test_loss_is_minimized(metric, parameters):
     """``_loss`` equals the score for a MINIMIZE metric and its negation for a MAXIMIZE one."""
     score = metric(Y_TRUE, Y_SCORE, **parameters)
-    loss = metric._loss(Y_TRUE, Y_SCORE, **parameters)
+    loss = metric.model.loss(Y_TRUE, Y_SCORE, **parameters)
 
     sign = -1.0 if metric.direction is Direction.MAXIMIZE else 1.0
     assert loss == pytest.approx(sign * score)
@@ -655,7 +655,7 @@ def test_loss_ranks_a_maximize_metric_the_right_way():
     bad = np.array([0.9, 0.1, 0.8, 0.2, 0.3, 0.9, 0.1, 0.8])
 
     assert expected_savings_score(Y_TRUE, good, **CLASS_COSTS) > expected_savings_score(Y_TRUE, bad, **CLASS_COSTS)
-    assert expected_savings_score._loss(Y_TRUE, good, **CLASS_COSTS) < expected_savings_score._loss(
+    assert expected_savings_score.model.loss(Y_TRUE, good, **CLASS_COSTS) < expected_savings_score.model.loss(
         Y_TRUE, bad, **CLASS_COSTS
     )
 
@@ -663,7 +663,7 @@ def test_loss_ranks_a_maximize_metric_the_right_way():
 def test_loss_on_mixture_metric():
     """A mixture inherits ``_loss`` from ``BaseMetric``; it negates the combined score once."""
     score = empcs_score(Y_TRUE, Y_SCORE, **CREDIT_PARAMS)
-    assert empcs_score._loss(Y_TRUE, Y_SCORE, **CREDIT_PARAMS) == pytest.approx(-score)
+    assert empcs_score.model.loss(Y_TRUE, Y_SCORE, **CREDIT_PARAMS) == pytest.approx(-score)
 
 
 def test_direction_inconsistent_mixture_raises():
@@ -718,7 +718,7 @@ class TestSiblingIsANegation:
         parent = Metric(cost_matrix, parent_cls())
         sibling = Metric(cost_matrix, sibling_cls())
 
-        assert sibling._loss(y, y_score, **COSTS) == pytest.approx(parent._loss(y, y_score, **COSTS))
+        assert sibling.model.loss(y, y_score, **COSTS) == pytest.approx(parent.model.loss(y, y_score, **COSTS))
 
     def test_directions_are_opposite(self, parent_cls, sibling_cls, cost_matrix):
         parent = Metric(cost_matrix, parent_cls())

@@ -663,7 +663,7 @@ def test_savings_baseline_is_a_fit_parameter(estimator, baseline, savings_mixtur
 @pytest.mark.parametrize('baseline', ['zero_one', 'one'])
 def test_a_tree_grows_on_the_costs_a_savings_mixture_weighs(baseline, savings_mixture, noisy_data):
     X, y = noisy_data
-    fp_cost, fn_cost, _, _ = savings_mixture._decision_costs(y, baseline=baseline, **SAVINGS_PARAMS)
+    fp_cost, fn_cost, _, _ = savings_mixture.model.decision_costs(y, baseline=baseline, **SAVINGS_PARAMS)
 
     with warnings.catch_warnings():
         # It optimizes the mixture itself, so it does not warn that it only minimizes an expected cost.
@@ -679,7 +679,7 @@ def test_a_tree_grows_on_the_costs_a_savings_mixture_weighs(baseline, savings_mi
 @pytest.mark.parametrize('baseline', ['zero_one', 'one'])
 def test_a_threshold_follows_the_baseline_of_a_savings_mixture(baseline, savings_mixture, noisy_data):
     X, y = noisy_data
-    fp_cost, fn_cost, _, _ = savings_mixture._decision_costs(y, baseline=baseline, **SAVINGS_PARAMS)
+    fp_cost, fn_cost, _, _ = savings_mixture.model.decision_costs(y, baseline=baseline, **SAVINGS_PARAMS)
     model = CSThresholdClassifier(LogisticRegression(), calibrator=None, loss=savings_mixture)
     model.fit(X, y, baseline=baseline, **SAVINGS_PARAMS)
     assert model.threshold_ == pytest.approx(float(fp_cost) / float(fp_cost + fn_cost))

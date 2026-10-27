@@ -83,7 +83,7 @@ def test_robustcs_mixture_metric_loss(classification_data):
     """
     A ``MixtureMetric`` loss is imputed, not rejected.
 
-    ``BaseMetric._outlier_sensitive_parameters()`` answers which parameters are outlier-sensitive
+    ``loss.model.outlier_sensitive_parameters()`` answers which parameters are outlier-sensitive
     uniformly for a ``Metric`` and a ``MixtureMetric`` (here, trivially, one component), so
     ``RobustCSClassifier`` does not need to walk a single ``CostMatrix``'s sympy expressions.
     """

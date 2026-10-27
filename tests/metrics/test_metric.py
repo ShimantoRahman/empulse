@@ -556,7 +556,7 @@ def test_objective_aec_gradient_boost(y_true_and_prediction, delta_churn_cost_ma
     y, y_proba = y_true_and_prediction
     profit_func = Metric(delta_churn_cost_matrix, Cost())
 
-    grad_const = profit_func._prepare_boost_objective(
+    grad_const = profit_func.model.prepare_boost_objective(
         y,
         clv=customer_lifetime_value,
         delta=incentive_fraction,

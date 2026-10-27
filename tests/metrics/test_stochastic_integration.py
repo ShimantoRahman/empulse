@@ -432,10 +432,10 @@ class TestDistributionWithLiteralAndSymbolicParameters:
         features = np.column_stack([np.ones(self.RANKING_Y_TRUE.size), self.RANKING_Y_SCORE])
         weights = np.array([0.1, -0.3])
         kwargs = {'C': 1.0, 'l1_ratio': 0.0, 'fit_intercept': True, 'clv': 200.0}
-        loss_mixed, grad_mixed = metric_mixed._logit_objective(
+        loss_mixed, grad_mixed = metric_mixed.model.logit_objective(
             features, self.RANKING_Y_TRUE, **kwargs, **mixed_params
         ).logit_loss_gradient(weights)
-        loss_symbolic, grad_symbolic = metric_symbolic._logit_objective(
+        loss_symbolic, grad_symbolic = metric_symbolic.model.logit_objective(
             features, self.RANKING_Y_TRUE, **kwargs, **symbolic_params
         ).logit_loss_gradient(weights)
         assert loss_mixed == pytest.approx(loss_symbolic)

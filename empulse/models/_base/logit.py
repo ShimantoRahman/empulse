@@ -61,7 +61,7 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
         optimizer = self._resolve_optimizer()
         requester = f'{type(self).__name__} with {type(optimizer).__name__}'
         if optimizer.requires_gradient:
-            loss._require(
+            loss.model.require(
                 Capability.LOGIT_OBJECTIVE,
                 requester=requester,
                 hint=(
@@ -70,11 +70,11 @@ class BaseLogitClassifier(CostSensitiveClassifier, ABC):  # type: ignore[misc]
                     else None
                 ),
             )
-            build_objective = loss._logit_objective
+            build_objective = loss.model.logit_objective
         else:
             # An optimizer that only compares losses gets an objective that computes the loss alone.
-            loss._require(Capability.LOGIT_VALUE_OBJECTIVE, requester=requester)
-            build_objective = loss._logit_value_objective
+            loss.model.require(Capability.LOGIT_VALUE_OBJECTIVE, requester=requester)
+            build_objective = loss.model.logit_value_objective
         objective = build_objective(
             features=X,
             y_true=y,

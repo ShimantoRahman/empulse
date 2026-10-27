@@ -95,7 +95,7 @@ class MetricObjective:
 
     def __call__(self, y_true: FloatNDArray, y_score: FloatNDArray) -> tuple[FloatNDArray, FloatNDArray]:
         """Compute the scaled gradient and hessian of the metric objective."""
-        gradient, hessian = self.metric._gradient_boost_objective(y_true, y_score, **self.loss_params)
+        gradient, hessian = self.metric.model.gradient_boost_objective(y_true, y_score, **self.loss_params)
         return self.scaling(gradient), self.scaling(hessian)
 
 
@@ -121,7 +121,7 @@ def _catboost_training_data(grad_const: FloatNDArray, y: IntNDArray) -> tuple[In
     Parameters
     ----------
     grad_const : ndarray of shape (n_samples,)
-        The metric's constant gradient term, from ``BaseMetric._prepare_boost_objective``.
+        The metric's constant gradient term, from ``ModelInterface.prepare_boost_objective``.
     y : ndarray of shape (n_samples,)
         The (0/1-encoded) training target.
 
@@ -329,7 +329,7 @@ class BoostingBackend:
             # The per-row gradient constants reach CatBoost as its targets and sample weights, built
             # by `fit_arguments`; the objective itself needs no parameters.
             return CatBoostObjective(), CatBoostMetric()
-        grad_const = scaling(loss._prepare_boost_objective(y, **loss_params).reshape(-1))
+        grad_const = scaling(loss.model.prepare_boost_objective(y, **loss_params).reshape(-1))
         if self.name == 'xgboost':
             # cy_boost_grad_hess (Cython) requires a float64 memoryview.
             return partial(cy_boost_grad_hess, grad_const=np.asarray(grad_const, dtype=np.float64))
@@ -369,7 +369,7 @@ class BoostingBackend:
         """
         if self.name == 'catboost':
             fit_kwargs = dict(fit_params)
-            grad_const = np.asarray(loss._prepare_boost_objective(y, **loss_params), dtype=np.float64).reshape(-1)
+            grad_const = np.asarray(loss.model.prepare_boost_objective(y, **loss_params), dtype=np.float64).reshape(-1)
             y_fit, sample_weight = _catboost_training_data(scaling(grad_const), y)
             if not np.any(sample_weight > 0):
                 raise ValueError(

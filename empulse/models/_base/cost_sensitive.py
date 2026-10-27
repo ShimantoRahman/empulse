@@ -175,7 +175,7 @@ class CostSensitiveClassifier(RoutesLossParameters, BinaryClassifierTags, ABC, C
             )
         loss = loss_ if loss_ is not None else self._get_default_loss()
 
-        known = loss._all_parameters | loss._extra_parameters
+        known = loss.model.accepted_parameters
         loss_params = self._normalize_cost_shapes(loss_params, size=y.size, names=known)
         if self._extra_fit_params is not None:
             unknown = sorted(set(loss_params) - known - self._extra_fit_params)
@@ -185,7 +185,7 @@ class CostSensitiveClassifier(RoutesLossParameters, BinaryClassifierTags, ABC, C
                     f'Besides X and y it accepts the costs and the parameters of its loss: '
                     f'{", ".join(sorted(known | self._extra_fit_params))}.'
                 )
-        loss._validate_parameters(**{name: value for name, value in loss_params.items() if name in known})
+        loss.model.validate_parameters(**{name: value for name, value in loss_params.items() if name in known})
 
         return self._fit(X, y, loss=loss, **loss_params)
 
@@ -299,8 +299,8 @@ class CostSensitiveClassifier(RoutesLossParameters, BinaryClassifierTags, ABC, C
             fn_cost = loss_params.get('fn_cost', 0.0)
             fp_cost = loss_params.get('fp_cost', 0.0)
         else:
-            loss_._require(Capability.CLASS_COSTS, requester=self.__class__.__name__)
-            fp_cost, fn_cost, tp_cost, tn_cost = loss_._evaluate_costs(replace_stochastic=True, **loss_params)
+            loss_.model.require(Capability.CLASS_COSTS, requester=self.__class__.__name__)
+            fp_cost, fn_cost, tp_cost, tn_cost = loss_.model.evaluate_costs(replace_stochastic=True, **loss_params)
 
         # This model requires scalar (class-dependent) costs, so instance-dependent
         # (array-like) costs are aggregated to their mean value.

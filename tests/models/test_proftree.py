@@ -107,7 +107,7 @@ class TestPreflightSmokeTestReproducibility:
 
 
 class TestCustomLossDirection:
-    """The custom-loss path hands the evolutionary search the negated ``BaseMetric._loss``.
+    """The custom-loss path hands the evolutionary search the negated ``ModelInterface.loss``.
 
     The search keeps the fittest trees, i.e. it maximizes, while ``_loss`` is a value to minimize.
     Handing it ``_loss`` directly would make ProfTree search for the costliest tree: with an
@@ -437,7 +437,7 @@ class TestLeafLevelCustomLoss:
         if rounded:
             X = np.round(X)
         metric = Metric(self.EMPC_MATRIX, MaxProfit())
-        assert metric._prepare_count_loss(clv=200.0, d=10.0) is not None
+        assert metric.model.prepare_count_loss(clv=200.0, d=10.0) is not None
 
         def fit():
             model = ProfTreeClassifier(loss=metric, max_iter=15, population_size=20, max_depth=5, random_state=0)

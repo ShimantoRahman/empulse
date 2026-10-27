@@ -62,7 +62,7 @@ def test_does_not_support_model_training(empirical_churn_cost_matrix, empirical_
     metric = Metric(cost_matrix, empirical_strategy())
 
     with pytest.raises(NotImplementedError):
-        metric._logit_objective(
+        metric.model.logit_objective(
             features=np.eye(len(y)),
             y_true=y,
             C=1.0,
@@ -73,9 +73,9 @@ def test_does_not_support_model_training(empirical_churn_cost_matrix, empirical_
             f=15,
         )
     with pytest.raises(NotImplementedError):
-        metric._gradient_boost_objective(y, y_score, clv=clv, delta=0.05, f=15)
+        metric.model.gradient_boost_objective(y, y_score, clv=clv, delta=0.05, f=15)
     with pytest.raises(NotImplementedError):
-        metric._prepare_boost_objective(y, clv=clv, delta=0.05, f=15)
+        metric.model.prepare_boost_objective(y, clv=clv, delta=0.05, f=15)
 
 
 def test_repr_and_latex_smoke(empirical_churn_cost_matrix, empirical_strategy):
