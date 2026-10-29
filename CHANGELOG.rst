@@ -241,6 +241,13 @@ Metrics
 Models
 ------
 
+- |API| :class:`~empulse.models.ProfLogitClassifier`, :class:`~empulse.models.ProfTreeClassifier`,
+  :class:`~empulse.models.ProfSRClassifier`, :class:`~empulse.models.ProfMPMClassifier` and
+  :class:`~empulse.models.ProfMEMPMClassifier` take a ``threshold`` parameter. With the default
+  ``'auto'``, ``predict`` predicts the positive class above ``threshold_``, the probability that costs
+  the training samples least, instead of above 0.5. Across nine benchmark datasets this raised the
+  share of attainable savings on held-out data by 0.03 to 0.33 on average, depending on the model.
+  Pass ``threshold=0.5`` for the previous predictions. See :ref:`learned_threshold`.
 - |Fix| A loss parameter passed to ``fit`` as a list or a pandas Series is treated like an array.
   :class:`~empulse.models.CSThresholdClassifier` learned one threshold per training sample from it,
   so ``predict`` failed on other data or applied the wrong thresholds, and weighted voting in

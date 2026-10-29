@@ -21,6 +21,8 @@ from empulse.models import (
     CSThresholdClassifier,
     CSTreeClassifier,
     ProfLogitClassifier,
+    ProfMEMPMClassifier,
+    ProfMPMClassifier,
     ProfTreeClassifier,
     RobustCSClassifier,
 )
@@ -45,6 +47,12 @@ ESTIMATOR_CLASSES = {est.__class__ for est in ESTIMATORS}
 def expected_failed_checks(estimator):
     if isinstance(estimator, CSThresholdClassifier):
         return {'check_decision_proba_consistency': 'CalibratedClassifierCV does not support decision_function.'}
+    if isinstance(estimator, ProfLogitClassifier | ProfMPMClassifier | ProfMEMPMClassifier):
+        return {
+            'check_classifiers_train': 'predict applies the threshold learned from the training costs, not 0.5, '
+            'so it can disagree with the argmax of predict_proba. ProfTree and ProfSR happen to agree on the '
+            "check's data."
+        }
     if isinstance(estimator, CSRateClassifier) and sklearn_version < parse_version('1.7'):
         return {
             'check_methods_subset_invariance': 'A rate classifier labels the top fraction of the batch it is given, '

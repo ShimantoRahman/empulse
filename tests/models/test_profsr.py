@@ -7,7 +7,8 @@ import pytest
 from scipy.special import expit
 from sklearn.metrics import roc_auc_score
 
-from empulse.metrics import Cost, CostMatrix, Metric
+from empulse.metrics import Cost, CostMatrix, MaxProfit, Metric
+from empulse.metrics.metric.prebuilt_metrics import make_generic_metric
 from empulse.models import ProfSRClassifier
 
 FIT_COSTS = {'tp_cost': -200, 'fp_cost': 10}
@@ -123,8 +124,20 @@ class TestSelectProgram:
             assert model.program_ is point.program
             np.testing.assert_allclose(model.decision_function(X), expected)
             np.testing.assert_array_equal(
-                model.predict(X), model.classes_[(model.decision_function(X) > 0).astype(int)]
+                model.predict(X), model.classes_[(model.predict_proba(X)[:, 1] > model.threshold_).astype(int)]
             )
+
+    def test_every_point_of_the_front_brings_its_own_threshold(self, model, data):
+        X, y = data
+        loss = make_generic_metric(MaxProfit())
+        thresholds = set()
+        for point in model.pareto_front_:
+            model.select_program(point.length)
+            expected = loss.model.decision_threshold(y, model.predict_proba(X)[:, 1], **FIT_COSTS)
+
+            assert model.threshold_ == expected
+            thresholds.add(model.threshold_)
+        assert len(thresholds) > 1, 'the front of this fit no longer tells a stale threshold from a fresh one'
 
     def test_the_parsimony_choice_can_be_restored(self, model):
         chosen, scaling = model.program_, (model.score_center_, model.score_scale_)

@@ -1,8 +1,9 @@
-from typing import ClassVar
+from typing import ClassVar, Literal
 
-from ...metrics import MaxProfit
+from ..._types import FloatArrayLike, ParameterConstraint
+from ...metrics import BaseMetric, MaxProfit
 from ...optimizers import GeneticAlgorithmOptimizer, LBFGSBOptimizer, Optimizer
-from .._base import BaseLogitClassifier, MetricStrategyFactory
+from .._base import THRESHOLD_CONSTRAINT, BaseLogitClassifier, LearnsThreshold, MetricStrategyFactory
 
 
 class CSLogitClassifier(BaseLogitClassifier):
@@ -192,7 +193,7 @@ class CSLogitClassifier(BaseLogitClassifier):
     _default_optimizer: ClassVar[type[Optimizer]] = LBFGSBOptimizer
 
 
-class ProfLogitClassifier(BaseLogitClassifier):
+class ProfLogitClassifier(LearnsThreshold, BaseLogitClassifier):
     """
     Profit-driven logistic regression classifier.
 
@@ -271,6 +272,15 @@ class ProfLogitClassifier(BaseLogitClassifier):
         :class:`~empulse.optimizers.GeneticAlgorithmOptimizer` with ``n_jobs > 1``, runs each
         evaluation on a single thread instead.
 
+    threshold : float or 'auto', default='auto'
+        The predicted probability of the positive class above which :meth:`predict` predicts it.
+
+        - If ``'auto'``, the threshold that minimizes the cost of the training samples, each with
+          its own costs, learned during :meth:`fit` from the fitted model's scores. A model trained
+          on a ranking metric, such as the default :class:`~empulse.metrics.MaxProfit` loss, ranks
+          the samples without placing the decision at 0.5.
+        - If a float, that threshold. ``0.5`` predicts the class with the highest probability.
+
     Attributes
     ----------
     classes_ : numpy.ndarray
@@ -285,6 +295,10 @@ class ProfLogitClassifier(BaseLogitClassifier):
     intercept_ : float
         Intercept of the logit model.
         Only available when ``fit_intercept=True``.
+
+    threshold_ : float
+        The threshold :meth:`predict` applies. With ``threshold='auto'``, ``inf`` when predicting
+        every training sample negative costs least and ``-inf`` when predicting every one positive does.
 
     References
     ----------
@@ -314,5 +328,38 @@ class ProfLogitClassifier(BaseLogitClassifier):
         model.fit(X, y, tp_cost=-200, fp_cost=10)
     """
 
+    _parameter_constraints: ClassVar[ParameterConstraint] = {
+        **BaseLogitClassifier._parameter_constraints,
+        'threshold': THRESHOLD_CONSTRAINT,
+    }
     _default_metric_strategy: ClassVar[MetricStrategyFactory] = MaxProfit
     _default_optimizer: ClassVar[type[Optimizer]] = GeneticAlgorithmOptimizer
+
+    def __init__(
+        self,
+        *,
+        tp_cost: FloatArrayLike | float = 0.0,
+        tn_cost: FloatArrayLike | float = 0.0,
+        fn_cost: FloatArrayLike | float = 0.0,
+        fp_cost: FloatArrayLike | float = 0.0,
+        C: float = 1.0,
+        fit_intercept: bool = True,
+        l1_ratio: float = 1.0,
+        loss: BaseMetric | None = None,
+        optimizer: Optimizer | None = None,
+        n_jobs: int | None = 1,
+        threshold: float | Literal['auto'] = 'auto',
+    ):
+        self.threshold = threshold
+        super().__init__(
+            tp_cost=tp_cost,
+            tn_cost=tn_cost,
+            fn_cost=fn_cost,
+            fp_cost=fp_cost,
+            C=C,
+            fit_intercept=fit_intercept,
+            l1_ratio=l1_ratio,
+            loss=loss,
+            optimizer=optimizer,
+            n_jobs=n_jobs,
+        )

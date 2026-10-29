@@ -113,6 +113,14 @@ class ProfMPMClassifier(BaseMinimaxProbabilityMachine):
         to keep them positive definite (Tikhonov/ridge stabilization).
         This is independent of ``lambda_reg`` and is always applied.
 
+    threshold : float or 'auto', default='auto'
+        The predicted probability of the positive class above which :meth:`predict` predicts it.
+
+        - If ``'auto'``, the threshold that minimizes the cost of the training samples, each with
+          its own costs, learned during :meth:`fit` from the fitted model's scores. The worst-case
+          boundary the model fits, at 0.5, need not be the one that costs least.
+        - If a float, that threshold. ``0.5`` predicts the class with the highest probability.
+
     Attributes
     ----------
     classes_ : numpy.ndarray
@@ -126,6 +134,10 @@ class ProfMPMClassifier(BaseMinimaxProbabilityMachine):
 
     result_ : :class:`scipy:scipy.optimize.OptimizeResult`
         Optimization result.
+
+    threshold_ : float
+        The threshold :meth:`predict` applies. With ``threshold='auto'``, ``inf`` when predicting
+        every training sample negative costs least and ``-inf`` when predicting every one positive does.
 
     References
     ----------
@@ -281,6 +293,14 @@ class ProfMEMPMClassifier(BaseMinimaxProbabilityMachine):
         to keep them positive definite (Tikhonov/ridge stabilization).
         This is independent of ``lambda_reg`` and is always applied.
 
+    threshold : float or 'auto', default='auto'
+        The predicted probability of the positive class above which :meth:`predict` predicts it.
+
+        - If ``'auto'``, the threshold that minimizes the cost of the training samples, each with
+          its own costs, learned during :meth:`fit` from the fitted model's scores. The worst-case
+          boundary the model fits, at 0.5, need not be the one that costs least.
+        - If a float, that threshold. ``0.5`` predicts the class with the highest probability.
+
     Attributes
     ----------
     classes_ : numpy.ndarray
@@ -294,6 +314,10 @@ class ProfMEMPMClassifier(BaseMinimaxProbabilityMachine):
 
     result_ : :class:`scipy:scipy.optimize.OptimizeResult`
         Optimization result.
+
+    threshold_ : float
+        The threshold :meth:`predict` applies. With ``threshold='auto'``, ``inf`` when predicting
+        every training sample negative costs least and ``-inf`` when predicting every one positive does.
 
     References
     ----------

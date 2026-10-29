@@ -87,6 +87,36 @@ Analytic or searched
      - Slower — depends on ``cv`` splits × candidate thresholds
 
 
+.. _learned_threshold:
+
+Models that learn their threshold
+=================================
+
+The profit-driven models, :class:`~empulse.models.ProfLogitClassifier`,
+:class:`~empulse.models.ProfTreeClassifier`, :class:`~empulse.models.ProfSRClassifier`,
+:class:`~empulse.models.ProfMPMClassifier` and :class:`~empulse.models.ProfMEMPMClassifier`, choose
+their own threshold. They train on a metric such as :class:`~empulse.metrics.MaxProfit`, which
+rewards the order of the scores but says nothing about where 0.5 falls in them. At the end of ``fit``
+they set ``threshold_`` to the probability above which predicting the positive class costs the
+training samples least, each with its own costs, and ``predict`` applies it:
+
+.. code-block:: python
+
+    from empulse.models import ProfLogitClassifier
+    from empulse.optimizers import GeneticAlgorithmOptimizer
+
+    model = ProfLogitClassifier(optimizer=GeneticAlgorithmOptimizer(max_iter=50, random_state=0))
+    model.fit(X_train, y_train, tp_cost=-10.0, fp_cost=1.0)
+
+    print(f'threshold_ = {model.threshold_:.3f}')
+    print(f'predicted positive: {model.predict(X_test).mean():.1%}')
+
+Pass ``threshold=0.5`` to predict the most probable class instead, or another probability to fix the
+threshold yourself. The cost-sensitive models, such as :class:`~empulse.models.CSLogitClassifier` and
+:class:`~empulse.models.CSBoostClassifier`, train on the costs themselves and decide at 0.5. To
+move their threshold, wrap them in one of the meta-estimators below.
+
+
 .. _csthreshold_classifier:
 
 CSThresholdClassifier

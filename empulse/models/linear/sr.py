@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 from numbers import Integral, Real
-from typing import Any, ClassVar, Self
+from typing import Any, ClassVar, Literal, Self
 
 import numpy as np
 from joblib import effective_n_jobs
@@ -11,7 +11,7 @@ from sklearn.utils.validation import check_is_fitted
 from ..._common._sklearn_compat import validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, Capability, MaxProfit
-from .._base import CostSensitiveClassifier, MetricStrategyFactory
+from .._base import THRESHOLD_CONSTRAINT, CostSensitiveClassifier, LearnsThreshold, MetricStrategyFactory
 from .._base.cost_sensitive import subset_loss_params
 from ._symbolic import ParetoPoint, Program, ProgramSpace, SearchSettings, evolve, get_function
 
@@ -50,7 +50,7 @@ class _LossFitness:
         return float(value) if np.isfinite(value) else np.inf
 
 
-class ProfSRClassifier(CostSensitiveClassifier):
+class ProfSRClassifier(LearnsThreshold, CostSensitiveClassifier):
     """
     Profit-driven symbolic regression classifier.
 
@@ -243,6 +243,15 @@ class ProfSRClassifier(CostSensitiveClassifier):
         during fitting, ``random_state`` has to be fixed to an integer.
         See :term:`Sklearn Glossary <sklearn:random_state>` for details.
 
+    threshold : float or 'auto', default='auto'
+        The predicted probability of the positive class above which :meth:`predict` predicts it.
+
+        - If ``'auto'``, the threshold that minimizes the cost of the training samples, each with
+          its own costs, learned during :meth:`fit` from the fitted model's scores. A model trained
+          on a ranking metric, such as the default :class:`~empulse.metrics.MaxProfit` loss, ranks
+          the samples without placing the decision at 0.5.
+        - If a float, that threshold. ``0.5`` predicts the class with the highest probability.
+
     Attributes
     ----------
     classes_ : numpy.ndarray
@@ -284,6 +293,10 @@ class ProfSRClassifier(CostSensitiveClassifier):
         Spread by which :meth:`decision_function` divides the centered outputs of ``program_``:
         their interquartile range on the training data, normalized to the standard deviation of a normal
         distribution (their standard deviation if that is 0), for a loss that only ranks the samples, 1 otherwise.
+
+    threshold_ : float
+        The threshold :meth:`predict` applies. With ``threshold='auto'``, ``inf`` when predicting
+        every training sample negative costs least and ``-inf`` when predicting every one positive does.
 
     References
     ----------
@@ -331,6 +344,7 @@ class ProfSRClassifier(CostSensitiveClassifier):
         'tuning_max_iter': [Interval(Integral, 1, None, closed='left')],
         'n_jobs': [Interval(Integral, 1, None, closed='left'), Interval(Integral, None, -1, closed='right'), None],
         'random_state': ['random_state'],
+        'threshold': THRESHOLD_CONSTRAINT,
     }
     _default_metric_strategy: ClassVar[MetricStrategyFactory] = MaxProfit
 
@@ -366,7 +380,9 @@ class ProfSRClassifier(CostSensitiveClassifier):
         tuning_max_iter: int = 50,
         n_jobs: int | None = 1,
         random_state: np.random.RandomState | int | None = None,
+        threshold: float | Literal['auto'] = 'auto',
     ) -> None:
+        self.threshold = threshold
         self.max_iter = max_iter
         self.patience = patience
         self.tolerance = tolerance
@@ -485,6 +501,19 @@ class ProfSRClassifier(CostSensitiveClassifier):
 
         return self
 
+    def _finish_fit(self, X: FloatNDArray, y: IntNDArray, loss: BaseMetric, loss_params: dict[str, Any]) -> None:
+        # Every expression on the front gets its own threshold too, for `select_program`.
+        chosen = self.program_
+        self._front_thresholds = {}
+        for point in self.pareto_front_:
+            self.program_ = point.program
+            self.score_center_, self.score_scale_ = self._front_scaling[point.length]
+            super()._finish_fit(X, y, loss, loss_params)
+            self._front_thresholds[point.length] = self.threshold_
+        self.program_ = chosen
+        self.score_center_, self.score_scale_ = self._front_scaling[chosen.length_]
+        self.threshold_ = self._front_thresholds[chosen.length_]
+
     @property
     def formula_(self) -> str:
         """The rule that turns the features into the probability of the positive class, as one expression."""
@@ -498,8 +527,8 @@ class ProfSRClassifier(CostSensitiveClassifier):
         Use the expression of the given length on the Pareto front as the fitted expression.
 
         :meth:`fit` picks ``program_`` from ``pareto_front_`` with ``parsimony_coefficient``. This
-        replaces that choice by another point of the front, together with the ``score_center_`` and
-        ``score_scale_`` that expression has on the training data, so that :meth:`decision_function`,
+        replaces that choice by another point of the front, together with the ``score_center_``,
+        ``score_scale_`` and ``threshold_`` that expression has on the training data, so that :meth:`decision_function`,
         :meth:`predict_proba` and :meth:`predict` all use it. Fitting again, or cloning, restores the
         choice ``parsimony_coefficient`` makes.
 
@@ -518,6 +547,7 @@ class ProfSRClassifier(CostSensitiveClassifier):
             if point.length == length:
                 self.program_ = point.program
                 self.score_center_, self.score_scale_ = self._front_scaling[length]
+                self.threshold_ = self._front_thresholds[length]
                 return self
         lengths = ', '.join(str(point.length) for point in self.pareto_front_)
         raise ValueError(f'The Pareto front has no expression of length {length}; its lengths are {lengths}.')
@@ -535,7 +565,8 @@ class ProfSRClassifier(CostSensitiveClassifier):
         -------
         y_score : 1D numpy.ndarray, shape=(n_samples,)
             Output of ``program_`` for each sample, minus ``score_center_``, divided by ``score_scale_``.
-            Positive values predict the positive class. ``program_.execute(X)`` gives the output of the
+            Positive values are those :meth:`predict_proba` puts above one half; :meth:`predict` compares
+            the probability with ``threshold_`` instead. ``program_.execute(X)`` gives the output of the
             expression itself.
         """
         check_is_fitted(self)

@@ -13,12 +13,13 @@ from ..._common._sklearn_compat import validate_data
 from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstraint
 from ...metrics import BaseMetric, MaxProfit
 from .cost_sensitive import CostSensitiveClassifier, MetricStrategyFactory
+from .threshold import THRESHOLD_CONSTRAINT, LearnsThreshold
 
 if TYPE_CHECKING:
     from scipy.optimize._typing import Constraint
 
 
-class BaseMinimaxProbabilityMachine(CostSensitiveClassifier, ABC):
+class BaseMinimaxProbabilityMachine(LearnsThreshold, CostSensitiveClassifier, ABC):
     """Shared fit/predict_proba logic for the profit-driven minimax probability machine models.
 
     :class:`~empulse.models.ProfMPMClassifier` and :class:`~empulse.models.ProfMEMPMClassifier`
@@ -36,6 +37,7 @@ class BaseMinimaxProbabilityMachine(CostSensitiveClassifier, ABC):
         'penalty': [StrOptions({'l1', 'l2'})],
         'lambda_reg': [Interval(Real, 0, None, closed='left')],
         'ridge_penalty': [Interval(Real, 0, None, closed='left')],
+        'threshold': THRESHOLD_CONSTRAINT,
     }
     _default_metric_strategy: ClassVar[MetricStrategyFactory] = MaxProfit
 
@@ -50,7 +52,9 @@ class BaseMinimaxProbabilityMachine(CostSensitiveClassifier, ABC):
         penalty: Literal['l1', 'l2'] = 'l2',
         lambda_reg: float = 0.0,
         ridge_penalty: float = 1e-6,
+        threshold: float | Literal['auto'] = 'auto',
     ) -> None:
+        self.threshold = threshold
         self.penalty = penalty
         self.lambda_reg = lambda_reg
         self.ridge_penalty = ridge_penalty

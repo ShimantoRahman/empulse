@@ -1,6 +1,6 @@
 from functools import partial
 from numbers import Integral, Real
-from typing import TYPE_CHECKING, Any, ClassVar, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self
 
 import numpy as np
 from joblib import effective_n_jobs
@@ -12,6 +12,7 @@ from ..._types import FloatArrayLike, FloatNDArray, IntNDArray, ParameterConstra
 from ...metrics import BaseMetric, Capability, MaxProfit
 from ...metrics._cy_max_profit import _expected_max_profit_of_groups_address
 from .._base.cost_sensitive import CostSensitiveClassifier, MetricStrategyFactory
+from .._base.threshold import THRESHOLD_CONSTRAINT, LearnsThreshold
 from ._cy_proftree.evolutionary_tree import EvolutionaryTree
 
 if TYPE_CHECKING:
@@ -35,7 +36,7 @@ def _negated_count_loss(
     return -count_loss(y_score, n_positive, n_negative)
 
 
-class ProfTreeClassifier(CostSensitiveClassifier):
+class ProfTreeClassifier(LearnsThreshold, CostSensitiveClassifier):
     """
     Profit-driven evolutionary decision tree classifier.
 
@@ -212,6 +213,15 @@ class ProfTreeClassifier(CostSensitiveClassifier):
         during fitting, ``random_state`` has to be fixed to an integer.
         See :term:`Sklearn Glossary <sklearn:random_state>` for details.
 
+    threshold : float or 'auto', default='auto'
+        The predicted probability of the positive class above which :meth:`predict` predicts it.
+
+        - If ``'auto'``, the threshold that minimizes the cost of the training samples, each with
+          its own costs, learned during :meth:`fit` from the fitted model's scores. A model trained
+          on a ranking metric, such as the default :class:`~empulse.metrics.MaxProfit` loss, ranks
+          the samples without placing the decision at 0.5.
+        - If a float, that threshold. ``0.5`` predicts the class with the highest probability.
+
     Attributes
     ----------
     classes_ : numpy.ndarray
@@ -230,6 +240,10 @@ class ProfTreeClassifier(CostSensitiveClassifier):
     n_iter_ : int
         Number of generations the genetic algorithm ran for before stopping
         (by ``max_iter`` or by ``patience``).
+
+    threshold_ : float
+        The threshold :meth:`predict` applies. With ``threshold='auto'``, ``inf`` when predicting
+        every training sample negative costs least and ``-inf`` when predicting every one positive does.
     """
 
     _parameter_constraints: ClassVar[ParameterConstraint] = {
@@ -256,6 +270,7 @@ class ProfTreeClassifier(CostSensitiveClassifier):
         'cache_samples': ['boolean'],
         'n_jobs': [Interval(Integral, 1, None, closed='left'), Interval(Integral, None, -1, closed='right'), None],
         'random_state': ['random_state'],
+        'threshold': THRESHOLD_CONSTRAINT,
     }
     _default_metric_strategy: ClassVar[MetricStrategyFactory] = MaxProfit
 
@@ -283,7 +298,9 @@ class ProfTreeClassifier(CostSensitiveClassifier):
         cache_samples: bool = True,
         n_jobs: int | None = 1,
         random_state: np.random.RandomState | int | None = None,
+        threshold: float | Literal['auto'] = 'auto',
     ):
+        self.threshold = threshold
         self.alpha = alpha
         self.patience = patience
         self.tolerance = tolerance

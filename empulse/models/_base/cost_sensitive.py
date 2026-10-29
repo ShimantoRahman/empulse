@@ -185,9 +185,12 @@ class CostSensitiveClassifier(RoutesLossParameters, BinaryClassifierTags, ABC, C
                     f'Besides X and y it accepts the costs and the parameters of its loss: '
                     f'{", ".join(sorted(known | self._extra_fit_params))}.'
                 )
-        loss.model.validate_parameters(**{name: value for name, value in loss_params.items() if name in known})
+        metric_params = {name: value for name, value in loss_params.items() if name in known}
+        loss.model.validate_parameters(**metric_params)
 
-        return self._fit(X, y, loss=loss, **loss_params)
+        self._fit(X, y, loss=loss, **loss_params)
+        self._finish_fit(X, y, loss, metric_params)
+        return self
 
     def _classes_of(self, y: NDArray[Any]) -> NDArray[Any]:
         """Return the sorted classes of the binary target *y*, raising if it holds only one."""
@@ -198,6 +201,9 @@ class CostSensitiveClassifier(RoutesLossParameters, BinaryClassifierTags, ABC, C
 
     @abstractmethod
     def _fit(self, X: FloatNDArray, y: IntNDArray, loss: BaseMetric, **loss_params: Any) -> Self: ...
+
+    def _finish_fit(self, X: FloatNDArray, y: IntNDArray, loss: BaseMetric, loss_params: dict[str, Any]) -> None:
+        """Run after :meth:`_fit` with the training data, the loss and the loss's parameters."""
 
     def predict(self, X: FloatArrayLike) -> NDArray[Any]:
         """
