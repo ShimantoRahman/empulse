@@ -21,7 +21,7 @@ def run_examples() -> None:
 
     np.random.seed(42)
     np.set_printoptions(precision=6, threshold=20)
-    # ## Section 5: Cost specification
+    # ## Section 5: Defining costs: The CostMatrix class
     #
     # ### Section 5.1 Symbolic foundations and the builder API
     #
@@ -29,7 +29,7 @@ def run_examples() -> None:
     # $\gamma$, which costs the incentive $\delta \cdot clv$ and the contact cost $f$; a contacted
     # non-churner costs the same.
 
-    print('\n' + 'Section 5: Cost specification')
+    print('\n' + 'Section 5: Defining costs: The CostMatrix class')
 
     import sympy
 
@@ -77,7 +77,8 @@ def run_examples() -> None:
     #
     # *Replication setup:* the paper assumes a trained model and a metric. Here, a logistic
     # regression is trained on the churn data of Section 9, with the same split as the case study, and
-    # the metric is the Expected Maximum Profit of Section 5 (`Metric(cost_matrix, MaxProfit())`).
+    # the metric is the Expected Maximum Profit of Section 6.4 on the Section 5 cost matrix
+    # (`Metric(cost_matrix, MaxProfit())`).
 
     print('\n' + 'Section 6: Evaluation metrics')
 
@@ -171,7 +172,7 @@ def run_examples() -> None:
     result = emp_score(y_true, y_pred, alpha=6, beta=14, clv=200, d=10, f=1)
     print(result)
 
-    # The EMP integration comparison of Section 5.4 is run with the Section 10 benchmarks.
+    # The EMP integration comparison of Section 6.4 is run with the Section 10 benchmarks.
 
     # ## Section 7: Estimators and scikit-learn integration
     #
@@ -186,11 +187,11 @@ def run_examples() -> None:
     model = CSBoostClassifier(loss=metric)
     model.fit(X_train, y_train, clv=clv_train)
 
-    # ### Section 7.2 The optimizer module
+    # ### Section 7.2 The optimizers module
     #
     # *Replication setup:* the features are standardized first, as gradient-based optimizers expect.
 
-    print('\n' + 'Section 7.2 The optimizer module')
+    print('\n' + 'Section 7.2 The optimizers module')
 
     X_train_scaled = StandardScaler().fit_transform(X_train)
 
@@ -209,11 +210,11 @@ def run_examples() -> None:
     sampler = CostSensitiveSampler(loss=cost_loss, method='oversampling', random_state=42)
     X_re, y_re = sampler.fit_resample(X_train, y_train, clv=clv_train, accept_rate=0.3)
 
-    # ### Section 7.4 Scikit-learn integration and metadata routing
+    # ### Section 7.4 scikit-learn integration and metadata routing
     #
     # `clv_array` holds the customer lifetime values of the training instances here.
 
-    print('\n' + 'Section 7.4 Scikit-learn integration and metadata routing')
+    print('\n' + 'Section 7.4 scikit-learn integration and metadata routing')
 
     clv_array = clv_train
 
@@ -266,14 +267,14 @@ def run_examples() -> None:
     print(profit)
     print(dataset)
 
-    # ## Section 9: Case study: customer churn prediction
+    # ## Section 9: Case study: Customer churn prediction
     #
     # The code below is the paper's case study, cell for cell. Its output matches the output printed in
     # the paper.
     #
     # ### Section 9.1 Evaluating a standard baseline
 
-    print('\n' + 'Section 9: Case study: customer churn prediction')
+    print('\n' + 'Section 9: Case study: Customer churn prediction')
 
     import pandas as pd
     from sklearn.linear_model import LogisticRegression
@@ -371,7 +372,7 @@ def run_examples() -> None:
 
 def run_emp_benchmark(max_stochastic_variables: int = 2) -> None:
     """Run the EMP benchmark with full size sweeps and a configurable dimension limit."""
-    print('\nEMP integration comparison (Section 5.4)')
+    print('\nEMP integration comparison (Section 6.4)')
     size = emp_integration.run_size_sweep()
     dimensions = emp_integration.run_dimension_sweep(dimensions=tuple(range(1, max_stochastic_variables + 1)))
     for name, table in figures.summarize_emp_integration(size, dimensions).items():
@@ -389,7 +390,9 @@ def run_training_times(max_samples: int, repetitions: int = 1) -> None:
     )
 
     print('\nAnalytical-gradient comparison (Section 10)')
-    print(gradient.run_gradient_comparison(min(max_samples, 100_000)).to_string(index=False))
+    comparison = gradient.run_gradient_comparison(min(max_samples, 100_000), range(repetitions))
+    print(comparison.to_string(index=False))
+    print(gradient.summarize_gradient_comparison(comparison).to_string())
 
     summary = figures.summarize_timing(results)
     print('\nTraining times (seconds)')

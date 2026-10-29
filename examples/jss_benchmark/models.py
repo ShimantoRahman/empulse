@@ -9,7 +9,7 @@ the caller's input format rather than part of training.
 Hyperparameters are identical wherever both implementations have the concept:
 
 - CSLogit: zero initial coefficients, an L1 penalty with Empulse's default strength (``C=1``), and
-  L-BFGS-B capped at 100 iterations. The reference hard-codes its optimizer options, so ``_CSLogit``
+  L-BFGS-B capped at 1000 iterations. The reference hard-codes its optimizer options, so ``_CSLogit``
   overrides ``optimization`` to add the iteration cap and keeps the reference's own function
   tolerance (``ftol=1e-6``). The reference supplies no gradient, so SciPy approximates it by finite
   differences, as in the original code.
@@ -33,7 +33,7 @@ from .reference_cslogit import CSLogit
 MAX_DEPTH = 10
 MIN_SAMPLES_SPLIT = 20
 N_ESTIMATORS = 100
-LBFGS_MAX_ITER = 100
+LBFGS_MAX_ITER = 1000
 LBFGS_TOLERANCE = 1e-4
 
 

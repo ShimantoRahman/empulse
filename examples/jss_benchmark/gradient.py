@@ -8,13 +8,14 @@ are hardware-dependent, and final objective values are reported for comparison.
 from __future__ import annotations
 
 import time
+from collections.abc import Iterable
 
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
 from scipy.special import expit
 
-from .data import make_dataset
+from .data import SEEDS, make_dataset
 from .models import LBFGS_MAX_ITER, _CSLogit, _CSLogitAdapter, build_model
 
 
@@ -51,29 +52,43 @@ class _AnalyticalAdapter(_CSLogitAdapter):
         return self
 
 
-def run_gradient_comparison(n_samples: int) -> pd.DataFrame:
-    """Fit the finite-difference reference, analytical reference and Empulse."""
-    X, y, fn_cost, fp_cost = make_dataset(n_samples, seed=0)
+def run_gradient_comparison(n_samples: int, seeds: Iterable[int] = SEEDS) -> pd.DataFrame:
+    """Fit the finite-difference reference, analytical reference and Empulse once per seed."""
     rows = []
-    reference = _CSLogitAdapter(fn_cost, fp_cost)
-    for name, model in (
-        ('finite_difference', reference),
-        ('analytical_gradient', _AnalyticalAdapter(fn_cost, fp_cost)),
-        ('empulse', build_model('current', 'cslogit', fn_cost, fp_cost, 0)),
-    ):
-        started = time.perf_counter()
-        model.fit(X, y)
-        elapsed = time.perf_counter() - started
-        if name == 'empulse':
-            theta = np.concatenate((np.atleast_1d(model.intercept_), model.coef_.ravel()))
-        else:
-            theta = model.model.theta
-        objective = reference.model.aec(theta, X, y, reference.cost_matrix)
-        rows.append({
-            'implementation': name,
-            'n_samples': n_samples,
-            'seed': 0,
-            'fit_seconds': elapsed,
-            'reference_objective': float(objective),
-        })
+    for seed in seeds:
+        X, y, fn_cost, fp_cost = make_dataset(n_samples, seed)
+        reference = _CSLogitAdapter(fn_cost, fp_cost)
+        for name, model in (
+            ('finite_difference', reference),
+            ('analytical_gradient', _AnalyticalAdapter(fn_cost, fp_cost)),
+            ('empulse', build_model('current', 'cslogit', fn_cost, fp_cost, seed)),
+        ):
+            started = time.perf_counter()
+            model.fit(X, y)
+            elapsed = time.perf_counter() - started
+            if name == 'empulse':
+                theta = np.concatenate((np.atleast_1d(model.intercept_), model.coef_.ravel()))
+            else:
+                theta = model.model.theta
+            objective = reference.model.aec(theta, X, y, reference.cost_matrix)
+            rows.append({
+                'implementation': name,
+                'n_samples': n_samples,
+                'seed': seed,
+                'fit_seconds': elapsed,
+                'reference_objective': float(objective),
+            })
     return pd.DataFrame(rows)
+
+
+def summarize_gradient_comparison(results: pd.DataFrame) -> pd.Series:
+    """The two speedups quoted in Section 10, from the mean fit times."""
+    seconds = results.groupby('implementation')['fit_seconds'].mean()
+    return pd.Series({
+        'Speedup, reference: analytical gradient over finite differences': (
+            f'{seconds["finite_difference"] / seconds["analytical_gradient"]:.1f}x'
+        ),
+        'Speedup, Empulse over reference with analytical gradient': (
+            f'{seconds["analytical_gradient"] / seconds["empulse"]:.1f}x'
+        ),
+    })

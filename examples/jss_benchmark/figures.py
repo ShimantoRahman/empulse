@@ -34,7 +34,7 @@ RC_PARAMS: dict[str, Any] = {
     'axes.edgecolor': RULE,
     'axes.titlecolor': INK,
     'axes.titlesize': 10,
-    'axes.titleweight': 'medium',
+    'axes.titleweight': 'normal',
     'axes.labelsize': 9,
     'axes.spines.top': False,
     'axes.spines.right': False,
