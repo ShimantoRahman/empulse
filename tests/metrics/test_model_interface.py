@@ -11,6 +11,7 @@ from empulse.metrics import (
     Capability,
     Cost,
     CostMatrix,
+    EmpiricalMaxProfit,
     LogCost,
     MaxProfit,
     Metric,
@@ -134,3 +135,83 @@ def test_model_survives_copying(round_trip, data):
     metric = _cost_metric()
     restored = round_trip(metric)
     assert restored.model.loss(y_true, y_score, fp=1.0, fn=fn) == metric.model.loss(y_true, y_score, fp=1.0, fn=fn)
+
+
+def _realised_cost(interface, y_true, predicted_positive, **params):
+    fp_cost, fn_cost, tp_cost, tn_cost = (
+        np.broadcast_to(cost, y_true.shape) for cost in interface.decision_costs(y_true, **params)
+    )
+    positive = y_true == 1
+    return float(
+        np.sum(np.where(predicted_positive, np.where(positive, tp_cost, fp_cost), np.where(positive, fn_cost, tn_cost)))
+    )
+
+
+def test_decision_threshold_costs_least_of_every_cut(metric_and_params, data):
+    metric, params = metric_and_params
+    y_true, y_score, _ = data
+    interface = metric.model
+    threshold = interface.decision_threshold(y_true, y_score, **params)
+    best = _realised_cost(interface, y_true, y_score > threshold, **params)
+    for cut in [-np.inf, *np.unique(y_score)]:
+        assert best <= _realised_cost(interface, y_true, y_score > cut, **params) + 1e-9
+
+
+def test_decision_threshold_targets_what_the_empirical_max_profit_targets(data):
+    y_true, y_score, fn = data
+    cost_matrix = CostMatrix().add_fp_cost('fp').add_fn_cost('fn')
+    threshold = Metric(cost_matrix, Cost()).model.decision_threshold(y_true, y_score, fp=1.0, fn=fn)
+    rate = Metric(cost_matrix, EmpiricalMaxProfit()).optimal_rate(y_true, y_score, fp=1.0, fn=fn)
+    assert np.mean(y_score > threshold) == pytest.approx(rate)
+
+
+def test_decision_threshold_lies_between_the_scores_it_separates(data):
+    y_true, y_score, fn = data
+    threshold = _cost_metric().model.decision_threshold(y_true, y_score, fp=12.0, fn=fn)
+    assert np.isfinite(threshold)
+    above, below = y_score[y_score > threshold].min(), y_score[y_score <= threshold].max()
+    assert threshold == pytest.approx((above + below) / 2)
+
+
+def test_decision_threshold_separates_adjacent_floats():
+    y_true = np.array([1, 0])
+    y_score = np.array([0.5, np.nextafter(0.5, 0)])
+    threshold = _cost_metric().model.decision_threshold(y_true, y_score, fp=1.0, fn=1.0)
+    np.testing.assert_array_equal(y_score > threshold, [True, False])
+
+
+@pytest.mark.parametrize(('fp', 'fn', 'expected'), [(10.0, 0.1, np.inf), (0.1, 10.0, -np.inf)])
+def test_decision_threshold_predicts_every_sample_alike_when_that_costs_least(data, fp, fn, expected):
+    y_true, y_score, _ = data
+    assert _cost_metric().model.decision_threshold(y_true, y_score, fp=fp, fn=fn) == expected
+
+
+def test_decision_threshold_gives_tied_scores_one_decision():
+    y_true = np.array([1, 1, 0, 1])
+    y_score = np.array([0.9, 0.4, 0.4, 0.1])
+    threshold = _cost_metric().model.decision_threshold(y_true, y_score, fp=1.0, fn=5.0)
+    predicted = y_score > threshold
+    assert predicted[1] == predicted[2]
+
+
+def test_decision_threshold_does_not_depend_on_the_cost_units(data):
+    y_true, y_score, fn = data
+    interface = _cost_metric().model
+    threshold = interface.decision_threshold(y_true, y_score, fp=1.0, fn=fn)
+    for factor in (1 / 64, 64):
+        assert interface.decision_threshold(y_true, y_score, fp=factor, fn=factor * fn) == threshold
+
+
+@pytest.mark.parametrize('bad_score', [np.nan, np.inf], ids=['nan', 'inf'])
+def test_decision_threshold_rejects_scores_that_are_not_finite(data, bad_score):
+    y_true, y_score, fn = data
+    y_score = y_score.copy()
+    y_score[3] = bad_score
+    with pytest.raises(ValueError, match='should not contain'):
+        _cost_metric().model.decision_threshold(y_true, y_score, fp=1.0, fn=fn)
+
+
+def test_decision_threshold_rejects_labels_and_scores_of_different_lengths(data):
+    y_true, y_score, _ = data
+    with pytest.raises(ValueError, match='shapes'):
+        _cost_metric().model.decision_threshold(y_true, y_score[:-1], fp=1.0, fn=1.0)

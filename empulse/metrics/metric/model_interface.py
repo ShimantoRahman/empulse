@@ -5,9 +5,11 @@ import numpy as np
 
 from ..._common._objective import objective_scale_from_costs
 from ..._types import FloatArrayLike, FloatNDArray
+from .._validation import _check_shape, _check_y_pred
 from ._compile import CountScoreFn
 from .capabilities import Capability
 from .strategies import LogitObjective
+from .strategies.auepc_strategy import _ranked_profit_curve
 
 if TYPE_CHECKING:
     from .base_metric import BaseMetric
@@ -342,6 +344,55 @@ class ModelInterface:
             The average cost of a wrong decision, times :meth:`cost_weight`.
         """
         return self.decision_cost_scale(y_true, **parameters) * self.cost_weight(y_true, **parameters)
+
+    def decision_threshold(self, y_true: FloatNDArray, y_score: FloatNDArray, **parameters: Any) -> float:
+        """
+        Return the score above which predicting the positive class costs the samples least.
+
+        Each sample is charged the cost of its own outcome under :meth:`decision_costs`, so
+        instance-dependent costs count sample by sample. Samples with equal scores get the same
+        decision. The threshold lies halfway between the lowest score predicted positive and the
+        highest score predicted negative.
+
+        Parameters
+        ----------
+        y_true : ndarray of shape (n_samples,)
+            Binary labels.
+        y_score : ndarray of shape (n_samples,)
+            Scores that rank the samples; higher means more likely positive.
+        **parameters
+            The metric's parameters.
+
+        Returns
+        -------
+        threshold : float
+            Predict positive when ``y_score > threshold``. ``inf`` when predicting every sample
+            negative costs least, and ``-inf`` when predicting every sample positive does.
+
+        Raises
+        ------
+        ValueError
+            If ``y_true`` and ``y_score`` differ in length, or a score is NaN or infinite.
+        """
+        y_true = np.asarray(y_true, dtype=np.float64).reshape(-1)
+        y_score = np.asarray(y_score, dtype=np.float64).reshape(-1)
+        _check_shape(y_true, y_score)
+        if not np.isfinite(y_score).all():
+            _check_y_pred(y_score)  # raises, naming what is not finite
+        fp_cost, fn_cost, tp_cost, tn_cost = self.decision_costs(y_true, **parameters)
+        positive_cost = np.where(y_true == 1, tp_cost, fp_cost)
+        negative_cost = np.where(y_true == 1, fn_cost, tn_cost)
+        n_positive, profits = _ranked_profit_curve(negative_cost - positive_cost, y_score)
+        k = int(n_positive[np.argmax(profits)])
+        if k == 0:
+            return float('inf')
+        if k == y_score.size:
+            return float('-inf')
+        ordered = np.sort(y_score)[::-1]
+        lowest_positive, highest_negative = ordered[k - 1], ordered[k]
+        midpoint = 0.5 * (lowest_positive + highest_negative)
+        # Between two adjacent floats the midpoint rounds onto one of them.
+        return float(midpoint if highest_negative <= midpoint < lowest_positive else highest_negative)
 
     def logit_objective(
         self,
