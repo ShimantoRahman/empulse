@@ -10,76 +10,85 @@ Metrics
 - |API| :class:`~empulse.metrics.Direction`, which a custom :class:`~empulse.metrics.MetricStrategy`
   passes to its constructor and every metric reports as ``direction``, is exported from
   :mod:`empulse.metrics`. It could only be imported from a private module.
-- |Feature| ``Capability.LOGIT_VALUE_OBJECTIVE`` states that a strategy can train a logistic
-  regression with an optimizer that only compares losses, such as
-  :class:`~empulse.optimizers.GeneticAlgorithmOptimizer`. Every strategy with
-  ``Capability.LOGIT_OBJECTIVE`` has it, and so do :class:`~empulse.metrics.EmpiricalMaxProfit`,
-  :class:`~empulse.metrics.EmpiricalMinCost` and :class:`~empulse.metrics.AUEPC`.
-- |Fix| A :class:`~empulse.metrics.MixtureMetric` nested in another accepts its components' extra
-  parameters when they use different strategies, such as the ``baseline`` of a
-  :class:`~empulse.metrics.Savings` component mixed with a :class:`~empulse.metrics.Profit` one. The
-  parameter was ignored with an unknown-parameter warning, so ``baseline='zero'`` scored 0.43 instead
-  of 0.74 in one example.
-- |Fix| A :class:`~empulse.metrics.MixtureMetric` of :class:`~empulse.metrics.Savings` components
-  decides and trains on the weighted sum of their savings. Each savings divides its component's cost by
-  the cost of its baseline, but the mixture combined the costs with the mixture weights alone, so the
-  component with the largest costs decided: in one example the threshold was 0.78 instead of 0.46,
-  which cut the savings from -0.50 to -1.33. The ``optimal_threshold``, ``optimal_rate``,
-  training objectives, the trees of :class:`~empulse.models.CSTreeClassifier`,
-  :class:`~empulse.models.CSForestClassifier` and :class:`~empulse.models.CSBaggingClassifier`,
-  :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.samplers.CostSensitiveSampler`
-  now weigh each component by its mixture weight over its baseline's cost. That weight depends on the
-  labels, so such a mixture no longer has ``Capability.COST_ONLY_DECISION``: it cannot decide from
-  costs passed to ``predict``.
+- |Feature| :class:`~empulse.metrics.Capability` has two new members. ``LOGIT_VALUE_OBJECTIVE`` states
+  that a strategy can train a logistic regression with an optimizer that only compares losses, such
+  as :class:`~empulse.optimizers.GeneticAlgorithmOptimizer`. Every strategy with ``LOGIT_OBJECTIVE``
+  has it, and so do :class:`~empulse.metrics.EmpiricalMaxProfit`,
+  :class:`~empulse.metrics.EmpiricalMinCost` and :class:`~empulse.metrics.AUEPC`. ``EXPECTED_COST``
+  is present for :class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.Profit` and
+  :class:`~empulse.metrics.Savings`.
 - |Feature| :meth:`CostMatrix.constrain <empulse.metrics.CostMatrix.constrain>` and
   :meth:`MixtureMetric.constrain <empulse.metrics.MixtureMetric.constrain>` take a condition relating
   several parameters, written as a comparison such as ``'clv > incentive_cost'`` or as a sympy
   relation, which may name aliases. Unlike a lambda, which cannot be pickled, it keeps the metric and
   the models fitted with it picklable, for instance by :func:`joblib.dump`. A condition on a name that
   is no symbol or alias raises when the metric is built.
-- |Fix| The bounds and conditions of a :class:`~empulse.metrics.MixtureMetric` check a component's
-  parameter against the default the components use when it is not passed. It went unchecked, so a
-  default outside the bounds was accepted. A parameter whose components have different defaults is
-  checked when passed.
+- |Fix| A :class:`~empulse.metrics.MixtureMetric` of :class:`~empulse.metrics.Savings` components
+  decides and trains on the weighted sum of their savings rather than of their costs, so the
+  component with the largest costs no longer decides alone. This applies to ``optimal_threshold``,
+  ``optimal_rate``, the training objectives, the cost-sensitive trees,
+  :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.samplers.CostSensitiveSampler`.
+  Because the weights now depend on the labels, such a mixture can no longer decide from costs passed
+  to ``predict``.
+- |Fix| The ``optimal_threshold`` and ``optimal_rate`` of a :class:`~empulse.metrics.MixtureMetric`
+  no longer average its components' rates. A mixture of components of one strategy type that decide
+  from their costs alone, such as :class:`~empulse.metrics.Cost`, takes them from the weighted
+  combined costs. A mixture without ``Capability.OPTIMAL_RATE`` or ``Capability.OPTIMAL_THRESHOLD``,
+  such as one of a :class:`~empulse.metrics.Profit` and a :class:`~empulse.metrics.Savings` component,
+  raises a ``ValueError``.
+- |API| :class:`~empulse.metrics.MixtureMetric` rejects components with different optimization
+  directions, and components that are amounts of money mixed with ones that are pure numbers, such
+  as :class:`~empulse.metrics.AUEPC`. Weights must not be negative and must sum to 1: constant
+  weights are checked when the mixture is built, the others when it is called.
+- |API| A :class:`~empulse.metrics.MixtureComponent` weight can be an expression, such as
+  ``'1 - success_rate - default_rate'``, whose parameters are parameters of the mixture. They can be
+  passed to a model's ``fit`` and are reported when missing. A callable weight is deprecated.
+  :func:`~empulse.metrics.empcs_score` uses an expression weight, so it and the models trained on it
+  can be pickled.
+- |Fix| :meth:`MixtureMetric.constrain <empulse.metrics.MixtureMetric.constrain>` rejects a lower
+  bound above the upper one, a name that is not a parameter, and a stochastic variable, which was
+  accepted and never checked. Called twice, it keeps the tighter bound. The bounds and conditions
+  also check a component's default when the parameter is not passed, unless the components have
+  different defaults.
+- |Fix| A metric accepts a parameter under its symbol name or any of its aliases wherever it takes
+  one, and :meth:`~empulse.metrics.CostMatrix.set_default` and
+  :meth:`~empulse.metrics.CostMatrix.constrain` can be called before
+  :meth:`~empulse.metrics.CostMatrix.alias`. In a :class:`~empulse.metrics.MixtureMetric`, a bound on
+  an alias was bypassed by passing the symbol, a predicate raised a ``KeyError`` for a parameter
+  passed by its alias, and fixed parameters and defaults applied under one spelling only. A mixture
+  no longer warns about a parameter that only another component uses. A constraint on a name that is
+  neither a symbol nor an alias raises instead of being ignored.
+- |Fix| :meth:`CostMatrix.mark_outlier_sensitive <empulse.metrics.CostMatrix.mark_outlier_sensitive>`
+  accepts an alias, finds a symbol created with assumptions such as ``positive=True``, and works for
+  a symbol with several aliases, which :class:`~empulse.models.RobustCSClassifier` could not use. An
+  outlier-sensitive parameter is reported under its symbol name, and one that only enters a
+  distribution is classified by the costs that distribution enters. A parameter that components of a
+  :class:`~empulse.metrics.MixtureMetric` mark for different classes is checked for outliers on every
+  sample, and one that every component fixes is no longer outlier-sensitive.
 - |Fix| :class:`~empulse.metrics.EmpiricalMaxProfit` and :class:`~empulse.metrics.EmpiricalMinCost`
   raise a ``ValueError`` on empty input, as :class:`~empulse.metrics.MaxProfit` does, instead of a
   ``ZeroDivisionError``.
 - |Fix| The ``optimal_threshold`` of :class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.Profit`,
   :class:`~empulse.metrics.Savings` and :class:`~empulse.metrics.LogCost` is a single number when a
   parameter is an array of length 1, which applies to every sample, instead of an array of one.
-- |Efficiency| Scoring :class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.Savings` and
-  :class:`~empulse.metrics.LogCost` is about a tenth faster: the symbols a call is checked against are
-  worked out once rather than on every call.
+- |Efficiency| Scoring the empirical strategies is up to a quarter faster, and scoring
+  :class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.Savings` and
+  :class:`~empulse.metrics.LogCost` gains another tenth on top of that. This speeds up the models
+  that score them on every iteration.
 - |Efficiency| Copying a metric, as cloning or fitting a model with it as ``loss`` does, reuses its
   compiled expressions instead of compiling them again. Cloning
   ``CSLogitClassifier(loss=empc_score)`` is 2.5 times as fast.
-- |Fix| A :class:`~empulse.metrics.MixtureMetric` without ``Capability.OPTIMAL_RATE`` or
-  ``Capability.OPTIMAL_THRESHOLD``, such as one of a :class:`~empulse.metrics.Profit` and a
-  :class:`~empulse.metrics.Savings` component, raises a ``ValueError`` from ``optimal_rate`` and
-  ``optimal_threshold``. It returned the average of its components' rates, which is no decision of the
-  mixture.
-- |API| :attr:`~empulse.metrics.Metric.parameter_names` lists the names a caller can pass, under
-  each spelling, and no longer a stochastic variable, which is drawn rather than passed and warned
-  about as unknown when passed. The parameters of its distribution are listed instead. A model's
-  ``set_fit_request`` no longer offers a stochastic variable either.
-- |API| Building a :class:`~empulse.metrics.Metric` raises a ``ValueError`` for a cost matrix with an
-  alias named after another of its symbols, which could then not be passed under its own name; with a
-  default or an outlier-sensitive marker on a stochastic variable; or with an outlier-sensitive marker
-  on a name that is no symbol or alias, which surfaced only as a misleading error when fitting a
-  :class:`~empulse.models.RobustCSClassifier`.
-- |Fix| The checks for reserved and duplicate symbol names cover the parameters of a stochastic
-  variable's distribution. A distribution parameter named ``s`` failed with ``Cost`` with an unclear
-  ``TypeError`` (and is now rejected for every strategy, as any other symbol named ``s`` is), and two
-  distinct symbols named alike failed with a ``SyntaxError`` from sympy.
-- |Fix| A symbol with several aliases can be outlier-sensitive: finding its outlier-sensitive
-  parameters raised, so :class:`~empulse.models.RobustCSClassifier` could not use the metric. An
-  outlier-sensitive parameter is now reported under its symbol name, and one that only enters a
-  distribution is classified by the costs that distribution enters.
-- |Fix| A :class:`~empulse.metrics.MixtureMetric` applies its bounds, predicates and defaults to a
-  component's parameter under every spelling. A bound on an alias was bypassed by passing the symbol,
-  and the other way around; a predicate raised a ``KeyError`` for a parameter passed by its alias; and
-  a default under one spelling conflicted with a value passed under another. Constraining a stochastic
-  variable, which was accepted and never checked, raises a ``ValueError``.
+- |API| :attr:`~empulse.metrics.Metric.parameter_names` lists every name a caller can pass, aliases
+  included. It lists a stochastic variable's distribution parameters instead of the variable, which
+  is drawn rather than passed. A model's ``set_fit_request`` no longer offers the variable either.
+- |API| Building a :class:`~empulse.metrics.Metric` raises a ``ValueError`` when the cost matrix
+  names an alias after another of its symbols, which could then not be passed under its own name. It
+  also raises for a default or an outlier-sensitive marker on a stochastic variable, and for an
+  outlier-sensitive marker on a name that is neither a symbol nor an alias, which surfaced only as a
+  misleading error when fitting a :class:`~empulse.models.RobustCSClassifier`.
+- |Fix| The parameters of a stochastic variable's distribution are checked for reserved and duplicate
+  names like any other symbol, instead of failing with an unclear ``TypeError`` or a ``SyntaxError``
+  from sympy.
 - |API| :class:`~empulse.metrics.Metric` and :class:`~empulse.metrics.MixtureMetric` raise a
   ``TypeError`` when passed ``sample_weight``, for instance by a scorer that requests it through
   metadata routing. They accepted it and ignored it, so a weighted cross-validation score was the
@@ -96,147 +105,89 @@ Metrics
   ``optimal_rate`` are the Bayes-optimal decision for the scores of a model trained on the log cost,
   0.5 whenever the cost matrix targets some but not all samples, instead of reusing
   :class:`~empulse.metrics.Cost`'s threshold for calibrated probabilities.
-- |Fix| When targeting nobody is optimal, :func:`~empulse.metrics.classification_threshold` and the
-  ``optimal_threshold`` of :class:`~empulse.metrics.MaxProfit`, :class:`~empulse.metrics.MinCost`,
-  :class:`~empulse.metrics.EmpiricalMaxProfit` and :class:`~empulse.metrics.EmpiricalMinCost`
-  return ``inf`` instead of 1.0, which targeted some samples on decision scores.
-- |Fix| The ``optimal_threshold`` and ``optimal_rate`` of :class:`~empulse.metrics.Cost`,
-  :class:`~empulse.metrics.Profit`, :class:`~empulse.metrics.Savings` and
-  :class:`~empulse.metrics.LogCost`, and so :class:`~empulse.models.CSThresholdClassifier`, no
-  longer target everyone when targeting nobody is optimal. When the sum of the costs of the wrong
-  decisions minus the costs of the right ones is negative, as with ``fp_cost=1`` and ``tp_cost=3``,
-  the break-even point was clipped into ``[0, 1]`` in the wrong direction. Targeting nobody now
-  returns a threshold of ``inf`` instead of 1.0, so a probability of exactly 1.0 is no longer
-  targeted, and the warning says the costs imply targeting every sample or none. Costs that make
-  targeting pay off the less likely a sample is to be positive, which no threshold can express, raise
-  a ``ValueError``.
-- |Fix| :func:`~empulse.metrics.cost_loss` and :func:`~empulse.metrics.savings_score` decide
-  probabilities by whichever decision costs less in expectation, for any signs of the costs, instead
-  of a break-even point that inverted the decision when the costs of the wrong decisions were
-  smaller than those of the right ones.
-- |Fix| A cost-matrix symbol named after a function its expression calls, such as a Weibull scale
-  named ``gamma``, no longer breaks the metric.
-- |Fix| Instance-dependent distribution parameters are validated when the distribution has another
-  parameter, e.g. a negative ``alpha`` array beside a scalar ``beta``.
-- |Fix| Metrics accept boolean labels.
-- |Fix| :class:`~empulse.metrics.MaxProfit` with stochastic variables finds the best threshold when
-  targeting either class loses money, where the optimum jumps between targeting everybody and nobody.
-- |Fix| :class:`~empulse.metrics.MaxProfit` no longer returns ``nan`` for Gamma, Chi-squared and Beta
-  distributions with large shape parameters, such as :func:`~empulse.metrics.empc_score` with a
-  concentrated Beta prior.
-- |Fix| :class:`~empulse.metrics.MaxProfit` integrates numerically wherever a stochastic variable's
-  mass lies. With ``integration_method='quad'``, or a single variable whose expected profit has no
-  closed form, a distribution far from zero, such as a Laplace(200, 2), or much narrower or wider
-  than one, such as a Normal(0, 1e-4), gave about zero without a warning. A density that overflows
-  a float, such as a Logistic, a Gamma(100, 1) or a Beta(600, 1400), no longer gives ``nan`` or
-  raises an ``OverflowError``. A large estimated integration error now warns.
-- |Fix| :class:`~empulse.metrics.MaxProfit` finds every point where the optimal threshold changes
-  for a profit that is not a polynomial in its stochastic variable, such as ``exp(v / 2)``, which
-  gave ``nan`` or a wrong optimal rate.
-- |Fix| :class:`~empulse.metrics.MaxProfit` with stochastic variables maximizes over every threshold
-  when targeting a positive loses and targeting a negative gains, like the deterministic
-  :class:`~empulse.metrics.MaxProfit` does, instead of only over the part of the ROC convex hull
-  above its diagonal. Other cost matrices are scored as before.
-- |Fix| :class:`~empulse.metrics.MaxProfit` with a discrete stochastic variable, such as a Poisson or
-  a Bernoulli one, uses Monte Carlo integration under ``integration_method='auto'``, and
-  ``'quad'`` raises a clear error, instead of failing with an ``IndexError`` or an
-  ``AttributeError``. ``'quasi-monte-carlo'`` with a distribution it has no quantile function for
-  raises a clear error instead of a ``KeyError``.
-- |Fix| :class:`~empulse.metrics.MaxProfit` and :class:`~empulse.metrics.MinCost` average each
-  instance-dependent cost and benefit over the samples, rather than the parameters they are computed
-  from, so a cost such as the product of two instance-dependent parameters is averaged correctly. A
-  stochastic cost that is not linear in instance-dependent parameters warns that it is approximated.
-- |Fix| :class:`~empulse.models.CSThresholdClassifier` fitted with instance-dependent costs uses
-  each cost averaged over the samples for its single threshold.
-- |Fix| A :class:`~empulse.metrics.MixtureMetric` of :class:`~empulse.metrics.Cost`-like components
-  (those that decide from their costs alone) takes its optimal threshold and rate from the weighted
-  combined costs, instead of averaging the components' rates, which gave the wrong threshold. Such a
-  mixture of different strategy types no longer claims an optimal threshold or rate.
-- |Fix| :class:`~empulse.metrics.MixtureMetric` applies a component's fixed parameter whichever
-  spelling, symbol name or alias, the caller uses, and no longer warns about parameters that only
-  another component uses.
-- |API| :class:`~empulse.metrics.MixtureMetric` rejects components with different optimization
-  directions, negative constant weights, and constant weights that do not sum to 1 when it is built.
-- |Fix| :class:`~empulse.metrics.MaxProfit` with ``integration_method='monte-carlo'`` gives the same
-  result for the same distribution parameters, whichever were evaluated before. Results for a given
-  ``random_state`` change.
-- |Fix| A string term of a :class:`~empulse.metrics.CostMatrix` can no longer run Python code,
-  which made it unsafe to build a cost matrix from untrusted input. A string term may only use
-  names, numbers, arithmetic and sympy's mathematical functions such as ``exp`` or ``Max``; build
-  anything else, such as ``sympy.Rational(1, 2)``, from sympy objects.
-- |Fix| A string term of a :class:`~empulse.metrics.CostMatrix` may use ``True`` and ``False``, e.g.
-  as the condition of a ``Piecewise``'s last branch.
-- |Fix| A callable passed to :meth:`CostMatrix.constrain <empulse.metrics.CostMatrix.constrain>` works
-  with instance-dependent parameters: it may answer per sample, and every sample must satisfy it.
-- |Fix| An instance-dependent distribution parameter is validated when another parameter of the same
-  distribution is passed as a single-element list or array.
-- |Fix| :meth:`CostMatrix.mark_outlier_sensitive <empulse.metrics.CostMatrix.mark_outlier_sensitive>`
-  accepts an alias, and marking a symbol by name finds it when it was created with assumptions, such
-  as ``positive=True``. Both were treated as a parameter of either class.
-- |Fix| The LaTeX of :class:`~empulse.metrics.Savings` shows the savings relative to the baseline
-  instead of the cost divided by it, and the sums of :class:`~empulse.metrics.Cost`,
-  :class:`~empulse.metrics.Profit`, :class:`~empulse.metrics.LogCost` and
-  :class:`~empulse.metrics.Savings` run over the N samples from 1.
-- |Enhancement| :class:`~empulse.metrics.Capability` has an ``EXPECTED_COST`` member, present for
-  :class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.Profit` and
-  :class:`~empulse.metrics.Savings`.
-- |Fix| Strategies that reduce a stochastic variable, such as :class:`~empulse.metrics.Cost` and
-  :class:`~empulse.metrics.EmpiricalMaxProfit`, take the expectation of a term that is not linear in
-  it, such as ``gamma ** 2``, instead of evaluating the term at the variable's mean. A term that is
-  not a polynomial in it, such as ``exp(gamma)``, warns that it is approximated.
-- |Fix| :class:`~empulse.metrics.CostMatrix` resolves aliases when the metric is built, so
-  :meth:`~empulse.metrics.CostMatrix.set_default` and :meth:`~empulse.metrics.CostMatrix.constrain`
-  can be called before :meth:`~empulse.metrics.CostMatrix.alias`. A constraint on a name that is
-  neither a symbol nor an alias raises instead of being ignored.
-- |Fix| A :class:`~empulse.metrics.MixtureMetric` whose components mark the same parameter
-  outlier-sensitive for different classes detects its outliers on every sample, and a parameter
-  every component fixes is no longer outlier-sensitive.
+- |Fix| When targeting nobody is optimal, ``optimal_threshold`` and
+  :func:`~empulse.metrics.classification_threshold` return ``inf`` instead of 1.0, which still
+  targeted a probability of exactly 1.0 and some samples' decision scores. :class:`~empulse.metrics.Cost`,
+  :class:`~empulse.metrics.Profit`, :class:`~empulse.metrics.Savings`, :class:`~empulse.metrics.LogCost`,
+  :class:`~empulse.models.CSThresholdClassifier`, :func:`~empulse.metrics.cost_loss` and
+  :func:`~empulse.metrics.savings_score` no longer invert the decision when the costs of the wrong
+  decisions are smaller than those of the right ones, as with ``fp_cost=1`` and ``tp_cost=3``. Costs
+  that make targeting pay off the less likely a sample is to be positive, which no threshold can
+  express, raise a ``ValueError``.
 - |Fix| :class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.Profit`,
   :class:`~empulse.metrics.Savings` and :class:`~empulse.metrics.LogCost` no longer raise in
   ``optimal_threshold`` and ``optimal_rate`` when, for some sample, the costs do not depend on the
   predicted probability. Such a sample is always targeted if that costs less and otherwise never,
   including when both decisions cost the same.
-- |API| A :class:`~empulse.metrics.MixtureComponent` weight can be an expression, such as
-  ``'1 - success_rate - default_rate'``, whose parameters are parameters of the mixture: they can be
-  passed to a model's ``fit`` and are reported when missing. A callable weight is deprecated.
-- |Fix| :func:`~empulse.metrics.empcs_score`, and models trained on it, can be pickled.
-- |Fix| :class:`~empulse.metrics.MixtureMetric` checks that its weights are not negative and sum to 1
-  when called, not only when they are constants, and rejects mixing components that are amounts of
-  money with ones that are pure numbers, such as :class:`~empulse.metrics.AUEPC`.
-- |Fix| :meth:`MixtureMetric.constrain <empulse.metrics.MixtureMetric.constrain>` rejects a lower bound
-  above the upper one and names that are not parameters, and keeps the tighter bound when called twice.
+- |Fix| A cost-matrix symbol named after a function its expression calls, such as a Weibull scale
+  named ``gamma``, no longer breaks the metric.
+- |Fix| An instance-dependent distribution parameter is validated when another parameter of the same
+  distribution is a scalar or a single-element list or array, e.g. a negative ``alpha`` array beside
+  a scalar ``beta``.
+- |Fix| Metrics accept boolean labels.
+- |Fix| :class:`~empulse.metrics.MaxProfit` and :class:`~empulse.metrics.MinCost` average each
+  instance-dependent cost and benefit over the samples, rather than the parameters they are computed
+  from, so a cost such as the product of two instance-dependent parameters is averaged correctly.
+  :class:`~empulse.models.CSThresholdClassifier` learns its single threshold from the same averaged
+  costs for any loss, :class:`~empulse.metrics.MixtureMetric` included, and
+  :class:`~empulse.models.ProfLogitClassifier` with a gradient-free optimizer optimizes the same
+  score. A stochastic cost that is not linear in instance-dependent parameters warns that it is
+  approximated.
+- |Fix| :class:`~empulse.metrics.MaxProfit` with stochastic variables finds the best threshold when
+  targeting loses money. When targeting either class loses, the optimum jumps between targeting
+  everybody and nobody. When targeting a positive loses and targeting a negative gains, it searched
+  only the part of the ROC convex hull above its diagonal. Other cost matrices are scored as before.
+- |Fix| :class:`~empulse.metrics.MaxProfit` integrates numerically wherever a stochastic variable's
+  mass lies. With ``integration_method='quad'``, or a single variable whose expected profit has no
+  closed form, a distribution far from zero, such as a Laplace(200, 2), or much narrower or wider
+  than one gave about zero without a warning. Concentrated distributions, such as a Logistic or a
+  Gamma, Chi-squared or Beta with large shape parameters, no longer give ``nan`` or raise an
+  ``OverflowError``. This fixes :func:`~empulse.metrics.empc_score` with a concentrated Beta prior. A
+  large estimated integration error warns.
+- |Fix| :class:`~empulse.metrics.MaxProfit` finds every point where the optimal threshold changes
+  for a profit that is not a polynomial in its stochastic variable, such as ``exp(v / 2)``, which
+  gave ``nan`` or a wrong optimal rate.
+- |Fix| :class:`~empulse.metrics.MaxProfit` with a discrete stochastic variable, such as a Poisson or
+  a Bernoulli one, uses Monte Carlo integration under ``integration_method='auto'``, and
+  ``'quad'`` raises a clear error, instead of failing with an ``IndexError`` or an
+  ``AttributeError``. ``'quasi-monte-carlo'`` with a distribution it has no quantile function for
+  raises a clear error instead of a ``KeyError``.
+- |Fix| :class:`~empulse.metrics.MaxProfit` with ``integration_method='monte-carlo'`` gives the same
+  result for the same distribution parameters, whichever were evaluated before. Under
+  ``'monte-carlo'`` and ``'quasi-monte-carlo'``, the optimal rate is computed on the same samples as
+  the score, so the two describe the same operating point. Results for a given ``random_state``
+  change.
+- |Fix| A string term of a :class:`~empulse.metrics.CostMatrix` can no longer run Python code,
+  which made it unsafe to build a cost matrix from untrusted input. A string term may only use
+  names, numbers, arithmetic and sympy's mathematical functions such as ``exp`` or ``Max``; build
+  anything else, such as ``sympy.Rational(1, 2)``, from sympy objects.
+- |Fix| A callable passed to :meth:`CostMatrix.constrain <empulse.metrics.CostMatrix.constrain>` works
+  with instance-dependent parameters: it may answer per sample, and every sample must satisfy it.
+- |Fix| The LaTeX of :class:`~empulse.metrics.Savings` shows the savings relative to the baseline
+  instead of the cost divided by it.
+- |Fix| Strategies that reduce a stochastic variable, such as :class:`~empulse.metrics.Cost` and
+  :class:`~empulse.metrics.EmpiricalMaxProfit`, take the expectation of a term that is not linear in
+  it, such as ``gamma ** 2``, instead of evaluating the term at the variable's mean. A term that is
+  not a polynomial in it, such as ``exp(gamma)``, warns that it is approximated.
 - |API| :attr:`Metric.cost_matrix <empulse.metrics.Metric.cost_matrix>` returns a copy: a metric is
   compiled from its cost matrix when it is built, so changing the matrix afterwards had no effect on
   scoring. Build a new metric from the changed cost matrix instead.
-- |Efficiency| Scoring :class:`~empulse.metrics.Cost`, :class:`~empulse.metrics.Savings`,
-  :class:`~empulse.metrics.LogCost` and the empirical strategies is up to a quarter faster, which
-  speeds up the models that score them on every iteration.
 - |API| ``MetricStrategy.requires_dynamic_boost_objective`` is removed. Use
   ``Capability.PRECOMPUTED_BOOST_OBJECTIVE not in strategy.capabilities`` instead.
 - |API| Metrics, strategies and training objectives pickled with 0.13 or earlier are no longer
   supported. Build or fit them again with this release before pickling them.
-- |Efficiency| :class:`~empulse.metrics.MaxProfit` computes the closed-form partial moments of its
-  ten supported distributions in compiled code for a profit of any degree. A profit of degree three
-  or more is scored up to a third faster, the analytic gradients that
+- |Efficiency| :class:`~empulse.metrics.MaxProfit` is faster with stochastic variables. A profit of
+  degree three or more is scored up to a third faster, the analytic gradients that
   :class:`~empulse.models.ProfLogitClassifier` and :class:`~empulse.models.CSBoostClassifier` train
-  with are 10 to 20% faster, and the optimal rate up to 15% faster. ``optimal_threshold`` of a
-  metric without stochastic variables takes the threshold from the scan that finds the optimal rate,
-  instead of sorting the scores again, which makes it up to twice as fast.
+  with are 10 to 20% faster, and the optimal rate up to 15% faster. ``optimal_threshold`` of a metric
+  without stochastic variables is up to twice as fast.
 - |Enhancement| The optimal rate of a :class:`~empulse.metrics.MaxProfit` metric with one stochastic
-  variable, integrated piecewise as ``integration_method='auto'`` does, is exact, from the
-  distribution's CDF, for every distribution that ``'quasi-monte-carlo'`` supports, such as
-  ``Laplace`` and ``Logistic``, instead of only the ten with closed-form partial moments. It is two
-  to three times as fast for those.
-- |Fix| The optimal rate of a :class:`~empulse.metrics.MaxProfit` metric integrated by
-  ``'monte-carlo'`` or ``'quasi-monte-carlo'`` is computed on the same samples as its score, so the
-  two describe the same operating point. They were drawn separately.
-- |Fix| Documentation: the formula of :func:`~empulse.metrics.max_profit_score` weighs the false
-  positive cost by the negative class prior and defines its symbols. :class:`~empulse.metrics.MaxProfit`
-  describes how instance-dependent parameters are averaged, that ``optimal_threshold`` returns one
-  threshold, and which integration methods use ``n_mc_samples_exp``.
-- |Fix| :class:`~empulse.models.ProfLogitClassifier` with a gradient-free optimizer optimizes the
-  :class:`~empulse.metrics.MaxProfit` score itself when instance-dependent parameters enter a cost
-  non-linearly.
+  variable under ``integration_method='auto'`` is exact for every distribution that
+  ``'quasi-monte-carlo'`` supports, such as ``Laplace`` and ``Logistic``, and two to three times as
+  fast for those.
+- |Fix| The docstrings of :func:`~empulse.metrics.max_profit_score` and
+  :class:`~empulse.metrics.MaxProfit` correct the formula and say how instance-dependent parameters
+  are averaged.
 
 Models
 ------
@@ -248,146 +199,98 @@ Models
   the training samples least, instead of above 0.5. Across nine benchmark datasets this raised the
   share of attainable savings on held-out data by 0.03 to 0.33 on average, depending on the model.
   Pass ``threshold=0.5`` for the previous predictions. See :ref:`learned_threshold`.
-- |Fix| A loss parameter passed to ``fit`` as a list or a pandas Series is treated like an array.
-  :class:`~empulse.models.CSThresholdClassifier` learned one threshold per training sample from it,
-  so ``predict`` failed on other data or applied the wrong thresholds, and weighted voting in
-  :class:`~empulse.models.CSForestClassifier` and :class:`~empulse.models.CSBaggingClassifier` raised
-  a length mismatch.
-- |Fix| :class:`~empulse.models.CSBaggingClassifier` fits when a bootstrap sample holds only one
-  class, which then gives a tree of a single leaf. It raised a ``ValueError``.
-- |Fix| :class:`~empulse.models.CSBaggingClassifier` with ``warm_start=True`` keeps the estimators
-  fitted earlier and only fits the new ones. It refitted all of them.
-- |Fix| Weighted voting in :class:`~empulse.models.CSForestClassifier` and
-  :class:`~empulse.models.CSBaggingClassifier` weighs each estimator by how much better than average
-  its out-of-bag loss is, relative to the average cost of a wrong decision. The worst estimator always
-  got no vote, so of two nearly equal trees only one counted.
-- |Fix| :class:`~empulse.models.RobustCSClassifier` standardizes the residuals of the costs, so
-  ``outlier_threshold`` is a number of standard deviations. It divided the absolute residuals by
-  their own standard deviation, as the original paper does, so the default of 2.5 flagged costs
-  beyond about 1.5 standard deviations, around 13% of normally distributed costs instead of 1%.
-- |Fix| Refitting :class:`~empulse.models.CSLogitClassifier` or
-  :class:`~empulse.models.ProfLogitClassifier` with ``fit_intercept=False`` removes the
-  ``intercept_`` of an earlier fit.
-- |Fix| Cost-sensitive models accept the ``baseline`` of a :class:`~empulse.metrics.Savings` loss in
-  ``fit``, and route it through metadata routing like the cost matrix's parameters. Most models
-  raised a ``TypeError``, and :class:`~empulse.models.CSThresholdClassifier` and
-  :class:`~empulse.models.CSRateClassifier` passed it on to their estimator, so a mixture of savings
-  always trained against the ``'zero_one'`` baseline.
-- |Fix| :class:`~empulse.models.RobustCSClassifier` wraps a :class:`~sklearn.pipeline.Pipeline` whose
-  last step is a cost-sensitive classifier. It looked for the loss and the costs on the pipeline itself,
-  so it missed a ``loss`` set on the classifier, and passed the costs to ``Pipeline.fit`` under their
-  plain names, which it rejects. Without metadata routing, the costs now go to the last step as
-  ``<step>__<cost>``; with it, to the steps that request them.
-- |API| :class:`~empulse.models.CSLogitClassifier` and :class:`~empulse.models.ProfLogitClassifier`
-  raise a ``ValueError`` before fitting when their optimizer needs a gradient the loss has no
-  objective for, such as :class:`~empulse.optimizers.LBFGSBOptimizer` with an
-  :class:`~empulse.metrics.EmpiricalMaxProfit` metric, and the message names an optimizer that works.
-  They raised a ``NotImplementedError`` from inside the fit.
-- |Fix| :class:`~empulse.models.CSTreeClassifier` and :class:`~empulse.models.CSForestClassifier`
-  accept a ``class_weight`` dict keyed by the class labels, as documented. It was looked up by the
-  0/1 encoding of the labels, so ``{'no': 1, 'yes': 5}`` or ``{1: 1, 2: 5}`` raised, and only labels 0
-  and 1 worked. A key that is no class raises a clear error, so a dict keyed by 0 and 1 for other
-  labels, which used to be the way around this, has to be keyed by the labels instead.
-- |Fix| :class:`~empulse.models.CSForestClassifier` passes a callable ``oob_score`` the class labels,
-  as scikit-learn's forests do, instead of their 0/1 encoding.
-- |Fix| :class:`~empulse.models.RobustCSClassifier` measures and imputes the outliers of a cost that
-  only enters one class's rows (such as ``fn_cost``, or a parameter used only in it) among that
-  class's rows. The other class's values, which the outlier model never saw and the cost never uses,
-  widened the spread an outlier is measured against, so that real outliers were missed, and were
-  themselves replaced as outliers.
-- |Fix| :class:`~empulse.models.CSBoostClassifier` and :class:`~empulse.models.B2BoostClassifier`
-  encode the labels of an ``eval_set`` passed in ``fit_params`` as they encode ``y``. String labels
-  crashed XGBoost, and labels such as 1/2 or -1/1 were scored as if they were 0/1.
-- |Fix| :class:`~empulse.models.BiasReweighingClassifier` weighs every sample alike, with a warning,
-  when the sensitive feature has a single value, as the resampling and relabeling models do. With
-  only the value 0, the weights followed the class prior instead.
-- |Fix| :class:`~empulse.models.ProfTreeClassifier` raises a clear error when every variation operator
-  rate is zero, instead of a ``ZeroDivisionError``. The rates are documented as the relative weights
-  they are: they need not sum to 1.
+- |Feature| :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.models.CSRateClassifier`
+  take a ``cv`` parameter to learn a decision that depends on the scores, such as a
+  :class:`~empulse.metrics.MaxProfit` threshold or any rate, from out-of-fold scores instead of the
+  scores of the training rows, which flatter an estimator that overfits them. A threshold that
+  depends only on the costs ignores it.
 - |API| :class:`~empulse.models.CSForestClassifier` accepts ``min_impurity_decrease=None``, as
   :class:`~empulse.models.CSTreeClassifier` does, and both it and the default tree of
   :class:`~empulse.models.CSBaggingClassifier` now use it: a tree only splits while that lowers the
   cost of its training samples, instead of growing until its leaves are pure. On the 15 bundled
   datasets the ensembles' own predictions save more, with a tenth of the leaves or fewer and fits
   taking half the time. Pass ``min_impurity_decrease=0.0`` for the previous trees.
-- |Fix| :class:`~empulse.models.CSBaggingClassifier` accepts missing values in ``X`` when its base
-  estimator does, as its default :class:`~empulse.models.CSTreeClassifier` and
-  :class:`~empulse.models.CSForestClassifier` do.
-- |Enhancement| :class:`~empulse.models.CSBoostClassifier` and :class:`~empulse.models.B2BoostClassifier`
-  accept missing values in ``X``, which XGBoost, LightGBM and CatBoost all handle, and say so in their
-  ``allow_nan`` tag. :class:`~empulse.models.CSThresholdClassifier` and
-  :class:`~empulse.models.CSRateClassifier` around them take missing values too.
-- |Enhancement| :class:`~empulse.models.BiasRelabelingClassifier`,
+- |Enhancement| :class:`~empulse.models.CSThresholdClassifier`, :class:`~empulse.models.CSRateClassifier`,
+  :class:`~empulse.models.RobustCSClassifier`, :class:`~empulse.models.BiasRelabelingClassifier`,
   :class:`~empulse.models.BiasResamplingClassifier` and :class:`~empulse.models.BiasReweighingClassifier`
-  pass ``X`` to their estimator as given, as the threshold wrappers do, so it can be a
-  :class:`~sklearn.pipeline.Pipeline` that encodes strings, imputes missing values or selects columns
-  by name. They converted ``X`` to a dense numeric array first, which rejected strings, missing values
-  and sparse matrices, and dropped the column names. :class:`~empulse.models.BiasReweighingClassifier`
-  passes its weights to a pipeline's last step, or, with metadata routing enabled, to the steps that
-  request them. ``estimator=None``, which the parameter check accepted but could not be fit, is
-  rejected by it.
-- |Fix| :class:`~empulse.models.RobustCSClassifier` only reports in its ``allow_nan`` tag that it
-  accepts missing values when its ``outlier_estimator`` does too, since that is fit on ``X`` as well.
-  The default :class:`~sklearn.linear_model.HuberRegressor` does not.
-- |Fix| :class:`~empulse.models.ProfTreeClassifier` optimizes a
-  :class:`~empulse.metrics.MixtureMetric` of deterministic :class:`~empulse.metrics.MaxProfit`
-  metrics, instead of the maximum profit of their averaged costs.
+  pass ``X`` to their estimator unchanged, so it can be a :class:`~sklearn.pipeline.Pipeline` that
+  encodes strings, imputes missing values or selects columns by name, and it keeps the feature names.
+  Their input tags follow the estimator's, and for :class:`~empulse.models.RobustCSClassifier` also
+  its ``outlier_estimator``'s, which by default rejects missing values. Without metadata routing,
+  :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.models.CSRateClassifier` forward
+  their other ``fit`` keyword arguments, such as ``sample_weight``, to the estimator, and the costs too
+  when its ``fit`` accepts them. :class:`~empulse.models.BiasReweighingClassifier` passes its weights
+  to a pipeline's last step, or, with metadata routing enabled, to the steps that request them, and
+  rejects ``estimator=None``.
+- |Enhancement| :class:`~empulse.models.CSBoostClassifier` and :class:`~empulse.models.B2BoostClassifier`
+  accept missing values in ``X``, which XGBoost, LightGBM and CatBoost all handle, and so do
+  :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.models.CSRateClassifier` around
+  them. :class:`~empulse.models.CSBaggingClassifier` accepts missing values when its base estimator
+  does, as its default :class:`~empulse.models.CSTreeClassifier` and
+  :class:`~empulse.models.CSForestClassifier` do.
+- |API| :class:`~empulse.models.CSLogitClassifier` and :class:`~empulse.models.ProfLogitClassifier`
+  raise a ``ValueError`` before fitting when their optimizer needs a gradient the loss has no
+  objective for, such as :class:`~empulse.optimizers.LBFGSBOptimizer` with an
+  :class:`~empulse.metrics.EmpiricalMaxProfit` metric, and the message names an optimizer that works.
+  They raised a ``NotImplementedError`` from inside the fit.
+- |Fix| The ``baseline`` of a :class:`~empulse.metrics.Savings` loss can be passed to the ``fit`` of
+  cost-sensitive models and routed through metadata routing like the cost matrix's parameters, also
+  in a nested :class:`~empulse.metrics.MixtureMetric` whose components use different strategies. Most
+  models raised a ``TypeError``, a nested mixture ignored it with an unknown-parameter warning, and
+  :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.models.CSRateClassifier` passed it
+  on to their estimator, so a mixture of savings always trained against the ``'zero_one'`` baseline.
+- |Fix| A loss parameter passed to ``fit`` as a list or a pandas Series is treated like an array.
+  :class:`~empulse.models.CSThresholdClassifier` learned one threshold per training sample from it,
+  so ``predict`` failed on other data or applied the wrong thresholds, and weighted voting in
+  :class:`~empulse.models.CSForestClassifier` and :class:`~empulse.models.CSBaggingClassifier` raised
+  a length mismatch.
+- |Fix| Cost-sensitive models accept an array fit parameter whose length is not the number of
+  samples, such as a per-feature weight, when it is not a cost or loss parameter.
+- |Fix| After ``set_params(loss=...)``, ``set_fit_request`` accepts the new loss's parameters.
 - |Fix| :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.models.CSRateClassifier`
-  fitted with every cost zero learn no decision, as without costs, also when that overrides non-zero
-  costs set in the constructor.
-- |Fix| :class:`~empulse.models.RobustCSClassifier` detects outliers on the positive class of a
-  wrapped estimator's ``pos_label``, and accepts an outlier-sensitive parameter given as a list.
-- |Fix| :class:`~empulse.models.CSTreeClassifier`, :class:`~empulse.models.CSForestClassifier` and
-  :class:`~empulse.models.CSBaggingClassifier` warn when the strategy of their ``loss`` is not an
-  expected cost, such as :class:`~empulse.metrics.MaxProfit`: they grow their trees on the metric's
-  costs, minimizing their expected cost, whatever the strategy.
-- |Fix| :class:`~empulse.models.CSThresholdClassifier` fitted on a
-  :class:`~empulse.metrics.MixtureMetric` with instance-dependent costs averages each cost over the
-  samples for its threshold, as it does for a :class:`~empulse.metrics.Metric`, instead of the
-  parameters the costs are computed from.
-- |Fix| :class:`~empulse.models.RobustCSClassifier` finds an outlier-sensitive parameter of a metric
-  loss whether it is passed under its symbol name or its alias.
-
-- |Fix| :class:`~empulse.models.CSThresholdClassifier`, :class:`~empulse.models.CSRateClassifier`
-  and :class:`~empulse.models.RobustCSClassifier` hand ``X`` to the wrapped estimator unchanged, so a
-  pipeline can encode string columns or handle missing values, and the wrapped estimator keeps the
-  feature names. Their input tags (sparse, missing values) follow the wrapped estimator's.
-- |Fix| :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.models.CSRateClassifier`
-  can wrap a :class:`~sklearn.pipeline.Pipeline`. Without metadata routing, ``fit`` forwards its other
-  keyword arguments, such as ``sample_weight``, to the wrapped estimator, and the costs too when the
-  wrapped estimator's ``fit`` accepts them.
-- |Feature| :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.models.CSRateClassifier`
-  take a ``cv`` parameter to learn a decision that depends on the scores, such as a
-  :class:`~empulse.metrics.MaxProfit` threshold or any rate, from out-of-fold scores instead of the
-  scores of the training rows, which flatter an estimator that overfits them. A threshold that
-  depends only on the costs ignores it.
-- |Fix| :class:`~empulse.models.CSThresholdClassifier` with a loss whose threshold depends on the
-  scores, such as :class:`~empulse.metrics.MaxProfit`, and instance-dependent parameters learns its
-  threshold from the costs those parameters make up, instead of from the parameters' averages, which
-  is wrong for a cost such as their product.
+  without a ``loss`` keep each cost not passed to ``predict`` at its value in ``fit``, instead of the
+  constructor's, which predicted every sample positive after ``fit(X, y, fp_cost=5, fn_cost=10)``
+  and ``predict(X, fn_cost=10)``. A predict-time cost with a length other than the samples' is
+  rejected with a clear error. Fitted without costs, or with every cost zero even over non-zero
+  constructor costs, they learn no decision, forget the decision of an earlier fit, and fit the same
+  calibrated estimator as with costs.
 - |Fix| :class:`~empulse.models.CSThresholdClassifier`'s default calibrator passes the costs on to a
   cost-sensitive estimator, which was trained on ``fp_cost=fn_cost=1`` instead, and with metadata
   routing it is fitted with the sample weights the estimator requests, which raised before.
 - |Fix| :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.models.CSRateClassifier`
   with ``pos_label`` set to the smaller class pass a cost-sensitive estimator the costs as it sees
   them, with the true and false positives and negatives swapped, instead of inverting its training.
-- |Fix| :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.models.CSRateClassifier`
-  without a ``loss`` keep each cost not passed to ``predict`` at its value in ``fit``, instead of the
-  constructor's, which predicted every sample positive after ``fit(X, y, fp_cost=5, fn_cost=10)``
-  and ``predict(X, fn_cost=10)``. A predict-time cost with a length other than the samples' is
-  rejected with a clear error.
-- |Fix| :class:`~empulse.models.CSThresholdClassifier` and :class:`~empulse.models.CSRateClassifier`
-  forget the decision of an earlier fit when refitted without costs, instead of applying it to the new
-  estimator, and fitted without costs they fit the same calibrated estimator as with costs.
 - |Fix| :class:`~empulse.models.CSRateClassifier` predicts exactly ``ceil(rate_ * n_samples)`` samples
   positive. Tied scores at the cut-off made it predict more, up to five times the rate on a shallow
   tree's scores, and rounding error one more for rates such as 0.07 of 100 samples. Its documentation
   now says that the rate applies to each ``predict`` batch.
-- |Fix| Cost-sensitive models accept an array fit parameter whose length is not the number of
-  samples, such as a per-feature weight, when it is not a cost or loss parameter.
+- |Fix| :class:`~empulse.models.RobustCSClassifier` standardizes the residuals of the costs, so
+  ``outlier_threshold`` is a number of standard deviations. It divided the absolute residuals by
+  their own standard deviation, as the original paper does, so the default of 2.5 flagged around 13%
+  of normally distributed costs instead of 1%.
+- |Fix| :class:`~empulse.models.RobustCSClassifier` measures and imputes the outliers of a cost that
+  only enters one class's rows, such as ``fn_cost``, among that class's rows. The other class's
+  values widened the spread, so real outliers were missed and rows the cost never uses were imputed.
+  It also detects outliers on the positive class of a wrapped estimator's ``pos_label``, and accepts
+  an outlier-sensitive parameter given as a list.
+- |Fix| :class:`~empulse.models.RobustCSClassifier` wraps a :class:`~sklearn.pipeline.Pipeline` whose
+  last step is a cost-sensitive classifier. It looked for the loss and the costs on the pipeline itself,
+  so it missed a ``loss`` set on the classifier, and passed the costs to ``Pipeline.fit`` under their
+  plain names, which it rejects. Without metadata routing, the costs now go to the last step as
+  ``<step>__<cost>``; with it, to the steps that request them.
 - |Fix| :class:`~empulse.models.RobustCSClassifier` keeps the costs set on the wrapped estimator
   when neither ``fit`` nor its own constructor sets them, instead of overriding them with zero.
-- |Fix| After ``set_params(loss=...)``, ``set_fit_request`` accepts the new loss's parameters.
+- |Fix| Refitting :class:`~empulse.models.CSLogitClassifier` or
+  :class:`~empulse.models.ProfLogitClassifier` with ``fit_intercept=False`` removes the
+  ``intercept_`` of an earlier fit.
+- |Fix| :class:`~empulse.models.CSTreeClassifier` and :class:`~empulse.models.CSForestClassifier`
+  accept a ``class_weight`` dict keyed by the class labels, as documented. The dict was looked up by
+  the 0/1 encoding of the labels, so only the labels 0 and 1 worked. A key that is no class raises a
+  clear error, so a dict keyed by 0 and 1 for other labels has to be keyed by the labels instead.
+- |Fix| :class:`~empulse.models.CSTreeClassifier`, :class:`~empulse.models.CSForestClassifier` and
+  :class:`~empulse.models.CSBaggingClassifier` warn when the strategy of their ``loss`` is not an
+  expected cost, such as :class:`~empulse.metrics.MaxProfit`: they grow their trees on the metric's
+  costs, minimizing their expected cost, whatever the strategy.
 - |Fix| The ``criterion="gini"`` impurity of :class:`~empulse.models.CSTreeClassifier` and
   :class:`~empulse.models.CSForestClassifier` is per unit of weight, like ``"cost"`` and
   ``"entropy"``. It grew with node size, which favoured even splits and let noise pass
@@ -397,12 +300,33 @@ Models
   samples disagree on which prediction costs less. With negative or non-zero correct-decision costs
   such nodes kept splitting without changing any prediction.
 - |Fix| Weighted voting in :class:`~empulse.models.CSForestClassifier` and
-  :class:`~empulse.models.CSBaggingClassifier` gives a tree without out-of-bag samples the average
-  weight, instead of making every weight uniform (forest) or failing (bagging).
+  :class:`~empulse.models.CSBaggingClassifier` weighs each estimator by how much better than average
+  its out-of-bag loss is, relative to the average cost of a wrong decision, and gives a tree without
+  out-of-bag samples the average weight. The worst estimator always got no vote, so of two nearly
+  equal trees only one counted, and a tree without out-of-bag samples made the forest weigh every tree
+  alike and bagging fail.
+- |Fix| :class:`~empulse.models.CSForestClassifier` passes a callable ``oob_score`` the class labels,
+  as scikit-learn's forests do, instead of their 0/1 encoding.
+- |Fix| :class:`~empulse.models.CSBaggingClassifier` fits when a bootstrap sample holds only one
+  class, which then gives a tree of a single leaf. It raised a ``ValueError``.
+- |Fix| :class:`~empulse.models.CSBaggingClassifier` with ``warm_start=True`` keeps the estimators
+  fitted earlier and only fits the new ones. It refitted all of them.
 - |Fix| :class:`~empulse.models.CSBaggingClassifier` raises a clear error for a base estimator whose
   ``fit`` does not accept the costs.
+- |Fix| :class:`~empulse.models.CSBoostClassifier` and :class:`~empulse.models.B2BoostClassifier`
+  encode the labels of an ``eval_set`` passed in ``fit_params`` as they encode ``y``. String labels
+  crashed XGBoost, and labels such as 1/2 or -1/1 were scored as if they were 0/1.
+- |Fix| :class:`~empulse.models.ProfTreeClassifier` optimizes a
+  :class:`~empulse.metrics.MixtureMetric` of deterministic :class:`~empulse.metrics.MaxProfit`
+  metrics, instead of the maximum profit of their averaged costs.
+- |Fix| :class:`~empulse.models.ProfTreeClassifier` raises a clear error when every variation operator
+  rate is zero, instead of a ``ZeroDivisionError``. The rates are documented as the relative weights
+  they are: they need not sum to 1.
 - |Fix| :class:`~empulse.models.ProfTreeClassifier` reports ``n_iter_`` correctly when stopping early,
   and reads ``min_samples_split=1.0`` and ``min_samples_leaf=1.0`` as fractions of the samples.
+- |Fix| :class:`~empulse.models.BiasReweighingClassifier` weighs every sample alike, with a warning,
+  when the sensitive feature has a single value, as the resampling and relabeling models do. With
+  only the value 0, the weights followed the class prior instead.
 
 Bias mitigation and samplers
 ----------------------------
@@ -433,9 +357,9 @@ Packaging and dependencies
   numpy 2.5.2, scipy 1.18.1, scikit-learn 1.9.1 and, for the ``datasets`` extra, pyarrow 26.0 or
   later. CatBoost has no Python 3.15 wheels yet, so there the ``boosting`` extra installs XGBoost
   and LightGBM only. The polars backend of :mod:`empulse.datasets` needs polars 2.0 on Python 3.15.
-- |Fix| Building Empulse requires Cython 3.1.2 or later. With Cython 3.1.0 or 3.1.1,
-  :class:`~empulse.models.CSBoostClassifier` and :class:`~empulse.models.B2BoostClassifier` failed
-  to fit or pickle with XGBoost.
+- |Fix| Building Empulse from source requires Cython 3.1.2 or later. Cython 3.1.0 and 3.1.1 built
+  a :class:`~empulse.models.CSBoostClassifier` and :class:`~empulse.models.B2BoostClassifier` that
+  failed to fit or pickle with XGBoost.
 
 
 `0.13.1`_ (22-10-2026)
