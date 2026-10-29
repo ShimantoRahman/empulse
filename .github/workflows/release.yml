@@ -88,8 +88,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Build wheels
+      - name: Build and test wheels
         uses: pypa/cibuildwheel@v4.3.4
+        with:
+          config-file: .github/cibuildwheel.toml
         env:
           CIBW_PLATFORM: ${{ matrix.platform || 'auto' }}
           CIBW_ARCHS: ${{ matrix.archs || 'auto' }}
@@ -99,7 +101,6 @@ jobs:
           # into the Windows wheels. They are left to the system's Visual C++ runtime instead.
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: ""
           CIBW_SKIP: "*-musllinux_*"
-          CIBW_TEST_COMMAND: "python {project}/scripts/smoke_test_wheel.py"
 
       - uses: actions/upload-artifact@v7
         with:

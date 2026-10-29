@@ -1,0 +1,50 @@
+# How the release workflow tests each wheel it builds. The build options themselves are set in
+# release.yml; environment variables there take precedence over this file.
+#
+# The fast suite runs against the installed wheel. cibuildwheel copies `test-sources` into a temporary
+# directory and runs the command from there, so `import empulse` cannot pick up the source tree.
+# `docs/` is copied because the doc-executing test modules parametrize over its pages at collection,
+# even though their tests are marked slow and deselected.
+[tool.cibuildwheel]
+test-sources = ["tests", "docs", "pyproject.toml"]
+test-extras = ["boosting", "datasets", "sampling"]
+# The pandas and polars pins follow the `test` dependency group in pyproject.toml.
+test-requires = [
+    "pytest>=8.3.4",
+    "pytest-xdist>=3.8.0",
+    "pandas>=2.2.0; python_version < '3.15'",
+    "pandas>=3.0.6; python_version >= '3.15'",
+    "polars>=1.40.1; python_version < '3.15'",
+    "polars>=2.0.0; python_version >= '3.15'",
+]
+test-command = [
+    "python {project}/scripts/smoke_test_wheel.py",
+    "pytest -m \"not slow and not remote\" -n auto -p no:cacheprovider tests",
+]
+
+# catboost and polars publish no free-threaded wheels, so the boosting and datasets extras cannot be
+# installed. This mirrors the py31{4,5}t-tests env in tox.ini: catboost tests skip through
+# pytest.importorskip, and tests/datasets imports polars at module scope.
+[[tool.cibuildwheel.overrides]]
+select = "cp31*t-*"
+test-extras = ["sampling"]
+test-requires = [
+    "pytest>=8.3.4",
+    "pytest-xdist>=3.8.0",
+    "pandas>=2.2.0; python_version < '3.15'",
+    "pandas>=3.0.6; python_version >= '3.15'",
+    "xgboost>=2.1.4",
+    "lightgbm>=4.6.0",
+]
+test-command = [
+    "python {project}/scripts/smoke_test_wheel.py",
+    "pytest -m \"not slow and not remote\" -n auto -p no:cacheprovider --ignore=tests/datasets tests",
+]
+
+# The xgboost and lightgbm macOS wheels load libomp at runtime without shipping it, and the runners do
+# not have it. Installing it before the first test would let setup.py's OpenMP probe succeed for every
+# wheel built after that one, so OpenMP is disabled for the build. That keeps the macOS wheels
+# single-threaded, which they already are because the runners lack libomp at build time.
+[tool.cibuildwheel.macos]
+environment = { EMPULSE_DISABLE_OPENMP = "1" }
+before-test = "HOMEBREW_NO_AUTO_UPDATE=1 brew install libomp"
