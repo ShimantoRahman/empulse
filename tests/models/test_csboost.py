@@ -8,6 +8,7 @@ from scipy.special import expit
 from sklearn.datasets import make_classification
 
 import empulse.models
+from empulse._common._sklearn_compat import get_tags
 from empulse.metrics import (
     CostMatrix,
     LogCost,
@@ -388,7 +389,7 @@ def test_missing_values_are_left_to_the_booster(library, classifier_name, strate
 
     y_proba = model.fit(X, y, **costs).predict_proba(X)
 
-    assert model.__sklearn_tags__().input_tags.allow_nan
+    assert get_tags(model).input_tags.allow_nan
     assert np.isfinite(y_proba).all()
     X[0, 1] = np.inf
     with pytest.raises(ValueError, match='infinity'):

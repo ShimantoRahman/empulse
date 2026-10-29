@@ -49,6 +49,13 @@ class PassesXThrough(MetaEstimatorMixin):
     estimator: Any
     estimator_: Any
 
+    def _more_tags(self) -> dict[str, Any]:
+        estimator_tags = get_tags(self.estimator)
+        return {
+            'allow_nan': estimator_tags.input_tags.allow_nan,
+            'X_types': ['2darray', 'sparse'] if estimator_tags.input_tags.sparse else ['2darray'],
+        }
+
     def __sklearn_tags__(self) -> Tags:
         tags: Tags = super().__sklearn_tags__()  # type: ignore[misc]
         estimator_tags = get_tags(self.estimator)

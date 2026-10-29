@@ -7,7 +7,9 @@ import pytest
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.datasets import make_classification
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.utils.fixes import parse_version
 
+from empulse._common._sklearn_compat import get_tags, sklearn_version
 from empulse.metrics import Cost, CostMatrix, Metric
 from empulse.models import CSBaggingClassifier, CSForestClassifier, CSTreeClassifier
 from empulse.models._base.cost_sensitive import subset_loss_params
@@ -503,10 +505,21 @@ class TestPredictVotesCheapestClasses:
 @pytest.mark.parametrize(
     'make_ensemble',
     [
-        lambda: CSForestClassifier(n_estimators=20, max_samples=3.0, combination='weighted_voting', random_state=0),
-        lambda: CSBaggingClassifier(n_estimators=20, max_samples=180, combination='weighted_voting', random_state=0),
+        pytest.param(
+            lambda: CSForestClassifier(n_estimators=20, max_samples=3.0, combination='weighted_voting', random_state=0),
+            id='forest',
+        ),
+        pytest.param(
+            lambda: CSBaggingClassifier(
+                n_estimators=20, max_samples=180, combination='weighted_voting', random_state=0
+            ),
+            id='bagging',
+            marks=pytest.mark.skipif(
+                sklearn_version < parse_version('1.8'),
+                reason='BaggingClassifier only draws more samples than n_samples from scikit-learn 1.8 on.',
+            ),
+        ),
     ],
-    ids=['forest', 'bagging'],
 )
 def test_weighted_voting_with_trees_without_out_of_bag_samples(make_ensemble):
     """A tree drawn without out-of-bag samples gets an average weight; the others are still weighted."""
@@ -552,7 +565,7 @@ class TestBaggingMissingValues:
         model = CSBaggingClassifier(n_estimators=5, combination=combination, random_state=0)
         model.fit(X, y, fp_cost=1.0, fn_cost=5.0)
 
-        assert model.__sklearn_tags__().input_tags.allow_nan
+        assert get_tags(model).input_tags.allow_nan
         assert np.isfinite(model.predict_proba(X)).all()
         assert set(model.predict(X)) <= {0, 1}
 
@@ -562,7 +575,7 @@ class TestBaggingMissingValues:
         X, y = self._data()
         model = CSBaggingClassifier(CSLogitClassifier(), n_estimators=3, random_state=0)
 
-        assert not model.__sklearn_tags__().input_tags.allow_nan
+        assert not get_tags(model).input_tags.allow_nan
         with pytest.raises(ValueError, match='NaN'):
             model.fit(X, y, fp_cost=1.0, fn_cost=5.0)
 

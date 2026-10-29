@@ -5,6 +5,7 @@ from sklearn.datasets import make_classification
 from sklearn.ensemble import HistGradientBoostingRegressor
 from sklearn.linear_model import HuberRegressor, LogisticRegression
 
+from empulse._common._sklearn_compat import get_tags
 from empulse.metrics import Cost, CostMatrix, Metric, MixtureComponent, MixtureMetric
 from empulse.models import CSLogitClassifier, CSThresholdClassifier, CSTreeClassifier, RobustCSClassifier
 
@@ -302,11 +303,9 @@ def test_residuals_are_centered_before_they_are_compared_with_the_threshold():
 def test_allow_nan_needs_the_outlier_estimator_to_take_missing_values(outlier_estimator, allow_nan):
     """The outlier estimator is fit on X too, so NaN in X is only fine if it takes them as well."""
     model = RobustCSClassifier(CSTreeClassifier(), outlier_estimator=outlier_estimator)
-    assert model.__sklearn_tags__().input_tags.allow_nan is allow_nan
+    assert get_tags(model).input_tags.allow_nan is allow_nan
     assert (
-        RobustCSClassifier(CSLogitClassifier(), outlier_estimator=outlier_estimator)
-        .__sklearn_tags__()
-        .input_tags.allow_nan
+        get_tags(RobustCSClassifier(CSLogitClassifier(), outlier_estimator=outlier_estimator)).input_tags.allow_nan
         is False
     )
 

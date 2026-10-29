@@ -266,11 +266,17 @@ class RobustCSClassifier(  # type: ignore[misc]
         'detect_outliers_for': [StrOptions({'all', 'tp_cost', 'tn_cost', 'fn_cost', 'fp_cost'}), list],
     }
 
+    def _allows_nan(self) -> bool:
+        """Whether ``X`` may hold missing values: the outlier estimator is fit on ``X`` too, so both must take them."""
+        outlier_estimator = self.outlier_estimator if self.outlier_estimator is not None else HuberRegressor()
+        return bool(get_tags(self.estimator).input_tags.allow_nan and get_tags(outlier_estimator).input_tags.allow_nan)
+
+    def _more_tags(self) -> dict[str, Any]:
+        return {**super()._more_tags(), 'allow_nan': self._allows_nan()}
+
     def __sklearn_tags__(self) -> Tags:
         tags = super().__sklearn_tags__()
-        # The outlier estimator is fit on X too, so X may only hold missing values if both accept them.
-        outlier_estimator = self.outlier_estimator if self.outlier_estimator is not None else HuberRegressor()
-        tags.input_tags.allow_nan = tags.input_tags.allow_nan and get_tags(outlier_estimator).input_tags.allow_nan
+        tags.input_tags.allow_nan = self._allows_nan()
         return tags
 
     def _get_metric_loss(self) -> BaseMetric | None:
